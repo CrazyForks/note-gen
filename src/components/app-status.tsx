@@ -27,7 +27,6 @@ export default function AppStatus() {
     }
     const imageRes = await createSyncRepo('note-gen-image-sync')
     if (imageRes || imageRes === 422) {
-      console.log(imageRes);
       setImageRepoStatus(true)
     }
     const articleRes = await createSyncRepo('note-gen-article-sync')

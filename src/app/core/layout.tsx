@@ -5,6 +5,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import useSettingStore from "@/stores/setting"
 import { useEffect } from "react";
+import '@mdxeditor/editor/style.css'
 
 export default function RootLayout({
   children,

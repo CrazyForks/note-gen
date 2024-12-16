@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
+    "@mdxeditor/editor": "^3.20.0",
     "@octokit/core": "^6.1.2",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.1.2",
@@ -42,6 +43,7 @@
     "@types/lodash-es": "^4.17.12",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "cm6-theme-basic-dark": "^0.2.0",
     "cmdk": "1.0.0",
     "dayjs": "^1.11.13",
     "fuse.js": "^7.0.0",
@@ -49,6 +51,7 @@
     "lodash-es": "^4.17.21",
     "lucide-react": "^0.456.0",
     "md-editor-rt": "5.0.2",
+    "mermaid": "^11.4.1",
     "next": "15.0.3",
     "next-themes": "^0.4.3",
     "react": "19.0.0-rc-66855b96-20241106",
@@ -66,6 +69,7 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.15",
     "@tauri-apps/cli": ">=2.0.0",
     "@types/node": "^20",
     "@types/react": "^18",
