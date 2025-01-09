@@ -12,19 +12,23 @@ NoteGen 是一个基于 Tauri + ChatGPT 的免费开源笔记 App，旨在帮助
 
 ![](https://cdn.jsdelivr.net/gh/codexu/note-gen-image-sync@main/2c3c6211-0905-43ba-8769-4d13fd30baf4.png)
 
-## 下载
+## 使用文档
+
+[=> NoteGen Wiki <=](https://github.com/codexu/note-gen/wiki)
+
+## 快速上手
+
+### 1. 下载
 
 NoteGen 是一个跨平台的笔记 APP，目前支持 `Mac`、`Windows`、`Linux`，得益于 Tauri2 的跨平台能力，未来将支持 `IOS`、`Android`。
 
 [=> 下载 NoteGen <=](https://github.com/codexu/note-gen/releases)
 
-## 快速上手
-
 唯一的门槛就是需要拥有一个 Github 账号，并且可以流畅访问。
 
 以下的配置工作在仅需在 1 分钟内完成：
 
-### 1. 配置 ChatGPT API Key
+### 2. 配置 ChatGPT API Key
 
 NoteGen 使用了国内代理[GPT-API-free](https://github.com/chatanywhere/GPT_API_free)，可[申请领取内测免费API Key](https://api.chatanywhere.org/v1/oauth/free/render)，限制200请求/天。
 
@@ -32,7 +36,7 @@ NoteGen 使用了国内代理[GPT-API-free](https://github.com/chatanywhere/GPT_
 
 > 此功能只限制于 AI 相关功能，不影响正常写作。
 
-### 2. 同步与图床（可选）
+### 3. 同步与图床（可选）
 
 同步和图床基于 Github 仓库实现，需要[创建密钥](https://github.com/settings/tokens/new)，需勾选 `repo` 权限。
 
@@ -41,7 +45,7 @@ NoteGen 使用了国内代理[GPT-API-free](https://github.com/chatanywhere/GPT_
 - `note-gen-image-sync`: 图床，使用 jsdelivr 加速。
 - `note-gen-article-sync（私有）`: 用于存放笔记 `.md` 文件。
 
-### 3. 仅限 Mac 用户
+### 4. 仅限 Mac 用户
 
 1. Mac 用户需要配置屏幕录制权限，才可以使用截图记录功能。
 2. NoteGen 暂未签名，因此安装时会出现文件已损坏的提示，根据不同芯片解决方法如下：
