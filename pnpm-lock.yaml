@@ -129,8 +129,8 @@ importers:
         specifier: ^0.456.0
         version: 0.456.0(react@19.0.0-rc-66855b96-20241106)
       md-editor-rt:
-        specifier: 5.2.0
-        version: 5.2.0(@codemirror/view@6.36.2)(@lezer/common@1.2.3)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+        specifier: 5.2.1
+        version: 5.2.1(@codemirror/view@6.36.2)(@lezer/common@1.2.3)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
@@ -2520,8 +2520,8 @@ packages:
     resolution: {integrity: sha512-4MqMiKP90ybymYvsut0CH2g4XWbfLtmlCkXmtmdcDCxNB+mQcu1w/1+L/VD7vi/PSv7X2JYV7SCcR+jiPXnQtA==}
     engines: {node: '>= 0.4'}
 
-  md-editor-rt@5.2.0:
-    resolution: {integrity: sha512-qYR9Yp2j71RSIrqD7dlQQO5VVgLxs2BjFFUhvh5ez/QSQ7J53YWl2jcPhfWK/oQVJBnRJ6umAzmSzL5ovMOpqA==}
+  md-editor-rt@5.2.1:
+    resolution: {integrity: sha512-L6K4yjGfNScryDhVaYfgJK4VpSgmZiAr13Ss3GMWwuELnOfpO7AxE1aar10Y56H6xs1yPCeTYHA+NkaKzec3TQ==}
     peerDependencies:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
@@ -5916,7 +5916,7 @@ snapshots:
 
   math-intrinsics@1.0.0: {}
 
-  md-editor-rt@5.2.0(@codemirror/view@6.36.2)(@lezer/common@1.2.3)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106):
+  md-editor-rt@5.2.1(@codemirror/view@6.36.2)(@lezer/common@1.2.3)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106):
     dependencies:
       '@codemirror/lang-markdown': 6.3.1
       '@codemirror/language-data': 6.5.1(@codemirror/view@6.36.2)
