@@ -1,5 +1,6 @@
 import { decodeBase64ToString, getFiles } from '@/lib/github'
 import { GithubContent, RepoNames } from '@/lib/github.types'
+import { getCurrentFolder } from '@/lib/path'
 import { join } from '@tauri-apps/api/path'
 import { BaseDirectory, DirEntry, exists, mkdir, readDir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import { Store } from '@tauri-apps/plugin-store'
@@ -157,23 +158,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
   // 加载文件夹内部的 Github 仓库文件
   loadCollapsibleFiles: async (fullpath: string) => {
     const cacheTree: DirTree[] = get().fileTree
-    let currentFolder: DirTree | undefined
-    const levels = fullpath.split('/')
-
-    for (let index = 0; index < levels.length; index++) {
-      const level = levels[index]
-      let currentIndex = -1
-      if (index === 0) {
-        currentIndex = cacheTree.findIndex(item => item.name === level)
-      } else {
-        currentIndex = currentFolder?.children?.findIndex(item => item.name === level) || -1
-      }
-      if (index === 0) {
-        currentFolder = cacheTree[currentIndex]
-      } else {
-        currentFolder = currentFolder?.children?.[currentIndex]
-      }
-    }
+    const currentFolder = getCurrentFolder(fullpath, cacheTree)
 
     const githubFiles = await getFiles({ path: fullpath, repo: RepoNames.sync })
     if (githubFiles && currentFolder) {

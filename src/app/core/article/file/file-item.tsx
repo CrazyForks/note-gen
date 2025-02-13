@@ -10,7 +10,7 @@ import { deleteFile } from "@/lib/github";
 import { RepoNames } from "@/lib/github.types";
 import { cloneDeep } from "lodash-es";
 import { open } from "@tauri-apps/plugin-shell";
-import { computedParentPath } from "@/lib/path";
+import { computedParentPath, getCurrentFolder } from "@/lib/path";
 
 export function FileItem({ item }: { item: DirTree }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
@@ -19,6 +19,9 @@ export function FileItem({ item }: { item: DirTree }) {
   const { activeFilePath, setActiveFilePath, readArticle, setCurrentArticle, fileTree, setFileTree } = useArticleStore()
   
   const path = computedParentPath(item)
+  const cacheTree = cloneDeep(fileTree)
+  const folderPath = path.split('/').slice(0, -1).join('/')
+  const currentFolder = getCurrentFolder(folderPath, cacheTree)
 
   function handleSelectFile() {
     setActiveFilePath(path)
@@ -27,23 +30,7 @@ export function FileItem({ item }: { item: DirTree }) {
 
   async function handleDeleteFile() {
     await remove(`article/${path}`, { baseDir: BaseDirectory.AppData })
-    const cacheTree = cloneDeep(fileTree)
-    if (path.includes('/')) {
-      const dirIndex = cacheTree.findIndex(item => item.name === path.split('/')[0])
-      const fileIndex = cacheTree[dirIndex].children?.findIndex(file => file.name === path.split('/')[1])
-      const file = cacheTree[dirIndex].children?.find(file => file.name === path.split('/')[1])
-      if (file && fileIndex !== undefined && fileIndex !== -1) {
-        if (file.sha) {
-          file.isLocale = false
-          cacheTree[dirIndex].children?.splice(fileIndex, 1, file)
-        } else {
-          cacheTree[dirIndex].children?.splice(fileIndex, 1)
-        }
-      }
-    } else {
-      const index = cacheTree.findIndex(file => file.name === activeFilePath)
-      cacheTree.splice(index, 1)
-    }
+    currentFolder?.children?.splice(currentFolder.children.findIndex(file => file.name === item.name), 1)
     setFileTree(cacheTree)
     setActiveFilePath('')
     setCurrentArticle('')
@@ -56,22 +43,9 @@ export function FileItem({ item }: { item: DirTree }) {
     });
     if (answer) {
       await deleteFile({ path: activeFilePath, sha: item.sha as string, repo: RepoNames.sync })
-      const cacheTree = cloneDeep(fileTree)
-      if (item.parent) {
-        const parentIndex = cacheTree.findIndex(file => file.name === item.parent?.name)
-        const index = item.parent.children?.findIndex(file => file.name === item.name)
-        if (index !== undefined && index !== -1) {
-          const currentFile = cloneDeep(item.parent.children?.[index])
-          if (currentFile) {
-            currentFile.sha = undefined;
-            cacheTree[parentIndex].children?.splice(index, 1, currentFile)
-          }
-        }
-      } else {
-        const index = cacheTree.findIndex(file => file.name === activeFilePath)
-        const currentFile = cacheTree[index]
-        currentFile.sha = undefined;
-        cacheTree.splice(index, 1, currentFile)
+      const index = currentFolder?.children?.findIndex(file => file.name === item.name)
+      if (index !== undefined && index !== -1 && currentFolder?.children) {
+        currentFolder.children[index].sha = ''
       }
       setFileTree(cacheTree)
     }

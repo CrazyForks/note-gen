@@ -14,3 +14,25 @@ export function computedParentPath(item: DirTree) {
   readParentPath(item)
   return path
 }
+
+export function getCurrentFolder(path: string, fileTree: DirTree[]) {
+  let currentFolder: DirTree | undefined
+  const levels = path.split('/')
+
+  for (let index = 0; index < levels.length; index++) {
+    const level = levels[index]
+    let currentIndex = -1
+    if (index === 0) {
+      currentIndex = fileTree.findIndex(item => item.name === level)
+    } else {
+      currentIndex = currentFolder?.children?.findIndex(item => item.name === level) || -1
+    }
+    if (index === 0) {
+      currentFolder = fileTree[currentIndex]
+    } else {
+      currentFolder = currentFolder?.children?.[currentIndex]
+    }
+  }
+
+  return currentFolder
+}
