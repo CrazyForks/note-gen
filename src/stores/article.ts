@@ -128,7 +128,6 @@ const useArticleStore = create<NoteState>((set, get) => ({
       return
     } else {
       const githubFiles = await getFiles({ path: '', repo: RepoNames.sync })
-      console.log(githubFiles);
       if (githubFiles) {
         githubFiles.forEach((file: GithubContent) => {
           const index = dirs.findIndex(item => item.name === file.path.replace('article/', ''))
@@ -156,22 +155,38 @@ const useArticleStore = create<NoteState>((set, get) => ({
     set({ fileTreeLoading: false })
   },
   // 加载文件夹内部的 Github 仓库文件
-  loadCollapsibleFiles: async (folderName: string) => {
+  loadCollapsibleFiles: async (fullpath: string) => {
     const cacheTree: DirTree[] = get().fileTree
-    const cacheFolderIndex = cacheTree.findIndex(item => item.name === folderName)
-    const cacheFolder = cacheTree.find(item => item.name === folderName)
-    const githubFiles = await getFiles({ path: folderName, repo: RepoNames.sync })
-    if (githubFiles && cacheFolder) {
+    let currentFolder: DirTree | undefined
+    const levels = fullpath.split('/')
+
+    for (let index = 0; index < levels.length; index++) {
+      const level = levels[index]
+      let currentIndex = -1
+      if (index === 0) {
+        currentIndex = cacheTree.findIndex(item => item.name === level)
+      } else {
+        currentIndex = currentFolder?.children?.findIndex(item => item.name === level) || -1
+      }
+      if (index === 0) {
+        currentFolder = cacheTree[currentIndex]
+      } else {
+        currentFolder = currentFolder?.children?.[currentIndex]
+      }
+    }
+
+    const githubFiles = await getFiles({ path: fullpath, repo: RepoNames.sync })
+    if (githubFiles && currentFolder) {
       githubFiles.forEach((file: GithubContent) => {
-        const index = cacheFolder.children?.findIndex(item => item.name === file.path.replace(`${folderName}/`, ''))
-        if (index !== undefined && index !== -1 && cacheTree[cacheFolderIndex]?.children) {
-          cacheTree[cacheFolderIndex].children[index].sha = file.sha
+        const index = currentFolder.children?.findIndex(item => item.name === file.name)
+        if (index !== undefined && index !== -1 && currentFolder.children) {
+          currentFolder.children[index].sha = file.sha
         } else {
-          cacheTree[cacheFolderIndex].children?.push({
-            name: file.path.replace(`${folderName}/`, ''),
+          currentFolder.children?.push({
+            name: file.path.replace(`${fullpath}/`, ''),
             isFile: file.type === 'file',
             isSymlink: false,
-            parent: cacheTree[cacheFolderIndex],
+            parent: currentFolder,
             isEditing: false,
             isDirectory: file.type === 'dir',
             sha: file.sha,
