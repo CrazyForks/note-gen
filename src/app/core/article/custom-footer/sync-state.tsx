@@ -12,7 +12,7 @@ export default function SyncState() {
 
   async function getSyscTime() {
     const res = await getFileCommits({ path: activeFilePath, repo: RepoNames.sync })
-    if (res.length > 0) {
+    if (res && res.length > 0) {
       setLastSyncTime(dayjs(res[0].commit.committer.date).fromNow())
     }
   }

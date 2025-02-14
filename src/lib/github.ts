@@ -116,6 +116,7 @@ export async function getFiles({ path, repo }: { path: string, repo: RepoNames }
 export async function deleteFile({ path, sha, repo }: { path: string, sha: string, repo: RepoNames }) {
   const store = await Store.load('store.json');
   const accessToken = await store.get('accessToken')
+  if (!accessToken) return;
   const octokit = new Octokit({
     auth: accessToken
   })
@@ -138,6 +139,7 @@ export async function deleteFile({ path, sha, repo }: { path: string, sha: strin
 export async function getFileCommits({ path, repo }: { path: string, repo: RepoNames }) {
   const store = await Store.load('store.json');
   const accessToken = await store.get('accessToken')
+  if (!accessToken) return;
   const octokit = new Octokit({
     auth: accessToken
   })
@@ -161,6 +163,7 @@ export async function getFileCommits({ path, repo }: { path: string, repo: RepoN
 export async function getUserInfo() {
   const store = await Store.load('store.json');
   const accessToken = await store.get('accessToken')
+  if (!accessToken) return;
   const octokit = new Octokit({
     auth: accessToken
   })
@@ -182,6 +185,7 @@ export async function checkSyncRepoState(name: string) {
   const store = await Store.load('store.json');
   const githubUsername = await store.get('githubUsername')
   const accessToken = await store.get('accessToken')
+  if (!accessToken) return;
   const octokit = new Octokit({
     auth: accessToken
   })
@@ -192,6 +196,7 @@ export async function checkSyncRepoState(name: string) {
 export async function createSyncRepo(name: string, isPrivate?: boolean) {
   const store = await Store.load('store.json');
   const accessToken = await store.get('accessToken')
+  if (!accessToken) return;
   const octokit = new Octokit({
     auth: accessToken
   })
