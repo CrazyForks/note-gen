@@ -14,7 +14,7 @@ export function FileSidebar() {
 
   useEffect(() => {
     initCollapsibleList()
-  }, [initCollapsibleList])
+  }, [])
 
   return (
     <Sidebar collapsible="none" className="w-full">

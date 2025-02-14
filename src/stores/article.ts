@@ -4,7 +4,7 @@ import { getCurrentFolder } from '@/lib/path'
 import { join } from '@tauri-apps/api/path'
 import { BaseDirectory, DirEntry, exists, mkdir, readDir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import { Store } from '@tauri-apps/plugin-store'
-import { cloneDeep } from 'lodash-es'
+import { cloneDeep, uniq } from 'lodash-es'
 import { create } from 'zustand'
 
 export interface Article {
@@ -101,7 +101,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
         parent: undefined,
         sha: ''
       }))
-    processEntriesRecursively('article', dirs as DirTree[]);
+    await processEntriesRecursively('article', dirs as DirTree[]);
     async function processEntriesRecursively(parent: string, entries: DirTree[]) {
       for (const entry of entries) {
         if (entry.isDirectory) {
@@ -116,7 +116,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
               sha: ''
             })) as DirTree[]
           entry.children = children
-          processEntriesRecursively(dir, children)
+          await processEntriesRecursively(dir, children)
         }
       }
     }
@@ -148,12 +148,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
           }
         });
         set({ fileTree: dirs })
-        get().collapsibleList.forEach(async (item) => {
-          await get().loadCollapsibleFiles(item)
-        })
+        set({ fileTreeLoading: false })
       }
     }
-    set({ fileTreeLoading: false })
   },
   // 加载文件夹内部的 Github 仓库文件
   loadCollapsibleFiles: async (fullpath: string) => {
@@ -275,7 +272,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
     }
     const store = await Store.load('store.json');
     await store.set('collapsibleList', collapsibleList)
-    set({ collapsibleList })
+    set({ collapsibleList: uniq(collapsibleList).filter(item => !item.includes('.md')) })
   },
 
   currentArticle: '',

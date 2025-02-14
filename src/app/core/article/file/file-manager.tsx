@@ -17,7 +17,6 @@ import { computedParentPath } from "@/lib/path"
 
 function Tree({ item }: { item: DirTree }) {
   const { collapsibleList, setCollapsibleList, loadCollapsibleFiles } = useArticleStore()
-
   const path = computedParentPath(item)
 
   function handleCollapse(isOpen: boolean) {
@@ -32,19 +31,19 @@ function Tree({ item }: { item: DirTree }) {
     <FileItem item={item} /> :
     <SidebarMenuItem>
       <Collapsible
-          onOpenChange={handleCollapse}
-          className="group/collapsible [&[data-state=open]>button>.file-manange-item>svg:first-child]:rotate-90"
-          open={collapsibleList.includes(path)}
-        >
-          <FolderItem item={item} />
-          <CollapsibleContent className="pl-1">
-            <SidebarMenuSub>
-              {item.children?.map((subItem) => (
-                <Tree key={subItem.name} item={subItem} />
-              ))}
-            </SidebarMenuSub>
-          </CollapsibleContent>
-        </Collapsible>
+        onOpenChange={handleCollapse}
+        className="group/collapsible [&[data-state=open]>button>.file-manange-item>svg:first-child]:rotate-90"
+        open={collapsibleList.includes(path)}
+      >
+        <FolderItem item={item} />
+        <CollapsibleContent className="pl-1">
+          <SidebarMenuSub>
+            {item.children?.map((subItem) => (
+              <Tree key={subItem.name} item={subItem} />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </Collapsible>
     </SidebarMenuItem>
   )
 }
