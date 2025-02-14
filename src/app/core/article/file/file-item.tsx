@@ -20,6 +20,7 @@ export function FileItem({ item }: { item: DirTree }) {
   const { activeFilePath, setActiveFilePath, readArticle, setCurrentArticle, fileTree, setFileTree } = useArticleStore()
   
   const path = computedParentPath(item)
+  const isRoot = path.split('/').length === 1
   const folderPath = path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
   const cacheTree = cloneDeep(fileTree)
   const currentFolder = getCurrentFolder(folderPath, cacheTree)
@@ -115,7 +116,7 @@ export function FileItem({ item }: { item: DirTree }) {
     <ContextMenu>
       <ContextMenuTrigger>
         <div
-          className={path === activeFilePath ? 'file-manange-item active' : 'file-manange-item'}
+          className={`${path === activeFilePath ? 'file-manange-item active' : 'file-manange-item'} ${isRoot && '-translate-x-5'}`}
           onClick={handleSelectFile}
           onContextMenu={handleSelectFile}
         >
@@ -145,7 +146,7 @@ export function FileItem({ item }: { item: DirTree }) {
                   { item.isLocale ? <File className="size-4" /> : <CloudDownload className="size-4" /> }
                   { item.sha && item.isLocale && <Cloud className="size-2.5 absolute left-0 bottom-0 z-10 bg-primary-foreground" /> }
                 </div>
-                <span className="text-xs flex-1 line-clamp-1">{item.name.slice(0, -3)}</span>
+                <span className="text-xs flex-1 line-clamp-1">{item.name}</span>
               </div> 
             </span>
           }

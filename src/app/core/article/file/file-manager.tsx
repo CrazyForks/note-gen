@@ -105,7 +105,7 @@ export function FileManager() {
     <SidebarContent className={`${isDragging && 'outline-2 outline-black outline-dotted -outline-offset-4'}`}>
       <SidebarGroup className="flex-1 p-0">
         <SidebarGroupContent className="flex-1">
-          <SidebarMenu className="h-full">
+          <SidebarMenu className="h-full pl-5">
             <div
               className="min-h-0.5"
               onDrop={(e) => handleDrop(e)}
