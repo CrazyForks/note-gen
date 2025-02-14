@@ -181,6 +181,12 @@ const useArticleStore = create<NoteState>((set, get) => ({
     }
   },
   newFolder: async () => {
+    const path = get().activeFilePath;
+    const cacheTree = cloneDeep(get().fileTree)
+
+    const parentFolderPath = path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
+    const currentFolder = getCurrentFolder(parentFolderPath, cacheTree)
+
     const newDir: DirTree = {
       name: '',
       isFile: false,
@@ -191,9 +197,8 @@ const useArticleStore = create<NoteState>((set, get) => ({
       isLocale: true,
       children: []
     }
-    const fileTree = get().fileTree
-    fileTree.unshift(newDir)
-    set({ fileTree })
+    currentFolder?.children?.unshift(newDir)
+    set({ fileTree: cacheTree })
   },
   newFile: async () => {
     // 判断 activeFilePath 是否存在 parent
