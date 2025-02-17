@@ -57,9 +57,6 @@ export function FolderItem({ item }: { item: DirTree }) {
   // 创建或修改文件夹名称
   async function handleRename() {
     setName(name.replace(/ /g, '_')) // github 存储空格会报错，替换为下划线
-    console.log(path);
-    console.log(name, item.name);
-    console.log(currentFolder);
     // 修改文件夹名称
     if (name && name !== item.name && item.name !== '') {
       console.log('rename');
@@ -78,7 +75,6 @@ export function FolderItem({ item }: { item: DirTree }) {
       setFileTree(cacheTree)
       setIsEditing(false)
     } else {
-      console.log('mkdir');
       // 新建文件夹
       const isExists = await exists(`article/${path}/${name}`, { baseDir: BaseDirectory.AppData })
       if (isExists) {

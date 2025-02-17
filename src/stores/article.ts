@@ -184,21 +184,37 @@ const useArticleStore = create<NoteState>((set, get) => ({
     const path = get().activeFilePath;
     const cacheTree = cloneDeep(get().fileTree)
 
-    const parentFolderPath = path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
-    const currentFolder = getCurrentFolder(parentFolderPath, cacheTree)
-
-    const newDir: DirTree = {
-      name: '',
-      isFile: false,
-      isSymlink: false,
-      parent: undefined,
-      isEditing: true,
-      isDirectory: true,
-      isLocale: true,
-      children: []
+    if (path.includes('/')) {
+      const parentFolderPath = path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
+      const currentFolder = getCurrentFolder(parentFolderPath, cacheTree)
+      if (currentFolder) {
+        const newDir: DirTree = {
+          name: '',
+          isFile: false,
+          isSymlink: false,
+          parent: currentFolder,
+          isEditing: true,
+          isDirectory: true,
+          isLocale: true,
+        }
+        currentFolder.children?.unshift(newDir)
+        set({ fileTree: cacheTree })
+      }
+    } else {
+      // 不存在 parent，直接在根目录下创建
+      const newDir: DirTree = {
+        name: '',
+        isFile: false,
+        isSymlink: false,
+        parent: undefined,
+        isEditing: true,
+        isDirectory: true,
+        isLocale: true,
+      }
+      const fileTree = get().fileTree
+      fileTree.unshift(newDir)
+      set({ fileTree })
     }
-    currentFolder?.children?.unshift(newDir)
-    set({ fileTree: cacheTree })
   },
   newFile: async () => {
     // 判断 activeFilePath 是否存在 parent
