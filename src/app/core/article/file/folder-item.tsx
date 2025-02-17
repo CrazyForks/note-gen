@@ -9,7 +9,7 @@ import { CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
 import { cloneDeep } from "lodash-es";
 import { open } from "@tauri-apps/plugin-shell";
-import { computedParentPath } from "@/lib/path";
+import { computedParentPath, getCurrentFolder } from "@/lib/path";
 
 export function FolderItem({ item }: { item: DirTree }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
@@ -19,15 +19,27 @@ export function FolderItem({ item }: { item: DirTree }) {
   const { activeFilePath, loadFileTree, setActiveFilePath, collapsibleList, setCollapsibleList, fileTree, setFileTree, newFileOnFolder } = useArticleStore()
 
   const path = computedParentPath(item)
+  const cacheTree = cloneDeep(fileTree)
+  const currentFolder = getCurrentFolder(path, cacheTree)
+  const parentFolder = currentFolder?.parent
 
   async function handleDeleteFolder(evnet: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     evnet.stopPropagation()
     try {
       await remove(`article/${path}`, { baseDir: BaseDirectory.AppData })
-      const index = fileTree.findIndex(file => file.name === item.name)
-      if (index!== -1) {
-        fileTree.splice(index, 1)
-        setFileTree(fileTree)
+      if (parentFolder) {
+        const index = parentFolder.children?.findIndex(folder => folder.name === currentFolder.name)
+        console.log(index);
+        if (index!== -1 && index !== undefined && parentFolder.children) {
+          parentFolder.children.splice(index, 1)
+          setFileTree(cacheTree)
+        }
+      } else {
+        const index = cacheTree?.findIndex(folder => folder.name === currentFolder?.name)
+        if (index!== -1 && index !== undefined && cacheTree) {
+          cacheTree.splice(index, 1)
+          setFileTree(cacheTree)
+        }
       }
     } catch {
       toast({
