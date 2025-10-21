@@ -8,6 +8,7 @@ import { create } from 'zustand'
 
 export interface MarkQueue {
   queueId: string
+  tagId: number
   type: Mark["type"]
   progress: string
   startTime: number

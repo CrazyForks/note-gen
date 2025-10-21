@@ -58,7 +58,7 @@ export function Clipboard() {
     setImage('')
     const queueId = uuid()
     // 获取文件后缀
-    addQueue({ queueId, progress: t('record.mark.progress.saveImage'), type: 'image', startTime: Date.now() })
+    addQueue({ queueId, tagId: currentTagId!, progress: t('record.mark.progress.saveImage'), type: 'image', startTime: Date.now() })
     const isImageFolderExists = await exists('image', { baseDir: BaseDirectory.AppData})
     if (!isImageFolderExists) {
       await mkdir('image', { baseDir: BaseDirectory.AppData})

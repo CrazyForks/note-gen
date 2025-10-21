@@ -42,6 +42,7 @@ export function ControlLink() {
     // 添加到队列中显示加载状态
     addQueue({
       queueId,
+      tagId: currentTagId!,
       type: 'link',
       progress: '0%',
       startTime: Date.now()

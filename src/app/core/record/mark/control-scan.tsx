@@ -98,12 +98,12 @@ export function ControlScan() {
       let content = ''
       let desc = ''
       if (primaryImageMethod === 'vlm') {
-        addQueue({ queueId, progress: t('record.mark.progress.aiAnalysis'), type: 'scan', startTime: Date.now() })
+        addQueue({ queueId, tagId: currentTagId!, progress: t('record.mark.progress.aiAnalysis'), type: 'scan', startTime: Date.now() })
         const base64 = `data:image/png;base64,${Buffer.from(uint8Array).toString('base64')}`
         content = await fetchAiDescByImage(base64) || 'VLM Error'
         desc = content
       } else {
-        addQueue({ queueId, progress: t('record.mark.progress.ocr'), type: 'scan', startTime: Date.now() })
+        addQueue({ queueId, tagId: currentTagId!, progress: t('record.mark.progress.ocr'), type: 'scan', startTime: Date.now() })
         content = await ocr(`screenshot/${queueId}.png`) || 'OCR Error'
         if (primaryModel) {
           setQueue(queueId, { progress: t('record.mark.progress.aiAnalysis') });

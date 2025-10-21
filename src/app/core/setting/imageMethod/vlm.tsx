@@ -7,7 +7,7 @@ import { SetDefault } from "./setDefault";
 export function VlmSetting() {
   const t = useTranslations('settings.imageMethod.vlm')
   return (
-    <>
+    <div className='space-y-4'>
       <Item variant="outline">
         <ItemMedia variant="icon"><Bot className="size-4" /></ItemMedia>
         <ItemContent>
@@ -19,6 +19,6 @@ export function VlmSetting() {
         </ItemActions>
       </Item>
       <SetDefault type="vlm" />
-    </> 
+    </div> 
   )
 }

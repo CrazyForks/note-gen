@@ -35,7 +35,7 @@ export function ControlImage() {
 
   async function upload(path: string) {
     const queueId = uuid()
-    addQueue({ queueId, progress: t('record.mark.progress.cacheImage'), type: 'image', startTime: Date.now() })
+    addQueue({ queueId, tagId: currentTagId!, progress: t('record.mark.progress.cacheImage'), type: 'image', startTime: Date.now() })
     const ext = path.substring(path.lastIndexOf('.') + 1)
     const isImageFolderExists = await exists('image', { baseDir: BaseDirectory.AppData})
     if (!isImageFolderExists) {
@@ -71,13 +71,15 @@ export function ControlImage() {
       url: filename,
       desc,
     }
-    setQueue(queueId, { progress: t('record.mark.progress.uploadImage') });
-    // 上传图片
+    
+    // 尝试上传图片到图床（如果配置了图床）
     const file = new File([new Blob([fileData])], filename, { type: `image/${ext}` })
     const url = await uploadImage(file)
     if (url) {
+      setQueue(queueId, { progress: t('record.mark.progress.uploadImage') });
       mark.url = url
     }
+    
     removeQueue(queueId)
     await insertMark(mark)
     await fetchMarks()

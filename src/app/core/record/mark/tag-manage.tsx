@@ -22,6 +22,7 @@ import useTagStore from "@/stores/tag"
 import useMarkStore from "@/stores/mark"
 import useChatStore from "@/stores/chat"
 import { MarkItem } from './mark-item'
+import { MarkLoading } from './mark-loading'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -102,7 +103,7 @@ export function TagManage() {
     getCurrentTag
   } = useTagStore()
 
-  const { marks, fetchMarks } = useMarkStore()
+  const { marks, queues, fetchMarks } = useMarkStore()
 
   async function handleAddTag() {
     if (!newTagName.trim()) return
@@ -263,7 +264,13 @@ export function TagManage() {
                     </ContextMenuContent>
                   </ContextMenu>
                   <AccordionContent className="px-0 pb-0">
-                    {getTagMarks(tag.id).length === 0 ? (
+                    {/* 显示当前标签的队列（正在处理中的记录） */}
+                    {queues.filter(queue => queue.tagId === tag.id).map((queue) => (
+                      <MarkLoading key={queue.queueId} mark={queue} />
+                    ))}
+                    
+                    {/* 显示已完成的记录 */}
+                    {getTagMarks(tag.id).length === 0 && queues.filter(queue => queue.tagId === tag.id).length === 0 ? (
                       <Empty className="border-0 py-8">
                         <EmptyHeader>
                           <EmptyMedia variant="icon">
