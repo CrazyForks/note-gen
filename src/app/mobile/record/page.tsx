@@ -24,22 +24,26 @@ export default function Record() {
   }
   
   return (
-    <div id="mobile-record" className="flex flex-col h-full w-full">
+    <div id="mobile-record" className="flex flex-col h-full w-full bg-background">
       <MarkHeader />
       {trashState ? (
         <>
-          <div className="flex p-2 border-b items-center justify-between">
-            <p className="text-xs text-zinc-500">{t('record.trash.records', { count: marks.length })}</p>
+          <div className="flex p-3 border-b items-center justify-between bg-muted/50">
+            <p className="text-sm text-muted-foreground">{t('record.trash.records', { count: marks.length })}</p>
             {marks.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={handleClearTrash}>
+              <Button variant="ghost" size="sm" onClick={handleClearTrash} className="h-8">
                 {t('record.trash.empty')}
               </Button>
             )}
           </div>
-          <MarkList />
+          <div className="flex-1 overflow-y-auto">
+            <MarkList />
+          </div>
         </>
       ) : (
-        <TagManage />
+        <div className="flex-1 overflow-y-auto">
+          <TagManage />
+        </div>
       )}
     </div>
   )

@@ -31,6 +31,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
+import { TagMobileActions } from './tag-mobile-actions'
 import {
   DndContext,
   closestCenter,
@@ -264,9 +265,15 @@ export function TagManage() {
                               autoFocus
                             />
                           ) : (
-                            <div className="text-xs w-full flex items-center justify-between pr-4">
-                              <span className={`${currentTagId === tag.id && 'font-bold'}`}>{tag.name}</span>
-                              <span className="ml-2 text-muted-foreground">{tag.total && tag.total > 0 ? tag.total : ''}</span>
+                            <div className="text-xs w-full flex items-center justify-between gap-2">
+                              <span className={`flex-1 ${currentTagId === tag.id && 'font-bold'}`}>{tag.name}</span>
+                              <span className="text-muted-foreground">{tag.total && tag.total > 0 ? tag.total : ''}</span>
+                              <TagMobileActions 
+                                tag={tag}
+                                onRename={startEditing}
+                                onDelete={handleDeleteTag}
+                                isEditing={editingTagId === tag.id}
+                              />
                             </div>
                           )}
                         </div>
