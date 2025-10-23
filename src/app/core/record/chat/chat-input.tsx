@@ -26,11 +26,27 @@ import { FileSelector } from "./file-selector"
 import { MarkdownFile } from "@/lib/files"
 import emitter from "@/lib/emitter"
 import { McpButton } from "./mcp-button"
+import { useIsMobile } from '@/hooks/use-mobile'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 
 export function ChatInput() {
   const [text, setText] = useState("")
-  const { primaryModel, chatToolbarConfig } = useSettingStore()
+  const { primaryModel, chatToolbarConfig, setChatToolbarConfig } = useSettingStore()
   const { chats, loading, locale, isLinkMark, isPlaceholderEnabled } = useChatStore()
   const { marks, trashState } = useMarkStore()
   const [isComposing, setIsComposing] = useState(false)
@@ -44,6 +60,16 @@ export function ChatInput() {
   const markGenRef = useRef<any>(null)
   const chatSendRef = useRef<any>(null)
   const translateSendRef = useRef<any>(null)
+  const isMobile = useIsMobile()
+
+  // 拖拽传感器配置（仅桌面端）
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 移动8px后才开始拖拽，避免误触
+      },
+    })
+  )
 
 
   // 添加输入到历史记录
@@ -156,6 +182,25 @@ export function ChatInput() {
     }
   }
 
+  // 处理拖拽结束
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = chatToolbarConfig.findIndex((item) => item.id === active.id)
+      const newIndex = chatToolbarConfig.findIndex((item) => item.id === over.id)
+      
+      const newItems = arrayMove(chatToolbarConfig, oldIndex, newIndex)
+      // 更新 order
+      const updatedItems = newItems.map((item, index) => ({
+        ...item,
+        order: index
+      }))
+      // 保存配置
+      setChatToolbarConfig(updatedItems)
+    }
+  }
+
   useEffect(() => {
     if (!primaryModel) {
       setPlaceholder(t('record.chat.input.placeholder.noPrimaryModel'))
@@ -252,40 +297,69 @@ export function ChatInput() {
           {/* 右侧渐变遮罩 */}
           <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none md:hidden" />
           
-          {/* 可滑动的按钮容器 */}
-          <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible">
-            {chatToolbarConfig
-              .filter(item => item.enabled)
-              .sort((a, b) => a.order - b.order)
-              .map(item => {
-                switch (item.id) {
-                  case 'modelSelect':
-                    return <ModelSelect key={item.id} />
-                  case 'promptSelect':
-                    return <PromptSelect key={item.id} />
-                  case 'chatLanguage':
-                    return <ChatLanguage key={item.id} />
-                  case 'chatLink':
-                    return <ChatLink key={item.id} inputType={inputType} />
-                  case 'fileLink':
-                    return <FileLink key={item.id} onFileLinkClick={openFileSelector} disabled={!primaryModel || loading} />
-                  case 'mcpButton':
-                    return <McpButton key={item.id} />
-                  case 'ragSwitch':
-                    return <RagSwitch key={item.id} />
-                  case 'chatPlaceholder':
-                    return <ChatPlaceholder key={item.id} />
-                  case 'clipboardMonitor':
-                    return <ClipboardMonitor key={item.id} />
-                  case 'clearContext':
-                    return <ClearContext key={item.id} />
-                  case 'clearChat':
-                    return <ClearChat key={item.id} />
-                  default:
-                    return null
-                }
-              })}
-          </div>
+          {/* 可拖拽排序的按钮容器（桌面端）或普通容器（移动端） */}
+          {!isMobile ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={chatToolbarConfig.filter(item => item.enabled).map(item => item.id)}
+                strategy={horizontalListSortingStrategy}
+              >
+                <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible">
+                  {chatToolbarConfig
+                    .filter(item => item.enabled)
+                    .sort((a, b) => a.order - b.order)
+                    .map(item => (
+                      <SortableToolbarItem
+                        key={item.id}
+                        id={item.id}
+                        inputType={inputType}
+                        openFileSelector={openFileSelector}
+                        primaryModel={primaryModel}
+                        loading={loading}
+                      />
+                    ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible">
+              {chatToolbarConfig
+                .filter(item => item.enabled)
+                .sort((a, b) => a.order - b.order)
+                .map(item => {
+                  switch (item.id) {
+                    case 'modelSelect':
+                      return <ModelSelect key={item.id} />
+                    case 'promptSelect':
+                      return <PromptSelect key={item.id} />
+                    case 'chatLanguage':
+                      return <ChatLanguage key={item.id} />
+                    case 'chatLink':
+                      return <ChatLink key={item.id} inputType={inputType} />
+                    case 'fileLink':
+                      return <FileLink key={item.id} onFileLinkClick={openFileSelector} disabled={!primaryModel || loading} />
+                    case 'mcpButton':
+                      return <McpButton key={item.id} />
+                    case 'ragSwitch':
+                      return <RagSwitch key={item.id} />
+                    case 'chatPlaceholder':
+                      return <ChatPlaceholder key={item.id} />
+                    case 'clipboardMonitor':
+                      return <ClipboardMonitor key={item.id} />
+                    case 'clearContext':
+                      return <ClearContext key={item.id} />
+                    case 'clearChat':
+                      return <ClearChat key={item.id} />
+                    default:
+                      return null
+                  }
+                })}
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-end gap-2 pr-1">
           <InputModeSelect value={inputType || 'chat'} onChange={inputTypeChangeHandler} />
@@ -308,5 +382,79 @@ export function ChatInput() {
         onClose={() => setShowFileSelector(false)}
       />
     </footer>
+  )
+}
+
+// 可排序的工具栏项组件
+interface SortableToolbarItemProps {
+  id: string
+  inputType: string | undefined
+  openFileSelector: () => void
+  primaryModel: string | undefined
+  loading: boolean
+}
+
+function SortableToolbarItem({ 
+  id, 
+  inputType, 
+  openFileSelector, 
+  primaryModel, 
+  loading 
+}: SortableToolbarItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  // 渲染对应的工具栏组件
+  const renderToolbarItem = () => {
+    switch (id) {
+      case 'modelSelect':
+        return <ModelSelect />
+      case 'promptSelect':
+        return <PromptSelect />
+      case 'chatLanguage':
+        return <ChatLanguage />
+      case 'chatLink':
+        return <ChatLink inputType={inputType} />
+      case 'fileLink':
+        return <FileLink onFileLinkClick={openFileSelector} disabled={!primaryModel || loading} />
+      case 'mcpButton':
+        return <McpButton />
+      case 'ragSwitch':
+        return <RagSwitch />
+      case 'chatPlaceholder':
+        return <ChatPlaceholder />
+      case 'clipboardMonitor':
+        return <ClipboardMonitor />
+      case 'clearContext':
+        return <ClearContext />
+      case 'clearChat':
+        return <ClearChat />
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing"
+    >
+      {renderToolbarItem()}
+    </div>
   )
 }
