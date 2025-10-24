@@ -59,6 +59,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
     "cropperjs": "1",
+    "crypto-js": "^4.2.0",
     "dayjs": "^1.11.13",
     "diff": "^7.0.0",
     "embla-carousel-react": "^8.6.0",
@@ -96,6 +97,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": ">=2.0.0",
+    "@types/crypto-js": "^4.2.2",
     "@types/diff": "^6.0.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^20",

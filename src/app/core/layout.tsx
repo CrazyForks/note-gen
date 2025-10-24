@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation"
 import initShowWindow from "@/lib/shortcut/show-window"
 import { initMcp } from "@/lib/mcp/init"
 import { SearchDialog } from "@/components/search-dialog"
+import { reportAppStart } from "@/lib/event-report"
 
 export default function RootLayout({
   children,
@@ -41,6 +42,8 @@ export default function RootLayout({
     initQuickRecordText(router)
     initShowWindow()
     initMcp()
+    // 上报应用启动事件
+    reportAppStart()
   }, [])
 
   // 应用界面缩放
