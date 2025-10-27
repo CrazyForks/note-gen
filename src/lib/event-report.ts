@@ -7,6 +7,7 @@ import CryptoJS from 'crypto-js'
 import { arch, platform } from '@tauri-apps/plugin-os'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { getVersion } from '@tauri-apps/api/app'
+import { invoke } from '@tauri-apps/api/core'
 
 // 配置常量
 const API_CONFIG = {
@@ -122,22 +123,40 @@ async function getVersionCode(): Promise<number> {
 }
 
 /**
+ * 获取设备唯一标识
+ * - 桌面端：使用硬件唯一标识（machine-uid）
+ * - 移动端：使用 UUID 并持久化存储（应用卸载后会重置）
+ */
+async function getDeviceId(): Promise<string | undefined> {
+  try {
+    const deviceId = await invoke<string>('get_device_id')
+    return deviceId
+  } catch (error) {
+    console.error('Failed to get device ID:', error)
+    return undefined
+  }
+}
+
+/**
  * 获取设备信息
  */
 async function getDeviceInfo() {
   try {
     const targetPlatform = await platform()
     const archInfo = await arch()
+    const deviceId = await getDeviceId()
     
     return {
       target: targetPlatform,
       arch: archInfo,
+      devKey: deviceId,
     }
   } catch (error) {
     console.error('Failed to get device info:', error)
     return {
       target: undefined,
       arch: undefined,
+      devKey: undefined,
     }
   }
 }
@@ -209,6 +228,7 @@ export async function reportAppStart(): Promise<boolean> {
     const eventData: AppStartEventData = {
       launchTime,
       versionCode,
+      devKey: deviceInfo.devKey,
       target: deviceInfo.target,
       arch: deviceInfo.arch,
     }
@@ -237,6 +257,7 @@ export async function reportAppUpgradeDownload(
       downloadVersionCode,
       code,
       versionCode,
+      devKey: deviceInfo.devKey,
       target: deviceInfo.target,
       arch: deviceInfo.arch,
     }
@@ -263,6 +284,7 @@ export async function reportAppUpgradeUpgrade(
       upgradeVersionCode,
       code,
       versionCode,
+      devKey: deviceInfo.devKey,
       target: deviceInfo.target,
       arch: deviceInfo.arch,
     }

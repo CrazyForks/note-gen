@@ -10,6 +10,7 @@ mod window;
 mod app_setup;
 mod backup;
 mod mcp;
+mod device;
 
 use screenshot::{screenshot};
 use webdav::{webdav_backup, webdav_sync, webdav_test, webdav_create_dir};
@@ -17,6 +18,7 @@ use fuzzy_search::{fuzzy_search, fuzzy_search_parallel};
 use keywords::{rank_keywords};
 use backup::{export_app_data, import_app_data};
 use mcp::{start_mcp_stdio_server, stop_mcp_server, send_mcp_message, McpServerManager};
+use device::get_device_id;
 use tauri::RunEvent;
 
 fn main() {
@@ -61,6 +63,7 @@ fn main() {
             start_mcp_stdio_server,
             stop_mcp_server,
             send_mcp_message,
+            get_device_id,
         ])
         
         // 应用设置 - 在所有插件和命令注册后

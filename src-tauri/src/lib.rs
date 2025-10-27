@@ -1,8 +1,10 @@
 mod webdav;
 mod mcp;
+mod device;
 
 use webdav::{webdav_backup, webdav_create_dir, webdav_sync, webdav_test};
 use mcp::{start_mcp_stdio_server, stop_mcp_server, send_mcp_message, McpServerManager};
+use device::get_device_id;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -23,6 +25,7 @@ pub fn run() {
             start_mcp_stdio_server,
             stop_mcp_server,
             send_mcp_message,
+            get_device_id,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
