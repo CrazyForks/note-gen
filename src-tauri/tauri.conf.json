@@ -45,15 +45,6 @@
     ],
     "iOS": {
       "bundleVersion": "0.22.2"
-    },
-    "macOS": {
-      "frameworks": [],
-      "minimumSystemVersion": "",
-      "exceptionDomain": "",
-      "entitlements": null,
-      "providerShortName": null,
-      "signingIdentity": null,
-      "hardenedRuntime": true
     }
   },
   "plugins": {
