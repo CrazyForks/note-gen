@@ -1,5 +1,3 @@
-[![](https://s2.loli.net/2025/09/16/efymQrKu8obaswx.png)](https://skywork.ai/p/bY47ky)
-
 # NoteGen
 
 ![](https://img.shields.io/badge/free-pricing?logo=free&color=%20%23155EEF&label=pricing&labelColor=%20%23528bff)
@@ -41,7 +39,7 @@ NoteGen is a cross-platform `Markdown` note-taking application dedicated to usin
 | ![Windows](https://img.shields.io/badge/Windows-0078D4?logo=windows&logoColor=white&style=for-the-badge) | ![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white&style=for-the-badge) | ![Linux](https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black&style=for-the-badge) | ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white&style=for-the-badge) | ![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white&style=for-the-badge) |
 | --- | --- | --- | --- | --- |
 | ✅ beta | ✅ beta | ✅ beta | 🛠️ alpha | 🛠️ alpha |
-| [Download](https://download.upgrade.toolsetlink.com/download?appKey=tyEi-iLVFxnRhGc9c_xApw) | [Download](https://download.upgrade.toolsetlink.com/download?appKey=tyEi-iLVFxnRhGc9c_xApw) | [Download](https://download.upgrade.toolsetlink.com/download?appKey=tyEi-iLVFxnRhGc9c_xApw) | [Download](https://download.upgrade.toolsetlink.com/download?appKey=9YXz-aEnn4cdwNkB2nqPww) | [TestFlight](https://testflight.apple.com/join/8KjFRTCq) |
+| [Download](https://notegen.top/en/docs/download#desktop-beta) | [Download](https://notegen.top/en/docs/download#desktop-beta) | [Download](https://notegen.top/en/docs/download#desktop-beta) | [Download](https://notegen.top/en/docs/download#android) | [TestFlight](https://testflight.apple.com/join/8KjFRTCq) |
 
 > [UpgradeLink offers application upgrade and download services](http://upgrade.toolsetlink.com/upgrade/example/tauri-example.html)
 
