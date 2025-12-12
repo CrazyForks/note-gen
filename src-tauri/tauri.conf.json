@@ -12,22 +12,23 @@
   "app": {
     "withGlobalTauri": true,
     "macOSPrivateApi": true,
-    "windows": [
-      {
-        "title": "NoteGen",
-        "label": "main",
-        "width": 1360,
-        "height": 720,
-        "dragDropEnabled": false
-      }
-    ],
     "security": {
       "csp": null,
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
       }
-    }
+    },
+    "windows": [
+      {
+        "title": "",
+        "label": "main",
+        "width": 1360,
+        "height": 720,
+        "dragDropEnabled": false,
+        "titleBarStyle": "Overlay"
+      }
+    ]
   },
   "bundle": {
     "active": true,

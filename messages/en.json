@@ -1200,7 +1200,13 @@
     "loading": "Loading",
     "view": "View",
     "logout": "Logout",
-    "setting": "Setting"
+    "setting": "Settings",
+    "files": "Notes",
+    "hideLeftSidebar": "Hide Left Sidebar",
+    "showLeftSidebar": "Show Left Sidebar",
+    "hideRightSidebar": "Hide Right Sidebar",
+    "showRightSidebar": "Show Right Sidebar",
+    "searchPlaceholder": "Search notes or records..."
   },
   "marks": {
     "types": {
