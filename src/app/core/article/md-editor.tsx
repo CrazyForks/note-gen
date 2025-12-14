@@ -24,11 +24,14 @@ import useSettingStore from '@/stores/setting'
 import { uploadImage } from '@/lib/imageHosting'
 import FloatBar from './floatbar'
 import { createToolbarConfig } from './toolbar.config'
+import { delMark } from '@/db/marks'
+import useMarkStore from '@/stores/mark'
 
 export function MdEditor() {
   const [editor, setEditor] = useState<Vditor>();
   const { currentArticle, saveCurrentArticle, loading, activeFilePath, matchPosition, setMatchPosition } = useArticleStore()
   const { assetsPath, contentTextScale } = useSettingStore()
+  const { fetchMarks } = useMarkStore()
   const [floatBarPosition, setFloatBarPosition] = useState<{left: number, top: number} | null>(null)
   const [selectedText, setSelectedText] = useState<string>('')
   const [editorWidth, setEditorWidth] = useState<number>(0)
@@ -36,6 +39,7 @@ export function MdEditor() {
   const t = useTranslations('article.editor')
   const { currentLocale } = useI18n()
   const [localMode, setLocalMode] = useLocalStorage<'ir' | 'sv' | 'wysiwyg'>('useLocalMode', 'ir')
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
 
   function getLang() {
     switch (currentLocale) {
@@ -558,9 +562,123 @@ export function MdEditor() {
     }
   }, [contentTextScale, editor])
 
-  return <div id="article-editor" className='flex-1 relative w-full h-full flex flex-col overflow-hidden dark:bg-zinc-950'>
+  // 处理拖放事件
+  useEffect(() => {
+    if (!editor) return
+
+    const editorContainer = document.getElementById('article-editor')
+    if (!editorContainer) return
+
+    const handleDragOver = (e: DragEvent) => {
+      // 检查是否是从记录拖拽过来的
+      if (e.dataTransfer?.types.includes('text/plain')) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.dataTransfer.dropEffect = 'copy'
+        setIsDraggingOver(true)
+        
+        // 聚焦编辑器并根据鼠标位置设置光标
+        if (editor) {
+          editor.focus()
+          
+          // 尝试根据鼠标位置设置光标
+          // Vditor 使用 CodeMirror 或其他编辑器，需要找到对应的编辑区域
+          const vditorElement = editor.vditor.element
+          const editArea = vditorElement?.querySelector('.vditor-ir__marker, .vditor-wysiwyg, .vditor-sv') as HTMLElement
+          
+          if (editArea) {
+            // 使用 document.caretPositionFromPoint 或 document.caretRangeFromPoint
+            let range: Range | null = null
+            
+            if (document.caretRangeFromPoint) {
+              range = document.caretRangeFromPoint(e.clientX, e.clientY)
+            } else if ((document as any).caretPositionFromPoint) {
+              const position = (document as any).caretPositionFromPoint(e.clientX, e.clientY)
+              if (position) {
+                range = document.createRange()
+                range.setStart(position.offsetNode, position.offset)
+              }
+            }
+            
+            if (range) {
+              const selection = window.getSelection()
+              if (selection) {
+                selection.removeAllRanges()
+                selection.addRange(range)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const handleDragLeave = (e: DragEvent) => {
+      // 只有当离开整个编辑器容器时才清除状态
+      const rect = editorContainer.getBoundingClientRect()
+      if (
+        e.clientX < rect.left ||
+        e.clientX >= rect.right ||
+        e.clientY < rect.top ||
+        e.clientY >= rect.bottom
+      ) {
+        setIsDraggingOver(false)
+      }
+    }
+
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDraggingOver(false)
+
+      if (!e.dataTransfer) return
+
+      // 获取拖放的文本内容和记录信息
+      const markdownContent = e.dataTransfer.getData('text/plain')
+      const markJson = e.dataTransfer.getData('application/json')
+      
+      if (markdownContent && editor) {
+        // 光标位置已经在 dragover 时设置好了，直接插入内容
+        // 不添加换行，允许插入到文本中间
+        editor.insertValue(markdownContent)
+        editor.focus()
+        
+        // 插入成功后删除记录
+        if (markJson) {
+          try {
+            const mark = JSON.parse(markJson)
+            if (mark.id) {
+              await delMark(mark.id)
+              // 刷新记录列表
+              await fetchMarks()
+            }
+          } catch (error) {
+            console.error('Failed to delete mark:', error)
+          }
+        }
+      }
+    }
+
+    editorContainer.addEventListener('dragover', handleDragOver)
+    editorContainer.addEventListener('dragleave', handleDragLeave)
+    editorContainer.addEventListener('drop', handleDrop)
+
+    return () => {
+      editorContainer.removeEventListener('dragover', handleDragOver)
+      editorContainer.removeEventListener('dragleave', handleDragLeave)
+      editorContainer.removeEventListener('drop', handleDrop)
+    }
+  }, [editor])
+
+  return <div 
+    id="article-editor" 
+    className={`flex-1 relative w-full h-full flex flex-col overflow-hidden dark:bg-zinc-950 transition-all ${isDraggingOver ? 'bg-accent/20' : ''}`}
+  >
     <CustomToolbar editor={editor} />
-    <div id="aritcle-md-editor" className='flex-1' style={{minWidth: 0}}></div>
+    <div 
+      id="aritcle-md-editor" 
+      className="flex-1"
+      style={{minWidth: 0}}
+    ></div>
     <CustomFooter editor={editor} />
     <FloatBar left={floatBarPosition?.left} top={floatBarPosition?.top} value={selectedText} editor={editor} />
   </div>
