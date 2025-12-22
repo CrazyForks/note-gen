@@ -2,7 +2,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuSeparator, ContextMenuTrigg
 import { Input } from "@/components/ui/input";
 import useArticleStore, { DirTree } from "@/stores/article";
 import { BaseDirectory, exists, mkdir, rename } from "@tauri-apps/plugin-fs";
-import { ChevronRight, Cloud, Folder, FolderDot, FolderDown, FolderOpen, FolderOpenDot } from "lucide-react"
+import { ChevronRight, Cloud, Folder, FolderDot, FolderDown, FolderOpen, FolderOpenDot, Loader2 } from "lucide-react"
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
@@ -381,13 +381,15 @@ export function FolderItem({ item }: { item: DirTree }) {
                 >
                   <div className="flex flex-1 gap-1 select-none relative">
                     <div className="relative">
-                      {collapsibleList.includes(path) ? 
+                      {item.loading ? (
+                        <Loader2 className="size-4 animate-spin text-primary" />
+                      ) : collapsibleList.includes(path) ? 
                         (assetsPath === item.name ? <FolderOpenDot className="size-4" /> : <FolderOpen className="size-4" />) :
                         (assetsPath === item.name ? <FolderDot className="size-4" /> : <Folder className="size-4" />)
                       }
-                      {item.sha && item.isLocale && <Cloud className="size-2.5 absolute left-0 bottom-0 z-10 bg-primary-foreground" />}
+                      {!item.loading && item.sha && item.isLocale && <Cloud className="size-2.5 absolute left-0 bottom-0 z-10 bg-primary-foreground" />}
                     </div>
-                    <span className="text-xs line-clamp-1">{item.name}</span>
+                    <span className={`text-xs line-clamp-1 ${item.loading ? 'text-muted-foreground' : ''}`}>{item.name}</span>
                   </div>
                   {isMobile && (
                     <MobileActionMenu className="ml-1">
