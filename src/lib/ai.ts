@@ -397,8 +397,8 @@ async function prepareMessages(text: string, includeLanguage = false): Promise<{
   
   if (includeLanguage) {
     const store = await Store.load('store.json')
-    const chatLanguage = await store.get<string>('chatLanguage') || 'en'
-    promptContent += '\n\n' + `Use **${chatLanguage}** to answer.`
+    const chatLanguage = await store.get<string>('chatLanguage') || 'English'
+    promptContent += '\n\n' + `IMPORTANT: You MUST respond in ${chatLanguage} language. Do NOT use any other language under any circumstances.`
   }
   
   // 定义消息数组
@@ -855,15 +855,15 @@ export async function fetchAiDesc(text: string) {
     // 获取AI设置
     const aiConfig = await getAISettings('markDescModel')
     
-    const descContent = `根据截图的内容：${text}，返回一条描述，不要超过50字，不要包含特殊字符。`
+    const descContent = `Based on the screenshot content: ${text}, return a description. Keep it under 50 characters and avoid special characters.`
+    
+    // 准备消息（包含语言设置）
+    const { messages } = await prepareMessages(descContent, true)
     
     const openai = await createOpenAIClient(aiConfig)
     const completion = await openai.chat.completions.create({
       model: aiConfig?.model || '',
-      messages: [{
-        role: 'user' as const,
-        content: descContent
-      }],
+      messages: messages,
       temperature: aiConfig?.temperature || 1,
       top_p: aiConfig?.topP || 1,
     })
@@ -880,26 +880,52 @@ export async function fetchAiDescByImage(base64: string) {
     // 获取AI设置
     const aiConfig = await getAISettings('imageMethodModel')
 
-    const descContent = `根据截图的内容，返回一条描述。`
+    const descContent = `Based on the screenshot content, return a description.`
+    
+    // 获取语言设置
+    const store = await Store.load('store.json')
+    const chatLanguage = await store.get<string>('chatLanguage') || 'English'
+    const languageInstruction = `IMPORTANT: You MUST respond in ${chatLanguage} language. Do NOT use any other language under any circumstances.`
+    
+    // 获取prompt内容
+    let promptContent = await getPromptContent()
+    if (promptContent) {
+      promptContent += '\n\n' + languageInstruction
+    } else {
+      promptContent = languageInstruction
+    }
     
     const openai = await createOpenAIClient(aiConfig)
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = []
+    
+    // 如果有系统提示，先添加
+    if (promptContent) {
+      messages.push({
+        role: 'system',
+        content: promptContent
+      })
+    }
+    
+    // 添加用户消息（包含图片）
+    messages.push({
+      role: 'user' as const,
+      content: [
+        {
+          type: 'image_url',
+          image_url: {
+            url: base64
+          }
+        },
+        {
+          type: 'text',
+          text: descContent
+        }
+      ]
+    })
+    
     const completion = await openai.chat.completions.create({
       model: aiConfig?.model || '',
-      messages: [{
-        role: 'user' as const,
-        content: [
-          {
-            type: 'image_url',
-            image_url: {
-              url: base64
-            }
-          },
-          {
-            type: 'text',
-            text: descContent
-          }
-        ]
-      }],
+      messages: messages,
       temperature: aiConfig?.temperature || 1,
       top_p: aiConfig?.topP || 1,
     })
@@ -934,7 +960,7 @@ export async function fetchAiPlaceholder(text: string): Promise<string | false> 
       ${text}`
 
     // 准备消息
-    const { messages } = await prepareMessages(placeholderPrompt, false)
+    const { messages } = await prepareMessages(placeholderPrompt, true)
     
     const openai = await createOpenAIClient(aiConfig)
       

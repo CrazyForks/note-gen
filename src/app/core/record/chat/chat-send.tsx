@@ -228,7 +228,6 @@ ${ragContext}
     }
 
     const request_content = `
-      Use ${locale} language, don't use any other language.
       ${[...scanMarks, ...textMarks, ...imageMarks, ...fileMarks, ...linkMarks].length ? 'You can refer to the following content notes:' : ''}
       ${scanMarks.length ? 'The following are screenshots after using OCR to identify text fragments:' : ''}
       ${scanMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}

@@ -139,7 +139,6 @@ export function ChatInput() {
     const lastClearIndex = chats.findLastIndex(item => item.type === 'clear')
     const chatsAfterClear = chats.slice(lastClearIndex + 1)
     const request_content = `
-      Use ${locale} language, don't use any other language.
       ${[...scanMarks, ...textMarks, ...imageMarks, ...fileMarks, ...linkMarks]
         .slice(0, 5)
         .map(item => item.content?.replace(/<thinking>[\s\S]*?<thinking>/g, '').slice(0, 60))
