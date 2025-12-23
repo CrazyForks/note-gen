@@ -45,7 +45,7 @@ import { CSS } from '@dnd-kit/utilities'
 export function ChatInput() {
   const [text, setText] = useState("")
   const { primaryModel, chatToolbarConfigPc, setChatToolbarConfigPc, chatToolbarConfigMobile } = useSettingStore()
-  const { chats, loading, locale, isLinkMark, isPlaceholderEnabled } = useChatStore()
+  const { chats, loading, isLinkMark, isPlaceholderEnabled } = useChatStore()
   const [showFileSelector, setShowFileSelector] = useState(false)
   const { marks, trashState } = useMarkStore()
   const [isComposing, setIsComposing] = useState(false)

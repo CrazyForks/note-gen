@@ -238,9 +238,8 @@ const useArticleStore = create<NoteState>((set, get) => ({
           }
           entry.createdAt = fileStat.birthtime?.toISOString()
           entry.modifiedAt = fileStat.mtime?.toISOString()
-        } catch (error) {
+        } catch {
           // 静默失败，不阻塞排序功能
-          // console.error(`Error getting stats for ${filePath}:`, error)
         }
       } else if (entry.isDirectory && entry.children) {
         const dirPath = await join(basePath, entry.name)
@@ -351,7 +350,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
           const pathOptions = await getFilePathOptions(dirRelative)
           dirExists = await exists(pathOptions.path, { baseDir: pathOptions.baseDir })
         }
-      } catch (error) {
+      } catch {
         dirExists = false
       }
       
@@ -462,7 +461,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
           const pathOptions = await getFilePathOptions(dirRelative)
           dirExists = await exists(pathOptions.path, { baseDir: pathOptions.baseDir })
         }
-      } catch (error) {
+      } catch {
         dirExists = false
       }
       
@@ -602,7 +601,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
         const pathOptions = await getFilePathOptions(dirRelative)
         dirExists = await exists(pathOptions.path, { baseDir: pathOptions.baseDir })
       }
-    } catch (error) {
+    } catch {
       dirExists = false
     }
     
@@ -1132,7 +1131,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
                 } else {
                   parentExists = await exists(parentOptions.path, { baseDir: parentOptions.baseDir })
                 }
-              } catch (error) {
+              } catch {
                 parentExists = false
               }
               
