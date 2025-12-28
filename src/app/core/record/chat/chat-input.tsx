@@ -5,10 +5,12 @@ import useSettingStore from "@/stores/setting"
 import { Textarea } from "@/components/ui/textarea"
 import useChatStore from "@/stores/chat"
 import useMarkStore from "@/stores/mark"
+import useArticleStore from "@/stores/article"
 import { fetchAiPlaceholder } from "@/lib/ai"
 import { useTranslations } from 'next-intl'
 import { useLocalStorage } from 'react-use';
 import { ModelSelect } from "./model-select"
+import { getWorkspacePath } from "@/lib/workspace"
 import { PromptSelect } from "./prompt-select"
 import { ChatLanguage } from "./chat-language"
 import { ChatSend } from "./chat-send"
@@ -48,6 +50,7 @@ export function ChatInput() {
   const { chats, loading, isLinkMark, isPlaceholderEnabled } = useChatStore()
   const [showFileSelector, setShowFileSelector] = useState(false)
   const { marks, trashState } = useMarkStore()
+  const { activeFilePath } = useArticleStore()
   const [isComposing, setIsComposing] = useState(false)
   const [placeholder, setPlaceholder] = useState('')
   const t = useTranslations()
@@ -220,142 +223,173 @@ export function ChatInput() {
     }
   }, [])
 
-  return (
-    <footer className="relative flex flex-col border rounded-xl p-2 gap-2 mb-2 md:w-[calc(100%-1rem)] w-full">
-      <div className="relative w-full flex items-start">
-        <Textarea
-          className="flex-1 p-2 relative border-none text-xs placeholder:text-xs md:placeholder:text-sm md:text-sm focus-visible:ring-0 shadow-none min-h-[36px] max-h-[240px] resize-none overflow-y-auto"
-          rows={1}
-          disabled={!primaryModel || loading}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value)
-            const textarea = e.target
-            textarea.style.height = 'auto'
-            const newHeight = Math.min(textarea.scrollHeight, 240)
-            textarea.style.height = `${newHeight}px`
-          }}
-          placeholder={placeholder}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !isComposing && !e.shiftKey && e.keyCode === 13) {
-              e.preventDefault()
-              chatSendRef.current?.sendChat()
-            }
-            if (e.key === "Tab") {
-              e.preventDefault()
-              insertPlaceholder()
-            }
-            if (e.key === "ArrowUp" && !isComposing) {
-              e.preventDefault()
-              navigateHistory('up')
-            }
-            if (e.key === "ArrowDown" && !isComposing) {
-              e.preventDefault()
-              navigateHistory('down')
-            }
-            if (e.key === "Backspace") {
-              if (text === '') {
-                setPlaceholder(t('record.chat.input.placeholder.default'))
-              }
-            }
-          }}
-          onCompositionStart={() => setIsComposing(true)}
-          onCompositionEnd={() => setTimeout(() => {
-            setIsComposing(false)
-          }, 0)}
-        />
-      </div>
+  // 自动关联当前打开的 markdown 文件
+  useEffect(() => {
+    async function linkCurrentFile() {
+      if (activeFilePath && activeFilePath.endsWith('.md')) {
+        const workspace = await getWorkspacePath()
+        const fileName = activeFilePath.split('/').pop() || activeFilePath
+        
+        // 构建完整路径
+        let fullPath: string
+        if (workspace.isCustom) {
+          const pathParts = activeFilePath.split('/')
+          fullPath = workspace.path + '/' + pathParts.join('/')
+        } else {
+          fullPath = activeFilePath
+        }
+        
+        setLinkedFile({
+          name: fileName,
+          path: fullPath,
+          relativePath: activeFilePath
+        })
+      } else {
+        // 如果没有打开的文件，清除关联
+        setLinkedFile(null)
+      }
+    }
+    
+    linkCurrentFile()
+  }, [activeFilePath])
 
+  return (
+    <footer className="flex flex-col w-full p-1 justify-between items-center">
       <LinkedFileDisplay
         linkedFile={linkedFile}
         onFileRemove={removeLinkedFile}
       />
-      
-      <div className="flex justify-between items-center w-full">
-        <div className="relative flex-1 overflow-x-auto mr-6 px-2 -translate-x-2">
-          {/* 左侧渐变遮罩 */}
-          <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none md:hidden" />
-          
-          {/* 右侧渐变遮罩 */}
-          <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none md:hidden" />
-          
-          {/* 可拖拽排序的按钮容器（桌面端）或普通容器（移动端） */}
-          {!isMobile ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={chatToolbarConfigPc.filter(item => ['modelSelect', 'promptSelect', 'chatLanguage'].includes(item.id) && item.enabled).map(item => item.id)}
-                strategy={horizontalListSortingStrategy}
+      <div className="group relative flex flex-col border rounded-xl z-10 gap-2 p-1 w-full bg-background focus-within:border-primary transition-colors">
+        <div className="relative w-full flex items-start">
+          <Textarea
+            className="flex-1 p-2 relative border-none text-xs placeholder:text-xs md:placeholder:text-sm md:text-sm focus-visible:ring-0 shadow-none min-h-[36px] max-h-[240px] resize-none overflow-y-auto"
+            rows={1}
+            disabled={!primaryModel || loading}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value)
+              const textarea = e.target
+              textarea.style.height = 'auto'
+              const newHeight = Math.min(textarea.scrollHeight, 240)
+              textarea.style.height = `${newHeight}px`
+            }}
+            placeholder={placeholder}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !isComposing && !e.shiftKey && e.keyCode === 13) {
+                e.preventDefault()
+                chatSendRef.current?.sendChat()
+              }
+              if (e.key === "Tab") {
+                e.preventDefault()
+                insertPlaceholder()
+              }
+              if (e.key === "ArrowUp" && !isComposing) {
+                e.preventDefault()
+                navigateHistory('up')
+              }
+              if (e.key === "ArrowDown" && !isComposing) {
+                e.preventDefault()
+                navigateHistory('down')
+              }
+              if (e.key === "Backspace") {
+                if (text === '') {
+                  setPlaceholder(t('record.chat.input.placeholder.default'))
+                }
+              }
+            }}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setTimeout(() => {
+              setIsComposing(false)
+            }, 0)}
+          />
+        </div>
+        
+        <div className="flex justify-between items-center w-full">
+          <div className="relative flex-1 overflow-x-auto mr-6 px-2 -translate-x-2">
+            {/* 左侧渐变遮罩 */}
+            <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none md:hidden" />
+            
+            {/* 右侧渐变遮罩 */}
+            <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none md:hidden" />
+            
+            {/* 可拖拽排序的按钮容器（桌面端）或普通容器（移动端） */}
+            {!isMobile ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible">
-                  {chatToolbarConfigPc
-                    .filter(item => ['modelSelect', 'promptSelect', 'chatLanguage'].includes(item.id) && item.enabled)
-                    .sort((a, b) => a.order - b.order)
-                    .map(item => (
-                      <SortableToolbarItem
-                        key={item.id}
-                        id={item.id}
-                      />
-                    ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible gap-1">
-              {chatToolbarConfigMobile
-                .filter(item => item.enabled)
-                .sort((a, b) => a.order - b.order)
-                .map(item => {
-                  switch (item.id) {
-                    case 'modelSelect':
-                      return <ModelSelect key={item.id} />
-                    case 'promptSelect':
-                      return <PromptSelect key={item.id} />
-                    case 'chatLanguage':
-                      return <ChatLanguage key={item.id} />
-                    case 'chatLink':
-                      return <ChatLink key={item.id} />
-                    case 'fileLink':
-                      return <FileLink key={item.id} onFileLinkClick={() => setShowFileSelector(true)} disabled={!primaryModel || loading} />
-                    case 'mcpButton':
-                      return <McpButton key={item.id} />
-                    case 'ragSwitch':
-                      return <RagSwitch key={item.id} />
-                    case 'chatPlaceholder':
-                      return <ChatPlaceholder key={item.id} />
-                    case 'clipboardMonitor':
-                      return <ClipboardMonitor key={item.id} />
-                    case 'clearContext':
-                      return <ClearContext key={item.id} />
-                    case 'clearChat':
-                      return <ClearChat key={item.id} />
-                    default:
-                      return null
-                  }
-                })}
-            </div>
-          )}
+                <SortableContext
+                  items={chatToolbarConfigPc.filter(item => ['modelSelect', 'promptSelect', 'chatLanguage'].includes(item.id) && item.enabled).map(item => item.id)}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible">
+                    {chatToolbarConfigPc
+                      .filter(item => ['modelSelect', 'promptSelect', 'chatLanguage'].includes(item.id) && item.enabled)
+                      .sort((a, b) => a.order - b.order)
+                      .map(item => (
+                        <SortableToolbarItem
+                          key={item.id}
+                          id={item.id}
+                        />
+                      ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="flex overflow-x-auto scrollbar-hide md:overflow-visible gap-1">
+                {chatToolbarConfigMobile
+                  .filter(item => item.enabled)
+                  .sort((a, b) => a.order - b.order)
+                  .map(item => {
+                    switch (item.id) {
+                      case 'modelSelect':
+                        return <ModelSelect key={item.id} />
+                      case 'promptSelect':
+                        return <PromptSelect key={item.id} />
+                      case 'chatLanguage':
+                        return <ChatLanguage key={item.id} />
+                      case 'chatLink':
+                        return <ChatLink key={item.id} />
+                      case 'fileLink':
+                        return <FileLink key={item.id} onFileLinkClick={() => setShowFileSelector(true)} disabled={!primaryModel || loading} />
+                      case 'mcpButton':
+                        return <McpButton key={item.id} />
+                      case 'ragSwitch':
+                        return <RagSwitch key={item.id} />
+                      case 'chatPlaceholder':
+                        return <ChatPlaceholder key={item.id} />
+                      case 'clipboardMonitor':
+                        return <ClipboardMonitor key={item.id} />
+                      case 'clearContext':
+                        return <ClearContext key={item.id} />
+                      case 'clearChat':
+                        return <ClearChat key={item.id} />
+                      default:
+                        return null
+                    }
+                  })}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-2 pr-1">
+            <ChatModeSelect />
+            <ChatSend inputValue={text} onSent={handleSent} linkedFile={linkedFile} ref={chatSendRef} />
+          </div>
         </div>
-        <div className="flex items-center justify-end gap-2 pr-1">
-          <ChatModeSelect />
-          <ChatSend inputValue={text} onSent={handleSent} linkedFile={linkedFile} ref={chatSendRef} />
-        </div>
-      </div>
 
-      {/* 文件选择器（移动端） */}
-      {showFileSelector && (
-        <FileSelector
-          isOpen={showFileSelector}
-          onClose={() => setShowFileSelector(false)}
-          onFileSelect={(file) => {
-            setLinkedFile(file)
-            setShowFileSelector(false)
-          }}
-        />
-      )}
+        {/* 文件选择器（移动端） */}
+        {showFileSelector && (
+          <FileSelector
+            isOpen={showFileSelector}
+            onClose={() => setShowFileSelector(false)}
+            onFileSelect={(file) => {
+              setLinkedFile(file)
+              setShowFileSelector(false)
+            }}
+          />
+        )}
+      </div>
     </footer>
   )
 }
