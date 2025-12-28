@@ -10,17 +10,17 @@ import useArticleStore from "@/stores/article";
 
 export default function CustomFooter({editor}: {editor?: Vditor}) {
   const { activeFilePath } = useArticleStore()
-  return activeFilePath && <div className="h-6 w-full px-2 border-t shadow-sm items-center flex justify-between overflow-hidden">
+  return <div className="h-6 w-full px-2 border-t shadow-sm items-center flex justify-between overflow-hidden">
     <div className="flex items-center gap-1">
-      <TextNumber />
-      <Copy editor={editor} />
-      <Export editor={editor} />
+      {activeFilePath && <TextNumber />}
+      <Copy editor={editor} disabled={!activeFilePath} />
+      <Export editor={editor} disabled={!activeFilePath} />
     </div>
     <div className="flex items-center gap-1">
       <VectorCalc />
       <PrimarySync />
-      <History editor={editor} />
-      <Sync editor={editor} />
+      <History editor={editor} disabled={!activeFilePath} />
+      <Sync editor={editor} disabled={!activeFilePath} />
     </div>
   </div>
 }

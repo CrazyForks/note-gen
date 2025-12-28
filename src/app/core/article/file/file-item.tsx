@@ -107,8 +107,14 @@ export function FileItem({ item }: { item: DirTree }) {
       const url = await convertImageByWorkspace(path)
       setImageUrl(url)
     } else {
-      setActiveFilePath(computedParentPath(item))
-      readArticle(computedParentPath(item), item.sha, item.isLocale)
+      const currentPath = computedParentPath(item)
+      if (activeFilePath === currentPath) {
+        setActiveFilePath('')
+        setCurrentArticle('')
+      } else {
+        setActiveFilePath(currentPath)
+        readArticle(currentPath, item.sha, item.isLocale)
+      }
     }
   }
 

@@ -24,7 +24,7 @@ import { Store } from "@tauri-apps/plugin-store";
 
 dayjs.extend(relativeTime)
 
-export default function History({editor}: {editor?: Vditor}) {
+export default function History({editor, disabled}: {editor?: Vditor, disabled?: boolean}) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { activeFilePath, setCurrentArticle, currentArticle, loadFileTree, saveCurrentArticle } = useArticleStore()
   const [commits, setCommits] = useState<ResCommit[]>([])
@@ -240,6 +240,8 @@ export default function History({editor}: {editor?: Vditor}) {
   useEffect(() => {
     if (activeFilePath) {
       fetchCommits()
+    } else {
+      setCommits([])
     }
     emitter.on('sync-success', async () => {
       await loadFileTree()
@@ -258,7 +260,7 @@ export default function History({editor}: {editor?: Vditor}) {
             <Button 
               variant="ghost" 
               size="sm" 
-              disabled={commitsLoading} 
+              disabled={commitsLoading || disabled} 
               className="outline-none">
               {
                 commitsLoading && <LoaderCircle className="animate-spin !size-3" />

@@ -19,7 +19,7 @@ import { getFilePathOptions } from "@/lib/workspace";
 import { useTranslations } from "next-intl";
 import useUsername from "@/hooks/use-username";
 
-export default function Sync({editor}: {editor?: Vditor}) {
+export default function Sync({editor, disabled}: {editor?: Vditor, disabled?: boolean}) {
   const { currentArticle } = useArticleStore()
   const { accessToken, giteeAccessToken, gitlabAccessToken, giteaAccessToken, autoSync, giteeAutoSync, gitlabAutoSync, giteaAutoSync, primaryBackupMethod} = useSettingStore()
   const [isLoading, setIsLoading] = useState(false)
@@ -469,7 +469,7 @@ export default function Sync({editor}: {editor?: Vditor}) {
         onClick={handleSync}
         variant="ghost"
         size="sm"
-        disabled={(primaryBackupMethod === 'github' && !accessToken) || (primaryBackupMethod === 'gitee' && !giteeAccessToken) || (primaryBackupMethod === 'gitlab' && !gitlabAccessToken) || (primaryBackupMethod === 'gitea' && !giteaAccessToken) || isLoading}
+        disabled={(primaryBackupMethod === 'github' && !accessToken) || (primaryBackupMethod === 'gitee' && !giteeAccessToken) || (primaryBackupMethod === 'gitlab' && !gitlabAccessToken) || (primaryBackupMethod === 'gitea' && !giteaAccessToken) || isLoading || disabled}
         className="relative outline-none overflow-hidden"
       >
         {/* 进度条背景 */}

@@ -15,7 +15,7 @@ import html2canvas from "html2canvas";
 
 type ExportFormat = "HTML" | "JSON" | "Markdown" | "PDF";
 
-export default function ExportFormatSelector({editor}: {editor?: Vditor}) {
+export default function ExportFormatSelector({editor, disabled}: {editor?: Vditor, disabled?: boolean}) {
 
     const getFileNameFromContent = (content: string): string => {
         const titleMatch = content.match(/^#\s+(.+)$/m);
@@ -173,6 +173,7 @@ export default function ExportFormatSelector({editor}: {editor?: Vditor}) {
             variant="ghost"
             size="icon" 
             className="outline-none"
+            disabled={disabled}
           >
             <SquareArrowOutUpRightIcon className="!size-3" />
           </Button>
