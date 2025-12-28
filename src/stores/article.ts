@@ -581,9 +581,27 @@ const useArticleStore = create<NoteState>((set, get) => ({
       return
     }
     
-    // 设置加载状态
-    currentFolder.loading = true
-    set({ fileTree: [...cacheTree] })
+    // 检查是否配置了云同步
+    const store = await Store.load('store.json');
+    const primaryBackupMethod = await store.get<string>('primaryBackupMethod') || 'github';
+    let hasCloudSync = false
+    
+    if (primaryBackupMethod === 'github') {
+      const accessToken = await store.get<string>('accessToken')
+      hasCloudSync = !!accessToken
+    } else if (primaryBackupMethod === 'gitee') {
+      const giteeAccessToken = await store.get<string>('giteeAccessToken')
+      hasCloudSync = !!giteeAccessToken
+    } else if (primaryBackupMethod === 'gitlab') {
+      const gitlabAccessToken = await store.get<string>('gitlabAccessToken')
+      hasCloudSync = !!gitlabAccessToken
+    }
+    
+    // 只有在配置了云同步时才设置加载状态
+    if (hasCloudSync) {
+      currentFolder.loading = true
+      set({ fileTree: [...cacheTree] })
+    }
     
     // 尝试加载本地子目录内容
     const workspace = await getWorkspacePath()
