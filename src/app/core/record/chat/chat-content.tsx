@@ -1,6 +1,6 @@
 import useChatStore from '@/stores/chat'
 import useTagStore from '@/stores/tag'
-import { ArrowDownToLine, BotMessageSquare, ClipboardCheck, LoaderPinwheel, Undo2, UserRound, X } from 'lucide-react'
+import { ArrowDownToLine, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Chat } from '@/db/chats'
 import ChatPreview from './chat-preview'
@@ -11,13 +11,10 @@ import { ChatClipboard } from './chat-clipboard'
 import MessageControl from './message-control'
 import ChatEmpty from './chat-empty'
 import { useTranslations } from 'next-intl'
-import useSyncStore from '@/stores/sync'
-import { Avatar, AvatarImage } from '@/components/ui/avatar'
 import ChatThinking from './chat-thinking'
 import { Separator } from '@/components/ui/separator'
 import { scrollToBottom } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import emitter from '@/lib/emitter'
 import { RagSources } from './rag-sources'
 import { McpToolCallCard } from './mcp-tool-call'
 import { AgentExecutionStatus } from './agent-execution-status'
@@ -80,39 +77,48 @@ export default function ChatContent() {
 }
 
 function MessageWrapper({ chat, children }: { chat: Chat, children: React.ReactNode }) {
-  const { chats, loading } = useChatStore()
-  const { userInfo } = useSyncStore()
+  const { deleteChat } = useChatStore()
+  const [showDelete, setShowDelete] = useState(false)
 
-  const revertChat = () => {
-    emitter.emit('revertChat', chat.content)
+  const handleDelete = () => {
+    deleteChat(chat.id)
   }
-
-  const index = chats.findIndex(item => item.id === chat.id)
-  return <div className="flex w-full md:gap-4">
-    {
-      chat.role === 'user' ?  
-      <div className="relative">
-        <Avatar className='rounded size-6 items-center justify-center hidden md:flex'>
-          {
-            userInfo?.avatar_url ?
-            <AvatarImage src={userInfo?.avatar_url} /> : <UserRound />
-          }
-        </Avatar>
-        <Button onClick={revertChat} size="icon" className="absolute top-0 right-0 hidden group-hover:flex">
-          <Undo2 />
-        </Button>
-      </div> :
-      <div className='hidden md:flex'>
-        {loading && index === chats.length - 1 && chat.type === 'chat' ?
-          <LoaderPinwheel className="animate-spin" /> :
-          chat.type === 'clipboard' ? <ClipboardCheck /> : <BotMessageSquare />
-        }
+  
+  // 用户消息：右对齐，带边框和背景
+  if (chat.role === 'user') {
+    return (
+      <div className="flex w-full justify-end">
+        <div 
+          className="group relative max-w-[85%] rounded-lg border bg-primary px-3 py-2"
+          onMouseEnter={() => setShowDelete(true)}
+          onMouseLeave={() => setShowDelete(false)}
+        >
+          <div className='text-sm leading-6 break-words text-primary-foreground'>
+            {children}
+          </div>
+          {showDelete && (
+            <Button 
+              onClick={handleDelete} 
+              size="icon" 
+              variant="ghost"
+              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border shadow-sm"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       </div>
-    }
-    <div className='text-sm leading-6 flex-1 break-words'>
-      {children}
+    )
+  }
+  
+  // AI 消息：左对齐，无边框，无图标
+  return (
+    <div className="flex w-full min-w-0">
+      <div className='text-sm leading-6 flex-1 break-words min-w-0 overflow-hidden'>
+        {children}
+      </div>
     </div>
-  </div>
+  )
 }
 
 function AgentExecutionStatusWrapper() {
@@ -124,11 +130,8 @@ function AgentExecutionStatusWrapper() {
   }
 
   return (
-    <div className="flex w-full md:gap-4">
-      <div className='hidden md:flex'>
-        <LoaderPinwheel className="animate-spin" />
-      </div>
-      <div className='text-sm leading-6 flex-1 break-words'>
+    <div className="flex w-full min-w-0">
+      <div className='text-sm leading-6 flex-1 break-words min-w-0 overflow-hidden'>
         <AgentExecutionStatus />
       </div>
     </div>
@@ -226,12 +229,19 @@ function Message({ chat }: { chat: Chat }) {
           {chat.role === 'user' && images.length > 0 && (
             <ChatImages images={images} />
           )}
-          <ChatThinking chat={chat} />
-          <ChatPreview text={content || ''} />
-          {chat.role === 'system' && <RagSources sources={ragSources} />}
-          <MessageControl chat={chat}>
-            {chat.role !== 'user' && <MarkText chat={chat} />}
-          </MessageControl>
+          {chat.role === 'user' && content && (
+            <div className="whitespace-pre-wrap">{content}</div>
+          )}
+          {chat.role === 'system' && (
+            <>
+              <ChatThinking chat={chat} />
+              <ChatPreview text={content || ''} />
+              <RagSources sources={ragSources} />
+              <MessageControl chat={chat}>
+                <MarkText chat={chat} />
+              </MessageControl>
+            </>
+          )}
         </div>
       </MessageWrapper>
   }
