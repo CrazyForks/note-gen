@@ -680,10 +680,10 @@ export async function fetchAiStream(
         continue
       }
       
-      // 处理思考内容
+      // 处理思考内容（显示内容但隐藏标签）
       if (thinkingContent) {
         thinking += thinkingContent
-        fullContent = `<thinking>${thinking}<thinking>`
+        fullContent += thinkingContent  // 显示思考内容，但不显示 <thinking> 标签
       }
       
       // 处理普通内容
@@ -865,10 +865,10 @@ export async function fetchAiStream(
             continue
           }
           
-          // 显示普通内容
+          // 显示普通内容（显示内容但隐藏标签）
           if (thinkingContent) {
             thinking += thinkingContent
-            fullContent = `<thinking>${thinking}<thinking>`
+            fullContent += thinkingContent  // 显示思考内容，但不显示 <thinking> 标签
           }
           if (content) {
             fullContent += content

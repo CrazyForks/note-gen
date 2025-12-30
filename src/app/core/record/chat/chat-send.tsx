@@ -80,16 +80,11 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
     // 每次都创建新的 AgentHandler，使用当前的 placeholderMessage
     const agentHandler = new AgentHandler({
       requestConfirmation,
-      onComplete: async (result) => {
-        // 获取 Agent 执行历史
+      onComplete: async (result, steps) => {
+        // 获取 Agent 执行历史，保存完整的 ReAct 步骤
         const { agentState } = useChatStore.getState()
-        // 合并所有思考内容
-        const allThoughts = [...agentState.thoughtHistory]
-        if (agentState.currentThought) {
-          allThoughts.push(agentState.currentThought)
-        }
         const agentHistory = {
-          thought: allThoughts.join('\n\n'),
+          steps: steps || [], // 保存完整的 ReAct 步骤（包含 thought, action, observation）
           toolCalls: agentState.toolCalls,
           iterations: agentState.currentIteration,
         }

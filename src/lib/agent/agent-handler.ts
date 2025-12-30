@@ -6,7 +6,7 @@ export interface AgentHandlerConfig {
   onThought?: (thought: string) => void
   onAction?: (action: string, params: Record<string, any>) => void
   onObservation?: (observation: string) => void
-  onComplete?: (result: string) => void
+  onComplete?: (result: string, steps?: any[]) => void
   onError?: (error: string) => void
   requestConfirmation?: (toolName: string, params: Record<string, any>) => Promise<boolean>
 }
@@ -28,13 +28,17 @@ export class AgentHandler {
     const reactConfig: ReActConfig = {
       maxIterations: 15,
       onIterationStart: () => {
-        // 在新迭代开始时，将当前思考保存到历史
+        // 在新迭代开始时，将完整的 ReAct 循环保存到历史，然后清空当前状态
         const currentState = useChatStore.getState()
-        if (currentState.agentState.currentThought) {
+        if (currentState.agentState.currentThought || 
+            currentState.agentState.currentAction || 
+            currentState.agentState.currentObservation) {
           const newHistory = [...currentState.agentState.thoughtHistory, currentState.agentState.currentThought]
           store.setAgentState({ 
             thoughtHistory: newHistory,
-            currentThought: ''
+            currentThought: '',
+            currentAction: undefined,
+            currentObservation: undefined
           })
         }
       },
@@ -76,7 +80,9 @@ export class AgentHandler {
         return ''
       }
       
-      this.config.onComplete?.(result)
+      // 获取完整的 ReAct 步骤
+      const steps = this.agent.getSteps()
+      this.config.onComplete?.(result, steps)
       return result
     } catch (error) {
       store.setAgentState({ isRunning: false })

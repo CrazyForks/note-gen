@@ -233,6 +233,9 @@ Final Answer: 无法完成任务，请稍后重试或检查 AI 配置`
       if (inputMatch) {
         let jsonStr = inputMatch[1].trim()
         
+        // 移除可能的标记符号（如 <|begin_of_box|> 和 <|end_of_box|>）
+        jsonStr = jsonStr.replace(/<\|begin_of_box\|>/g, '').replace(/<\|end_of_box\|>/g, '').trim()
+        
         // 尝试找到完整的 JSON 对象
         let braceCount = 0
         let jsonEnd = -1

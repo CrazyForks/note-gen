@@ -1,11 +1,32 @@
 import * as React from "react"
-import { Loader2, ChevronRight, Brain, CheckCircle, XCircle, Clock } from "lucide-react"
+import { Loader2, ChevronRight, Brain, CheckCircle, XCircle, Clock, Zap, Eye } from "lucide-react"
 import useChatStore from "@/stores/chat"
 import { Button } from "@/components/ui/button"
+import { useTranslations } from "next-intl"
 
 export function AgentExecutionStatus() {
+  const t = useTranslations('record.chat.input.agent')
   const { agentState, setAgentState } = useChatStore()
   const [expandedItems, setExpandedItems] = React.useState<Set<number>>(new Set())
+  const contentRef = React.useRef<HTMLDivElement>(null)
+  const prevThoughtCountRef = React.useRef(0)
+
+  // 当思考历史增加时，确保新增的历史项是折叠的
+  React.useEffect(() => {
+    const currentCount = agentState.thoughtHistory.length
+    if (currentCount > prevThoughtCountRef.current) {
+      // 有新的思考历史添加，确保它们不在 expandedItems 中
+      // 不需要做任何操作，因为新项默认就不在 Set 中
+    }
+    prevThoughtCountRef.current = currentCount
+  }, [agentState.thoughtHistory.length])
+
+  // 当前思考内容更新时，自动滚动到底部
+  React.useEffect(() => {
+    if (agentState.currentThought && contentRef.current) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight
+    }
+  }, [agentState.currentThought])
 
   // 只在 Agent 运行时显示
   if (!agentState.isRunning) {
@@ -32,9 +53,11 @@ export function AgentExecutionStatus() {
       timestamp: Date.now()
     }
     
+    // 确认时保持 isRunning: true，只清除 pendingConfirmation
     setAgentState({ 
       pendingConfirmation: undefined,
-      confirmationHistory: [...agentState.confirmationHistory, confirmationRecord]
+      confirmationHistory: [...agentState.confirmationHistory, confirmationRecord],
+      isRunning: true  // 明确保持运行状态
     })
   }
 
@@ -48,6 +71,7 @@ export function AgentExecutionStatus() {
       timestamp: Date.now()
     }
     
+    // 取消时停止 Agent 运行
     setAgentState({ 
       pendingConfirmation: undefined,
       confirmationHistory: [...agentState.confirmationHistory, confirmationRecord],
@@ -64,44 +88,57 @@ export function AgentExecutionStatus() {
     return firstLine || thought.substring(0, 50) + '...'
   }
 
+  // 如果 Agent 运行中但没有任何内容，显示加载状态
+  const hasContent = agentState.thoughtHistory.length > 0 || agentState.currentThought
+
   return (
-    <div className="w-full space-y-1">
-      {/* 历史思考过程 */}
+    <div className="w-full space-y-2">
+      {/* 如果没有任何内容，显示加载提示 */}
+      {!hasContent && (
+        <div className="w-full space-y-1 mb-2 bg-accent border rounded overflow-hidden">
+          <div className="flex items-center gap-2 py-1.5 px-3 rounded bg-muted min-w-0">
+            <Loader2 className="size-4 animate-spin text-blue-500 flex-shrink-0" />
+            <span className="text-sm text-muted-foreground flex-1 truncate min-w-0">{t('running')}</span>
+          </div>
+        </div>
+      )}
+      
+      {/* 历史思考过程 - 默认折叠 */}
       {agentState.thoughtHistory.map((thought, index) => {
         const isExpanded = expandedItems.has(index)
         const confirmationRecord = agentState.confirmationHistory[index]
         const title = extractTitle(thought)
         
         return (
-          <div key={index} className="space-y-1">
+          <div key={index} className="w-full space-y-1 mb-2 bg-accent border rounded overflow-hidden">
             {/* 思考卡片 - 单行 */}
             <div 
-              className="flex items-center gap-2 py-1.5 px-3 rounded hover:bg-muted/50 cursor-pointer group"
+              className="flex items-center gap-2 py-1.5 px-3 rounded cursor-pointer hover:bg-muted/50 min-w-0"
               onClick={() => toggleExpand(index)}
             >
-              <Brain className="size-3.5 text-blue-500 flex-shrink-0" />
-              <span className="text-xs text-muted-foreground flex-1 break-words">
+              <Brain className="size-4 text-blue-500 flex-shrink-0" />
+              <span className="text-sm text-muted-foreground flex-1 truncate min-w-0">
                 {title}
               </span>
-              <ChevronRight className={`size-3.5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+              <ChevronRight className={`size-4 text-muted-foreground flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
             </div>
             
             {/* 展开的详细内容 */}
             {isExpanded && (
-              <div className="pl-6 pr-3 pb-2 text-xs text-muted-foreground whitespace-pre-wrap">
+              <div className="pl-6 pr-3 pb-2 text-xs text-muted-foreground whitespace-pre-wrap max-h-[250px] overflow-y-auto break-words">
                 {thought}
               </div>
             )}
             
             {/* 确认记录 - 单行 */}
             {confirmationRecord && (
-              <div className="flex items-center gap-2 py-1.5 px-3 rounded">
+              <div className="flex items-center gap-2 py-1.5 px-3 border-t">
                 {confirmationRecord.status === 'confirmed' ? (
-                  <CheckCircle className="size-3.5 text-green-500 flex-shrink-0" />
+                  <CheckCircle className="size-4 text-green-500 flex-shrink-0" />
                 ) : (
-                  <XCircle className="size-3.5 text-red-500 flex-shrink-0" />
+                  <XCircle className="size-4 text-red-500 flex-shrink-0" />
                 )}
-                <code className="text-xs text-muted-foreground flex-1 break-words font-mono">
+                <code className="text-sm text-muted-foreground flex-1 break-words font-mono">
                   {confirmationRecord.toolName}
                 </code>
               </div>
@@ -110,24 +147,38 @@ export function AgentExecutionStatus() {
         )
       })}
       
-      {/* 当前思考过程 - 完整显示，loading 图标 */}
-      {agentState.currentThought && (
-        <div className="space-y-1">
-          <div className="py-1.5 px-3 rounded bg-muted">
-            <div className="flex items-center gap-2 mb-2">
-              <Loader2 className="size-3.5 animate-spin text-blue-500 flex-shrink-0" />
-              <span className="text-xs font-medium text-blue-500">思考中...</span>
-            </div>
-            <div className="text-xs text-muted-foreground whitespace-pre-wrap">
-              {agentState.currentThought}
-            </div>
-          </div>
+      {/* 当前 ReAct 循环 - 展示 Thought、Action、Observation */}
+      {(agentState.currentThought || agentState.currentAction || agentState.currentObservation) && (
+        <div className="w-full space-y-1 mb-2 bg-accent border rounded overflow-hidden">
+          {/* Thought - 思考 */}
+          {agentState.currentThought && (
+            <>
+              <div className="flex items-center gap-2 py-1.5 px-3 rounded bg-muted min-w-0">
+                <Loader2 className="size-4 animate-spin text-blue-500 flex-shrink-0" />
+                <span className="text-sm text-muted-foreground flex-1 truncate min-w-0">{t('thinking')}</span>
+              </div>
+              <div 
+                ref={contentRef}
+                className="pl-6 pr-3 pb-2 text-xs text-muted-foreground whitespace-pre-wrap max-h-[250px] overflow-y-auto break-words"
+              >
+                {agentState.currentThought}
+              </div>
+            </>
+          )}
           
-          {/* 当前确认请求 - 单行，按钮在右侧 */}
+          {/* Action - 行动 */}
+          {agentState.currentAction && !agentState.pendingConfirmation && (
+            <div className="flex items-center gap-2 py-1.5 px-3 border-t">
+              <Zap className="size-4 text-yellow-500 flex-shrink-0" />
+              <code className="text-sm text-muted-foreground flex-1 truncate min-w-0 font-mono">{agentState.currentAction}</code>
+            </div>
+          )}
+          
+          {/* 确认请求 - 只显示工具名和按钮 */}
           {agentState.pendingConfirmation && (
-            <div className="flex items-center gap-2 py-1.5 px-3 rounded bg-muted">
-              <Clock className="size-3.5 text-orange-500 flex-shrink-0 animate-pulse" />
-              <code className="text-xs text-muted-foreground flex-1 break-words font-mono">
+            <div className="flex items-center gap-2 py-1.5 px-3 border-t">
+              <Clock className="size-4 text-orange-500 flex-shrink-0 animate-pulse" />
+              <code className="text-sm text-muted-foreground flex-1 truncate min-w-0 font-mono">
                 {agentState.pendingConfirmation.toolName}
               </code>
               <div className="flex gap-1 flex-shrink-0">
@@ -137,7 +188,7 @@ export function AgentExecutionStatus() {
                   className="h-6 w-6 p-0"
                   onClick={handleCancel}
                 >
-                  <XCircle className="size-3.5 text-red-500" />
+                  <XCircle className="size-4 text-red-500" />
                 </Button>
                 <Button
                   size="sm"
@@ -145,10 +196,23 @@ export function AgentExecutionStatus() {
                   className="h-6 w-6 p-0"
                   onClick={handleConfirm}
                 >
-                  <CheckCircle className="size-3.5 text-green-500" />
+                  <CheckCircle className="size-4 text-green-500" />
                 </Button>
               </div>
             </div>
+          )}
+          
+          {/* Observation - 观察 */}
+          {agentState.currentObservation && (
+            <>
+              <div className="flex items-center gap-2 py-1.5 px-3 border-t">
+                <Eye className="size-4 text-green-500 flex-shrink-0" />
+                <span className="text-sm text-muted-foreground flex-1 truncate min-w-0">{t('observation')}</span>
+              </div>
+              <div className="pl-6 pr-3 pb-2 text-xs text-muted-foreground whitespace-pre-wrap max-h-[250px] overflow-y-auto break-words">
+                {agentState.currentObservation}
+              </div>
+            </>
           )}
         </div>
       )}

@@ -94,14 +94,7 @@ export const createMarkdownFileTool: Tool = {
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
-      // 验证必需参数
-      if (!params.fileName || typeof params.fileName !== 'string') {
-        return {
-          success: false,
-          error: '缺少必需参数 fileName 或参数类型错误',
-        }
-      }
-      
+      // 验证内容参数
       if (!params.content || typeof params.content !== 'string') {
         return {
           success: false,
@@ -109,12 +102,19 @@ export const createMarkdownFileTool: Tool = {
         }
       }
       
+      // 如果没有提供 fileName，生成默认文件名
+      let fileName = params.fileName
+      if (!fileName || typeof fileName !== 'string' || fileName.trim() === '') {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+        fileName = `note-${timestamp}.md`
+      }
+      
       const workspace = await getWorkspacePath()
-      let filePath = params.fileName
+      let filePath = fileName
       
       // 如果指定了文件夹路径，拼接路径
       if (params.folderPath) {
-        filePath = `${params.folderPath}/${params.fileName}`
+        filePath = `${params.folderPath}/${fileName}`
       }
       
       // 确保文件名以 .md 结尾
