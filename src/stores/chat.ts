@@ -28,6 +28,7 @@ interface ChatState {
 
   isLinkMark: boolean // 是否关联记录
   setIsLinkMark: (isLinkMark: boolean) => void
+  initIsLinkMark: () => void // 初始化关联状态
 
   isPlaceholderEnabled: boolean // 是否启用AI提示占位符
   setPlaceholderEnabled: (isEnabled: boolean) => void
@@ -79,9 +80,23 @@ const useChatStore = create<ChatState>((set, get) => ({
     set({ loading })
   },
 
-  isLinkMark: true,
+  isLinkMark: (typeof window !== 'undefined' ? localStorage.getItem('isLinkMark') === 'true' : true),
   setIsLinkMark: (isLinkMark: boolean) => {
     set({ isLinkMark })
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('isLinkMark', String(isLinkMark))
+    }
+  },
+  initIsLinkMark: () => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('isLinkMark')
+      if (stored === null) {
+        localStorage.setItem('isLinkMark', 'true')
+        set({ isLinkMark: true })
+      } else {
+        set({ isLinkMark: stored === 'true' })
+      }
+    }
   },
 
   isPlaceholderEnabled: true,
