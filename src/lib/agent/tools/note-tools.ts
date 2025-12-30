@@ -213,12 +213,25 @@ export const deleteMarkdownFileTool: Tool = {
   execute: async (params): Promise<ToolResult> => {
     try {
       const workspace = await getWorkspacePath()
+      const articleStore = useArticleStore.getState()
+      
+      // 检查是否是当前打开的文件
+      const isCurrentFile = articleStore.activeFilePath === params.filePath
       
       if (workspace.isCustom) {
         await remove(params.filePath)
       } else {
         const { path, baseDir } = await getFilePathOptions(params.filePath)
         await remove(path, { baseDir })
+      }
+      
+      // 刷新文件列表
+      await articleStore.loadFileTree()
+      
+      // 如果删除的是当前打开的文件，取消选择并清空内容
+      if (isCurrentFile) {
+        await articleStore.setActiveFilePath('')
+        articleStore.setCurrentArticle('')
       }
       
       return {
