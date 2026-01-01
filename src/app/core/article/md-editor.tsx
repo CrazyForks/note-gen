@@ -134,6 +134,15 @@ export function MdEditor() {
           vditor.setValue('', true)
         }
         setEditorPadding(vditor)
+        
+        // 监听方向键，隐藏浮动工具栏
+        const editorElement = vditor.vditor.element
+        const handleKeyDown = (e: KeyboardEvent) => {
+          if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            resetSelectedText()
+          }
+        }
+        editorElement?.addEventListener('keydown', handleKeyDown)
       },
       input: async (value) => {
         if (!activeFilePathRef.current && !isCreatingFileRef.current) {
@@ -666,10 +675,26 @@ export function MdEditor() {
                     },
                   },
                   mode: currentMode,
+                  select: (value: string) => {
+                    setSelectedText(value)
+                    setFloatBarPosition(vditor.getCursorPosition())
+                  },
+                  unSelect: () => {
+                    resetSelectedText()
+                  },
                   after: () => {
                     vditor.setValue(currentContent, false)
                     setEditor(vditor)
                     setEditorPadding(vditor)
+                    
+                    // 监听方向键，隐藏浮动工具栏
+                    const editorElement = vditor.vditor.element
+                    const handleKeyDown = (e: KeyboardEvent) => {
+                      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                        resetSelectedText()
+                      }
+                    }
+                    editorElement?.addEventListener('keydown', handleKeyDown)
                   },
                   input: (value) => {
                     saveCurrentArticle(value)
