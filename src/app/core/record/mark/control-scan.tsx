@@ -29,7 +29,7 @@ import useMarkStore from "@/stores/mark"
 import { v4 as uuid } from "uuid"
 import useSettingStore from "@/stores/setting"
 import ocr from "@/lib/ocr"
-import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai"
+import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai/description"
 import { insertMark } from "@/db/marks"
 
 export function ControlScan() {

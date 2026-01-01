@@ -3,7 +3,7 @@ import { Send, Square } from "lucide-react"
 import useSettingStore, { GenTemplate, GenTemplateRange } from "@/stores/setting"
 import useMarkStore from "@/stores/mark"
 import useArticleStore from "@/stores/article"
-import { fetchAiStream } from "@/lib/ai"
+import { fetchAiStream } from "@/lib/ai/chat"
 import { convertImage } from "@/lib/utils"
 import {
   AlertDialog,

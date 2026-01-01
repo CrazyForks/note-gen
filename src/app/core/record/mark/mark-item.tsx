@@ -17,7 +17,7 @@ import React, { useEffect, useState } from "react";
 import useMarkStore from "@/stores/mark";
 import useTagStore from "@/stores/tag";
 import { LocalImage } from "@/components/local-image";
-import { fetchAiDesc } from "@/lib/ai";
+import { fetchAiDesc } from "@/lib/ai/description";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { appDataDir } from "@tauri-apps/api/path";
 import { ImageUp } from "lucide-react";

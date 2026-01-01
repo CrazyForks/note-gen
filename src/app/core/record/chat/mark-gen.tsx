@@ -4,7 +4,7 @@ import useSettingStore, { GenTemplate, GenTemplateRange } from "@/stores/setting
 import useChatStore from "@/stores/chat"
 import useTagStore from "@/stores/tag"
 import useMarkStore from "@/stores/mark"
-import { fetchAiStream } from "@/lib/ai"
+import { fetchAiStream } from "@/lib/ai/chat"
 import { convertImage } from "@/lib/utils"
 import { TooltipButton } from "@/components/tooltip-button"
 import {

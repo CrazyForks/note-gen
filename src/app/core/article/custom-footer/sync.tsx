@@ -1,5 +1,5 @@
 import { toast } from "@/hooks/use-toast";
-import { fetchAi } from "@/lib/ai";
+import { fetchAi } from "@/lib/ai/chat";
 import { decodeBase64ToString, getFileCommits as getGithubFileCommits, getFiles as getGithubFiles, uint8ArrayToBase64, uploadFile as uploadGithubFile } from "@/lib/sync/github";
 import { getFileCommits as getGiteeFileCommits, getFiles as getGiteeFiles, uploadFile as uploadGiteeFile } from "@/lib/sync/gitee";
 import { getFileContent as getGitlabFileContent, uploadFile as uploadGitlabFile, getFileCommits as getGitlabFileCommits } from "@/lib/sync/gitlab";

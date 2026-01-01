@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import useChatStore from "@/stores/chat"
 import useMarkStore from "@/stores/mark"
 import useArticleStore from "@/stores/article"
-import { fetchAiPlaceholder } from "@/lib/ai"
+import { fetchAiPlaceholder } from "@/lib/ai/placeholder"
 import { useTranslations } from 'next-intl'
 import { useLocalStorage } from 'react-use';
 import { ModelSelect } from "./model-select"

@@ -3,7 +3,7 @@ import useSettingStore, { GenTemplate, GenTemplateRange } from "@/stores/setting
 import useMarkStore from "@/stores/mark"
 import useArticleStore from "@/stores/article"
 import useTagStore from "@/stores/tag"
-import { fetchAiStream } from "@/lib/ai"
+import { fetchAiStream } from "@/lib/ai/chat"
 import { convertImage } from "@/lib/utils"
 import {
   AlertDialog,

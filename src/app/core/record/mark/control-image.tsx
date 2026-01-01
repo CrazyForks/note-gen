@@ -1,7 +1,7 @@
 import { TooltipButton } from "@/components/tooltip-button"
 import { insertMark, Mark } from "@/db/marks"
 import { useTranslations } from 'next-intl'
-import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai"
+import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai/description"
 import ocr from "@/lib/ocr"
 import useMarkStore from "@/stores/mark"
 import useTagStore from "@/stores/tag"
