@@ -29,6 +29,13 @@ export default function DefaultModelsSection() {
       color: 'bg-blue-500'
     },
     {
+      name: t('completionModel.name'),
+      type: t('completionModel.type'),
+      desc: t('completionModel.desc'),
+      icon: <MessageSquare className="h-5 w-5" />,
+      color: 'bg-orange-500'
+    },
+    {
       name: t('embeddingModel.name'),
       type: t('embeddingModel.type'),
       desc: t('embeddingModel.desc'),
@@ -61,7 +68,7 @@ export default function DefaultModelsSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* 模型列表 */}
-        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {models.map((model, index) => (
             <div key={index} className="flex items-start gap-3 p-4 rounded-lg border bg-card">
               <div className={`p-2 rounded-md ${model.color} text-white`}>

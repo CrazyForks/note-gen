@@ -698,9 +698,14 @@
           "desc": "Usado para vetorização de texto e busca semântica"
         },
         "visionModel": {
-          "name": "THUDM/GLM-4.1V-9B-Thinking",
+          "name": "OpenGVLab/InternVL2-8B",
           "type": "Modelo de Visão",
-          "desc": "Suporta compreensão de imagem e reconhecimento OCR"
+          "desc": "Suporta compreensão de imagens e perguntas visuais"
+        },
+        "completionModel": {
+          "name": "Conclusão Rápida",
+          "type": "Modelo de Conclusão",
+          "desc": "Conclusão inline de IA para editor Markdown, semelhante ao GitHub Copilot, gera rapidamente conteúdo de continuação"
         },
         "poweredBy": "Fornecido por SiliconFlow"
       }

@@ -49,8 +49,8 @@ interface SettingState {
   placeholderModel: string
   setPlaceholderModel: (placeholderModel: string) => Promise<void>
 
-  translateModel: string
-  setTranslateModel: (translateModel: string) => Promise<void>
+  completionModel: string
+  setCompletionModel: (completionModel: string) => Promise<void>
 
   markDescModel: string
   setMarkDescModel: (markDescModel: string) => Promise<void>
@@ -344,7 +344,7 @@ const useSettingStore = create<SettingState>((set, get) => ({
 
     // 检查并初始化其他模型类型
     const modelTypes = [
-      { storeKey: 'translateModel', modelType: 'chat' },
+      { storeKey: 'completionModel', modelType: 'chat' },
       { storeKey: 'markDescModel', modelType: 'chat' }
     ]
 
@@ -485,11 +485,11 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ placeholderModel })
   },
 
-  translateModel: '',
-  setTranslateModel: async (translateModel) => {
+  completionModel: '',
+  setCompletionModel: async (completionModel) => {
     const store = await Store.load('store.json');
-    await store.set('translateModel', translateModel)
-    set({ translateModel })
+    await store.set('completionModel', completionModel)
+    set({ completionModel })
   },
 
   markDescModel: '',

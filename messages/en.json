@@ -260,11 +260,11 @@
         },
         "placeholder": {
           "title": "AI Suggestion",
-          "desc": "AI suggestion prompts are used for content generation in the placeholder of the record page AI conversation."
+          "desc": "AI suggestion prompt for generating placeholder content in the record page AI conversation."
         },
-        "translate": {
-          "title": "Translation",
-          "desc": "Used for translation content scenes."
+        "completion": {
+          "title": "Fast Completion",
+          "desc": "AI inline completion for Markdown editor, similar to GitHub Copilot, quickly generates continuation content."
         },
         "embedding": {
           "title": "Embedding Model",
@@ -702,9 +702,14 @@
           "desc": "Used for text vectorization and semantic search"
         },
         "visionModel": {
-          "name": "THUDM/GLM-4.1V-9B-Thinking",
+          "name": "OpenGVLab/InternVL2-8B",
           "type": "Vision Model",
-          "desc": "Supports image understanding and OCR recognition"
+          "desc": "Supports image understanding and visual Q&A"
+        },
+        "completionModel": {
+          "name": "Fast Completion",
+          "type": "Completion Model",
+          "desc": "AI inline completion for Markdown editor, similar to GitHub Copilot, quickly generates continuation content"
         },
         "poweredBy": "Powered by SiliconFlow"
       }

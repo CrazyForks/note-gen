@@ -247,9 +247,9 @@
           "title": "AI 建议",
           "desc": "AI 建议提示作用于记录页面 AI 对话 placeholder 内容生成。"
         },
-        "translate": {
-          "title": "翻译",
-          "desc": "用于翻译内容的场景。"
+        "completion": {
+          "title": "快速补全",
+          "desc": "用于 Markdown 编辑器的 AI 内联补全，类似 GitHub Copilot，快速生成续写内容。"
         },
         "embedding": {
           "title": "嵌入模型",
@@ -703,9 +703,14 @@
           "desc": "用于文本向量化、语义搜索等功能"
         },
         "visionModel": {
-          "name": "THUDM/GLM-4.1V-9B-Thinking",
+          "name": "OpenGVLab/InternVL2-8B",
           "type": "视觉模型",
-          "desc": "支持图像理解、OCR识别等视觉任务"
+          "desc": "支持图像理解、视觉问答等功能"
+        },
+        "completionModel": {
+          "name": "快速补全",
+          "type": "补全模型",
+          "desc": "用于 Markdown 编辑器的 AI 内联补全，类似 GitHub Copilot，快速生成续写内容"
         },
         "poweredBy": "由 SiliconFlow 提供技术支持"
       }

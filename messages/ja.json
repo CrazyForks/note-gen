@@ -230,12 +230,12 @@
           "desc": "OCR認識後の記録を処理し、記録の説明を生成します。"
         },
         "placeholder": {
-          "title": "AIサジェスト",
-          "desc": "AIサジェスト機能は記録ページのAI対話プレースホルダーの内容生成に使用されます。"
+          "title": "AI提案",
+          "desc": "記録ページのAI会話プレースホルダーコンテンツ生成用のAI提案プロンプト。"
         },
-        "translate": {
-          "title": "翻訳",
-          "desc": "翻訳内容のシーン。"
+        "completion": {
+          "title": "高速補完",
+          "desc": "Markdownエディタ用のAIインライン補完、GitHub Copilotに類似、素早く続きの内容を生成します。"
         },
         "embedding": {
           "title": "埋め込みモデル",
@@ -658,9 +658,14 @@
           "desc": "テキストベクトル化や意味検索に使用"
         },
         "visionModel": {
-          "name": "THUDM/GLM-4.1V-9B-Thinking",
+          "name": "OpenGVLab/InternVL2-8B",
           "type": "ビジョンモデル",
-          "desc": "画像理解やOCR認識などの視覚タスクをサポート"
+          "desc": "画像理解とビジュアルQ&Aをサポート"
+        },
+        "completionModel": {
+          "name": "高速補完",
+          "type": "補完モデル",
+          "desc": "Markdownエディタ用のAIインライン補完、GitHub Copilotに類似、素早く続きの内容を生成"
         },
         "poweredBy": "SiliconFlowによる技術サポート"
       }

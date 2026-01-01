@@ -8,53 +8,7 @@ export const createToolbarConfig = (t: any, editorWidth?: number) => {
     { name: 'redo', tipPosition: 's' },
   ]
 
-  const markTool = {
-    name: 'mark',
-    tipPosition: 's',
-    tip: t('toolbar.mark.tooltip'),
-    className: 'right',
-    icon: '<svg><use xlink:href="#vditor-icon-mark"></svg>',
-    click: () => emitter.emit('toolbar-mark'),
-  }
-
-  const group2Mobile = [
-    markTool,
-    {
-      name: 'continue',
-      tipPosition: 's',
-      tip: t('toolbar.continue.tooltip'),
-      className: 'right',
-      icon: '<svg><use xlink:href="#vditor-icon-list-plus"></svg>',
-      click: () => emitter.emit('toolbar-continue'),
-    },
-    {
-      name: 'translation',
-      tipPosition: 's',
-      tip: t('toolbar.translation.tooltip'),
-      className: 'right',
-      icon: '<svg><use xlink:href="#vditor-icon-translation"></svg>',
-      click: () => emitter.emit('toolbar-translation'),
-    },
-  ]
-
-  const group2PC = [
-    {
-      name: 'continue',
-      tipPosition: 's',
-      tip: t('toolbar.continue.tooltip'),
-      className: 'right',
-      icon: '<svg><use xlink:href="#vditor-icon-list-plus"></svg>',
-      click: () => emitter.emit('toolbar-continue'),
-    },
-    {
-      name: 'translation',
-      tipPosition: 's',
-      tip: t('toolbar.translation.tooltip'),
-      className: 'right',
-      icon: '<svg><use xlink:href="#vditor-icon-translation"></svg>',
-      click: () => emitter.emit('toolbar-translation'),
-    },
-  ]
+  // mark 工具只在移动端使用，PC端不需要
 
   const group3 = [
     { name: 'headings', tipPosition: 's', className: 'bottom' },
@@ -89,24 +43,23 @@ export const createToolbarConfig = (t: any, editorWidth?: number) => {
   
   // 计算每组的宽度
   const group1Width = group1.length * BUTTON_WIDTH // 2 * 36 = 72
-  const group2PCWidth = group2PC.length * BUTTON_WIDTH // 2 * 36 = 72
   const group3Width = group3.length * BUTTON_WIDTH // 4 * 36 = 144
   const group4Width = group4.length * BUTTON_WIDTH // 10 * 36 = 360
   const groupLastWidth = groupLast.length * BUTTON_WIDTH // 3 * 36 = 108
   
   // 计算累计宽度阈值（包含分割线）
-  const baseWidth = group1Width + DIVIDER_WIDTH + group2PCWidth // 72 + 19 + 72 = 163
-  const withLastWidth = baseWidth + DIVIDER_WIDTH + groupLastWidth // 163 + 19 + 108 = 290
-  const withGroup3Width = baseWidth + DIVIDER_WIDTH + group3Width + DIVIDER_WIDTH + groupLastWidth // 163 + 19 + 144 + 19 + 108 = 453
-  const withGroup4Width = baseWidth + DIVIDER_WIDTH + group3Width + DIVIDER_WIDTH + group4Width + DIVIDER_WIDTH + groupLastWidth // 163 + 19 + 144 + 19 + 360 + 19 + 108 = 832
+  const baseWidth = group1Width // 72
+  const withLastWidth = baseWidth + DIVIDER_WIDTH + groupLastWidth // 72 + 19 + 108 = 199
+  const withGroup3Width = baseWidth + DIVIDER_WIDTH + group3Width + DIVIDER_WIDTH + groupLastWidth // 72 + 19 + 144 + 19 + 108 = 362
+  const withGroup4Width = baseWidth + DIVIDER_WIDTH + group3Width + DIVIDER_WIDTH + group4Width + DIVIDER_WIDTH + groupLastWidth // 72 + 19 + 144 + 19 + 360 + 19 + 108 = 741
   
   let config: any[] = []
   
   if (isMobileDevice()) {
-    config = [...group1, '|', ...group2Mobile, '|', ...groupLast]
+    config = [...group1, '|', ...groupLast]
   } else if (editorWidth) {
-    // 基础组：始终显示 group1 + group2PC
-    config = [...group1, '|', ...group2PC]
+    // 基础组：始终显示 group1
+    config = [...group1]
     
     // 根据宽度逐步添加更多组
     if (editorWidth >= withLastWidth) {
@@ -133,8 +86,6 @@ export const createToolbarConfig = (t: any, editorWidth?: number) => {
     // 默认显示所有
     config = [
       ...group1,
-      '|',
-      ...group2PC,
       '|',
       ...group3,
       '|',

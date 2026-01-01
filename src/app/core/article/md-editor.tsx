@@ -26,6 +26,8 @@ import FloatBar from './floatbar'
 import { createToolbarConfig } from './toolbar.config'
 import { delMark } from '@/db/marks'
 import useMarkStore from '@/stores/mark'
+import { useAiCompletion } from '@/hooks/useAiCompletion'
+import { AiCompletionPreview } from './ai-completion-preview'
 
 export function MdEditor() {
   const [editor, setEditor] = useState<Vditor>();
@@ -43,6 +45,47 @@ export function MdEditor() {
   const isCreatingFileRef = useRef(false)
   const activeFilePathRef = useRef(activeFilePath)
   const skipClearStackRef = useRef(false) // 标记是否跳过清空撤销栈
+  const completionTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [editorElement, setEditorElement] = useState<HTMLElement | null>(null)
+  const completionRef = useRef<string>('') // 用 ref 存储最新的 completion 值
+  const editorRef = useRef<Vditor | undefined>(undefined) // 用 ref 存储最新的 editor 实例
+  const justAcceptedCompletionRef = useRef(false) // 标记是否刚刚接受了补全
+  
+  // AI 内联补全
+  const { completion, isLoading: isCompletionLoading, generateCompletion, acceptCompletion, cancelCompletion } = useAiCompletion({
+    onAccept: (completionText) => {
+      console.log('[md-editor] onAccept called with text:', completionText.substring(0, 50))
+      console.log('[md-editor] Text length:', completionText.length, 'First char code:', completionText.charCodeAt(0), 'Last char code:', completionText.charCodeAt(completionText.length - 1))
+      
+      const currentEditor = editorRef.current
+      if (currentEditor) {
+        console.log('[md-editor] Inserting value into editor')
+        // 设置标志，表示刚刚接受了补全
+        justAcceptedCompletionRef.current = true
+        
+        // 立即清除防抖定时器，防止触发新的补全
+        if (completionTimerRef.current) {
+          console.log('[md-editor] Clearing completion timer')
+          clearTimeout(completionTimerRef.current)
+          completionTimerRef.current = null
+        }
+        
+        // 再次确保去除前后空格
+        const cleanText = completionText.trim()
+        console.log('[md-editor] Clean text:', cleanText.substring(0, 50), 'Length:', cleanText.length)
+        currentEditor.insertValue(cleanText)
+        console.log('[md-editor] Value inserted')
+        
+        // 500ms 后清除标志
+        setTimeout(() => {
+          console.log('[md-editor] Clearing justAcceptedCompletion flag')
+          justAcceptedCompletionRef.current = false
+        }, 500)
+      } else {
+        console.log('[md-editor] Editor is not available')
+      }
+    },
+  })
 
   function getLang() {
     switch (currentLocale) {
@@ -121,6 +164,7 @@ export function MdEditor() {
       },
       after: () => {
         setEditor(vditor);
+        editorRef.current = vditor;
         // 切换记录编辑模式
         const editModeButtons = vditor.vditor.element.querySelectorAll('.edit-mode-button .vditor-hint button')
         editModeButtons.forEach(button => {
@@ -135,16 +179,100 @@ export function MdEditor() {
         }
         setEditorPadding(vditor)
         
-        // 监听方向键，隐藏浮动工具栏
+        // 保存编辑器元素引用
         const editorElement = vditor.vditor.element
+        setEditorElement(editorElement)
+        
+        // 监听键盘事件
         const handleKeyDown = (e: KeyboardEvent) => {
+          // 方向键：隐藏浮动工具栏和取消补全，然后重新生成
           if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
             resetSelectedText()
+            const hadCompletion = !!completionRef.current
+            cancelCompletion()
+            
+            // 如果之前有补全，在光标移动后重新生成
+            if (hadCompletion) {
+              setTimeout(() => {
+                const content = vditor.getValue()
+                const cursorPos = content.length
+                if (content.trim().length > 20) {
+                  console.log('[md-editor] Cursor moved, regenerating completion')
+                  generateCompletion(content, cursorPos)
+                }
+              }, 100)
+            }
+          }
+          
+          // Tab 键：接受补全
+          if (e.key === 'Tab') {
+            const currentCompletion = completionRef.current
+            console.log('[md-editor] Tab key pressed, completion:', currentCompletion ? currentCompletion.substring(0, 50) : 'none')
+            if (currentCompletion) {
+              console.log('[md-editor] Preventing default and accepting completion')
+              e.preventDefault()
+              acceptCompletion()
+            }
+          }
+          
+          // Escape 键：取消补全
+          if (e.key === 'Escape') {
+            const currentCompletion = completionRef.current
+            if (currentCompletion) {
+              console.log('[md-editor] ESC pressed, canceling completion')
+              e.preventDefault()
+              cancelCompletion()
+            }
+          }
+          
+          // Ctrl/Cmd + Space：手动触发补全
+          if (e.key === ' ' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault()
+            const content = vditor.getValue()
+            // 使用内容长度作为光标位置（假设光标在末尾）
+            const cursorPos = content.length
+            console.log('[md-editor] Manual trigger, cursor position:', cursorPos)
+            generateCompletion(content, cursorPos)
           }
         }
         editorElement?.addEventListener('keydown', handleKeyDown)
+        
+        // 监听鼠标点击事件，点击时取消补全
+        const handleClick = () => {
+          const currentCompletion = completionRef.current
+          if (currentCompletion) {
+            console.log('[md-editor] Editor clicked, canceling completion')
+            cancelCompletion()
+          }
+        }
+        editorElement?.addEventListener('click', handleClick)
+        
+        // 监听 beforeinput 事件，在输入前就清除补全预览
+        const handleBeforeInput = () => {
+          const previews = document.querySelectorAll('.ai-completion-preview, [data-ai-preview="true"]')
+          if (previews.length > 0) {
+            console.log('[md-editor] Before input, removing', previews.length, 'preview nodes')
+            previews.forEach(preview => preview.remove())
+            cancelCompletion()
+          }
+        }
+        editorElement?.addEventListener('beforeinput', handleBeforeInput)
+        
+        // 清理事件监听
+        return () => {
+          editorElement?.removeEventListener('keydown', handleKeyDown)
+          editorElement?.removeEventListener('click', handleClick)
+          editorElement?.removeEventListener('beforeinput', handleBeforeInput)
+        }
       },
       input: async (value) => {
+        // 立即清除所有补全预览 DOM 节点，防止被保留
+        const previews = document.querySelectorAll('.ai-completion-preview')
+        if (previews.length > 0) {
+          console.log('[md-editor] Input detected, removing', previews.length, 'preview nodes')
+          previews.forEach(preview => preview.remove())
+        }
+        
         if (!activeFilePathRef.current && !isCreatingFileRef.current) {
           // 自动创建 untitled.md 文件，并写入当前内容
           isCreatingFileRef.current = true
@@ -156,6 +284,52 @@ export function MdEditor() {
           saveCurrentArticle(value)
           emitter.emit('editor-input')
           handleLocalImage(vditor)
+          
+          // 输入时取消当前补全
+          cancelCompletion()
+          
+          // 防抖触发 AI 补全（停止输入 1.5 秒后）
+          if (completionTimerRef.current) {
+            clearTimeout(completionTimerRef.current)
+          }
+          completionTimerRef.current = setTimeout(() => {
+            // 如果刚刚接受了补全，不触发新的补全
+            if (justAcceptedCompletionRef.current) {
+              console.log('[md-editor] Just accepted completion, skipping auto-trigger')
+              return
+            }
+            
+            console.log('[md-editor] Auto-trigger timer fired')
+            
+            // 获取真实的光标位置（使用 DOM Selection API）
+            let cursorPos = value.length // 默认使用文档末尾
+            try {
+              const sel = window.getSelection()
+              if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0)
+                // 创建一个从文档开始到光标位置的范围
+                const preCaretRange = range.cloneRange()
+                const editArea = vditor.vditor.element.querySelector('.vditor-ir__marker, .vditor-wysiwyg, .vditor-sv__marker')
+                if (editArea) {
+                  preCaretRange.selectNodeContents(editArea)
+                  preCaretRange.setEnd(range.endContainer, range.endOffset)
+                  cursorPos = preCaretRange.toString().length
+                }
+              }
+            } catch (error) {
+              console.log('[md-editor] Error getting cursor position:', error)
+            }
+            
+            console.log('[md-editor] Cursor position:', cursorPos, 'Content length:', value.length)
+            
+            // 只在内容足够长时才触发
+            if (value.trim().length > 20) {
+              console.log('[md-editor] Triggering completion')
+              generateCompletion(value, cursorPos)
+            } else {
+              console.log('[md-editor] Content too short, skipping completion')
+            }
+          }, 200) // 减少延时到 200ms，提高响应速度
         }
       },
       mode: localMode,
@@ -482,6 +656,11 @@ export function MdEditor() {
   useEffect(() => {
     activeFilePathRef.current = activeFilePath
   }, [activeFilePath])
+
+  // 同步更新 completionRef
+  useEffect(() => {
+    completionRef.current = completion
+  }, [completion])
 
   useEffect(() => {
     emitter.on('toolbar-reset-selected-text', resetSelectedText)
@@ -858,9 +1037,16 @@ export function MdEditor() {
     <CustomToolbar editor={editor} />
     <div 
       id="aritcle-md-editor" 
-      className="flex-1 min-h-0 overflow-hidden"
+      className="flex-1 min-h-0 overflow-hidden relative"
       style={{minWidth: 0}}
-    ></div>
+    >
+      {/* AI 内联补全预览 */}
+      <AiCompletionPreview 
+        completion={completion} 
+        isLoading={isCompletionLoading} 
+        editorElement={editorElement} 
+      />
+    </div>
     <CustomFooter editor={editor} />
     <FloatBar left={floatBarPosition?.left} top={floatBarPosition?.top} value={selectedText} editor={editor} />
   </div>
