@@ -344,7 +344,6 @@ const useSettingStore = create<SettingState>((set, get) => ({
 
     // 检查并初始化其他模型类型
     const modelTypes = [
-      { storeKey: 'placeholderModel', modelType: 'chat' },
       { storeKey: 'translateModel', modelType: 'chat' },
       { storeKey: 'markDescModel', modelType: 'chat' }
     ]
@@ -877,11 +876,10 @@ const useSettingStore = create<SettingState>((set, get) => ({
     { id: 'fileLink', enabled: true, order: 4 },
     { id: 'mcpButton', enabled: true, order: 5 },
     { id: 'ragSwitch', enabled: true, order: 6 },
-    { id: 'chatPlaceholder', enabled: true, order: 7 },
-    { id: 'clipboardMonitor', enabled: true, order: 8 },
+    { id: 'clipboardMonitor', enabled: true, order: 7 },
     // 顶部工具栏 - 右侧
-    { id: 'clearContext', enabled: true, order: 9 },
-    { id: 'clearChat', enabled: true, order: 10 },
+    { id: 'clearContext', enabled: true, order: 8 },
+    { id: 'clearChat', enabled: true, order: 9 },
   ],
   setChatToolbarConfigPc: async (config: ChatToolbarItem[]) => {
     set({ chatToolbarConfigPc: config })
@@ -899,10 +897,9 @@ const useSettingStore = create<SettingState>((set, get) => ({
     { id: 'fileLink', enabled: true, order: 4 },
     { id: 'mcpButton', enabled: true, order: 5 },
     { id: 'ragSwitch', enabled: true, order: 6 },
-    { id: 'chatPlaceholder', enabled: true, order: 7 },
-    { id: 'clipboardMonitor', enabled: true, order: 8 },
-    { id: 'clearContext', enabled: true, order: 9 },
-    { id: 'clearChat', enabled: true, order: 10 },
+    { id: 'clipboardMonitor', enabled: true, order: 7 },
+    { id: 'clearContext', enabled: true, order: 8 },
+    { id: 'clearChat', enabled: true, order: 9 },
   ],
   setChatToolbarConfigMobile: async (config: ChatToolbarItem[]) => {
     set({ chatToolbarConfigMobile: config })

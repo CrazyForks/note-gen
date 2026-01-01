@@ -1054,35 +1054,43 @@ export async function fetchAiDescByImage(base64: string) {
 // placeholder
 export async function fetchAiPlaceholder(text: string): Promise<string | false> {
   try {
-    // 获取AI设置
-    const aiConfig = await getAISettings('placeholderModel')
+    // 动态导入 model-config 以获取默认模型配置
+    const { noteGenDefaultModels } = await import('@/app/model-config')
     
-    // 检查配置是否存在
-    if (!aiConfig) {
-      console.error('Placeholder model not configured')
+    // 使用第一个默认模型配置（NoteGen Free）
+    const defaultConfig = noteGenDefaultModels[0]
+    const chatModel = defaultConfig.models?.find(m => m.modelType === 'chat')
+    
+    if (!defaultConfig || !chatModel) {
+      console.error('No default chat model found in noteGenDefaultModels')
       return false
     }
 
     // 构建 placeholder 提示词
     const placeholderPrompt = `
       You are a note-taking software with an intelligent assistant. You can refer to the recorded content to take notes.
-      Do not exceed 20 characters.
-      There is only one line left. Line breaks are prohibited.
-      Do not generate any special characters.
+      IMPORTANT: Do not exceed 10 characters. Keep it extremely short.
+      There is only one line left. Line breaks are strictly prohibited.
+      Do not generate any special characters or punctuation.
       Leave it as plain text and no format is required.
-      Generate a question based on the following content:
+      CRITICAL: Each response must be different and varied. Generate diverse suggestions each time, do not repeat previous patterns.
+      Generate a very short question based on the following content:
       ${text}`
 
     // 准备消息
     const { messages } = await prepareMessages(placeholderPrompt, true)
     
-    const openai = await createOpenAIClient(aiConfig)
+    const openai = new OpenAI({
+      baseURL: defaultConfig.baseURL,
+      apiKey: defaultConfig.apiKey,
+      dangerouslyAllowBrowser: true,
+    })
       
     const completion = await openai.chat.completions.create({
-      model: aiConfig.model || '',
+      model: chatModel.model || '',
       messages: messages,
-      temperature: aiConfig.temperature || 1,
-      top_p: aiConfig.topP || 1,
+      temperature: chatModel.temperature || 1,
+      top_p: chatModel.topP || 1,
     })
 
     const result = completion.choices[0]?.message?.content || ''

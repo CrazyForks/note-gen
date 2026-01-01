@@ -1,6 +1,6 @@
 "use client"
 import * as React from "react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import useSettingStore from "@/stores/setting"
 import { Textarea } from "@/components/ui/textarea"
 import useChatStore from "@/stores/chat"
@@ -19,7 +19,6 @@ import { FileSelector } from "./file-selector"
 import { ChatLink } from "./chat-link"
 import { McpButton } from "./mcp-button"
 import { RagSwitch } from "./rag-switch"
-import ChatPlaceholder from "./chat-placeholder"
 import { ClipboardMonitor } from "./clipboard-monitor"
 import { ClearContext } from "./clear-context"
 import { ClearChat } from "./clear-chat"
@@ -54,7 +53,7 @@ import { CSS } from '@dnd-kit/utilities'
 export function ChatInput() {
   const [text, setText] = useState("")
   const { primaryModel, chatToolbarConfigPc, setChatToolbarConfigPc, chatToolbarConfigMobile } = useSettingStore()
-  const { chats, loading, isLinkMark, isPlaceholderEnabled } = useChatStore()
+  const { chats, loading, isLinkMark } = useChatStore()
   const [showFileSelector, setShowFileSelector] = useState(false)
   const { marks, trashState } = useMarkStore()
   const { activeFilePath } = useArticleStore()
@@ -76,6 +75,7 @@ export function ChatInput() {
   const chatSendRef = useRef<any>(null)
   const isMobile = useIsMobile()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const placeholderTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // 拖拽传感器配置（仅桌面端）
   const sensors = useSensors(
@@ -221,14 +221,8 @@ export function ChatInput() {
 
   // 获取输入框占位符
   async function genInputPlaceholder() {
-    setPlaceholder(t('record.chat.input.placeholder.default'))
     if (!primaryModel) return
     if (trashState) return
-    // 检查是否启用了AI占位符功能
-    if (!isPlaceholderEnabled) {
-      setPlaceholder(t('record.chat.input.placeholder.default'))
-      return
-    }
     const scanMarks = isLinkMark ? marks.filter(item => item.type === 'scan') : []
     const textMarks = isLinkMark ? marks.filter(item => item.type === 'text') : []
     const imageMarks = isLinkMark ? marks.filter(item => item.type === 'image') : []
@@ -249,6 +243,19 @@ export function ChatInput() {
       setPlaceholder(content + ' [Tab]')
     }
   }
+
+  // 防抖的 placeholder 生成函数，延迟 1.5 秒执行，只执行最后一次
+  const debouncedGenPlaceholder = useCallback(() => {
+    // 清除之前的定时器
+    if (placeholderTimerRef.current) {
+      clearTimeout(placeholderTimerRef.current)
+    }
+    
+    // 设置新的定时器
+    placeholderTimerRef.current = setTimeout(() => {
+      genInputPlaceholder()
+    }, 1500) // 1.5秒延迟
+  }, [primaryModel, marks, isLinkMark, chats, trashState, t])
 
 
   // 插入占位符
@@ -292,18 +299,8 @@ export function ChatInput() {
       setPlaceholder(t('record.chat.input.placeholder.default'))
       return
     }
-    if (!isPlaceholderEnabled) {
-      setPlaceholder(t('record.chat.input.placeholder.default'))
-      return
-    }
     genInputPlaceholder()
-  }, [primaryModel, marks, isLinkMark, isPlaceholderEnabled, t])
-
-  useEffect(() => {
-    if (!isPlaceholderEnabled) {
-      setPlaceholder(t('record.chat.input.placeholder.default'))
-    }
-  }, [placeholder, isPlaceholderEnabled])
+  }, [primaryModel, marks, isLinkMark, t])
 
   useEffect(() => {
     emitter.on('revertChat', (event: unknown) => {
@@ -325,13 +322,15 @@ export function ChatInput() {
       setQuoteData(data)
       // 聚焦到输入框
       textareaRef.current?.focus()
+      // 触发防抖的 placeholder 重新生成
+      debouncedGenPlaceholder()
     })
     return () => {
       emitter.off('revertChat')
       emitter.off('fileSelected')
       emitter.off('insert-quote')
     }
-  }, [])
+  }, [debouncedGenPlaceholder])
 
   // 自动关联当前打开的 markdown 文件
   useEffect(() => {
@@ -362,6 +361,13 @@ export function ChatInput() {
     
     linkCurrentFile()
   }, [activeFilePath])
+
+  // 当关联文件变化时，触发防抖的 placeholder 重新生成
+  useEffect(() => {
+    if (linkedFile) {
+      debouncedGenPlaceholder()
+    }
+  }, [linkedFile, debouncedGenPlaceholder])
 
   return (
     <footer className="flex flex-col w-full p-1 justify-between items-center">
@@ -473,8 +479,6 @@ export function ChatInput() {
                         return <McpButton key={item.id} />
                       case 'ragSwitch':
                         return <RagSwitch key={item.id} />
-                      case 'chatPlaceholder':
-                        return <ChatPlaceholder key={item.id} />
                       case 'clipboardMonitor':
                         return <ClipboardMonitor key={item.id} />
                       case 'clearContext':

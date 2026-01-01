@@ -33,7 +33,7 @@ interface GroupedModel {
 
 export function ModelSelect({modelKey}: {modelKey: string}) {
   const [groupedModels, setGroupedModels] = useState<GroupedModel[]>([])
-  const { setPlaceholderModel, setTranslateModel, setMarkDescModel, setPrimaryModel, setImageMethodModel, setAudioModel, setSttModel, setEmbeddingModel, setRerankingModel } = useSettingStore()
+  const { setTranslateModel, setMarkDescModel, setPrimaryModel, setImageMethodModel, setAudioModel, setSttModel, setEmbeddingModel, setRerankingModel } = useSettingStore()
   const [model, setModel] = useState<string>('')
   const [open, setOpen] = React.useState(false)
   const t = useTranslations('settings.defaultModel')
@@ -45,8 +45,6 @@ export function ModelSelect({modelKey}: {modelKey: string}) {
         return 'primaryModel'
       case 'imageMethod':
         return 'imageMethodModel'
-      case 'placeholder':
-        return 'placeholderModel'
       case 'translate':
         return 'translateModel'
       case 'markDesc':
@@ -73,9 +71,6 @@ export function ModelSelect({modelKey}: {modelKey: string}) {
         break;
       case 'imageMethod':
         setImageMethodModel(primaryModel)
-        break;
-      case 'placeholder':
-        setPlaceholderModel(primaryModel)
         break;
       case 'translate':
         setTranslateModel(primaryModel)
