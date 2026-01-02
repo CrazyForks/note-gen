@@ -29,6 +29,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { ImageAttachments, ImageAttachment } from "./image-attachments"
 import { ImageIcon } from "lucide-react"
 import { TooltipButton } from "@/components/tooltip-button"
+import { isMobileDevice } from '@/lib/check'
 import { QuoteDisplay } from "./quote-display"
 import { convertFileSrc } from "@tauri-apps/api/core"
 import { writeFile } from "@tauri-apps/plugin-fs"
@@ -76,6 +77,8 @@ export function ChatInput() {
   const isMobile = useIsMobile()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const placeholderTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const isMobileDevice_ = isMobileDevice()
 
   // 拖拽传感器配置（仅桌面端）
   const sensors = useSensors(
@@ -138,6 +141,13 @@ export function ChatInput() {
 
   async function handleSelectLocalImages() {
     try {
+      // 移动端使用 HTML5 file input
+      if (isMobileDevice_) {
+        imageInputRef.current?.click()
+        return
+      }
+
+      // PC端使用 Tauri dialog
       const { open } = await import('@tauri-apps/plugin-dialog')
       const selected = await open({
         multiple: true,
@@ -159,6 +169,33 @@ export function ChatInput() {
       }
     } catch (error) {
       console.error('Failed to select files:', error)
+    }
+  }
+
+  // 处理移动端文件选择
+  async function handleImageInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    try {
+      const files = event.target.files
+      if (!files || files.length === 0) return
+
+      const newImages: ImageAttachment[] = []
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const url = URL.createObjectURL(file)
+        newImages.push({
+          id: `local-${Date.now()}-${Math.random()}`,
+          url,
+          name: file.name,
+          source: 'file' as const
+        })
+      }
+
+      setAttachedImages(prev => [...prev, ...newImages])
+      
+      // 重置 input
+      event.target.value = ''
+    } catch (error) {
+      console.error('Error in handleImageInputChange:', error)
     }
   }
 
@@ -371,6 +408,17 @@ export function ChatInput() {
 
   return (
     <footer className="flex flex-col w-full p-1 justify-between items-center">
+      {/* 移动端图片选择 */}
+      {isMobileDevice_ && (
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleImageInputChange}
+          className="hidden"
+        />
+      )}
       <LinkedFileDisplay
         linkedFile={linkedFile}
         onFileRemove={removeLinkedFile}

@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import useMarkStore from "@/stores/mark"
 import Image from "next/image"
 import { Check } from "lucide-react"
 import { ImageAttachment } from "./image-attachments"
+import { isMobileDevice } from "@/lib/check"
 
 interface ImageSelectorProps {
   isOpen: boolean
@@ -23,6 +24,8 @@ export function ImageSelector({ isOpen, onClose, onSelect, selectedImages }: Ima
   const t = useTranslations()
   const { marks } = useMarkStore()
   const [recordSelectedIds, setRecordSelectedIds] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const isMobile = isMobileDevice()
   
   const imageMarks = marks.filter(mark => mark.type === 'image' && !mark.deleted)
 
@@ -34,6 +37,13 @@ export function ImageSelector({ isOpen, onClose, onSelect, selectedImages }: Ima
   }, [isOpen, selectedImages])
 
   async function handleSelectLocalFiles() {
+    // 移动端使用 HTML5 file input
+    if (isMobile) {
+      fileInputRef.current?.click()
+      return
+    }
+
+    // PC端使用 Tauri dialog
     try {
       const selected = await open({
         multiple: true,
@@ -61,6 +71,34 @@ export function ImageSelector({ isOpen, onClose, onSelect, selectedImages }: Ima
     } catch (error) {
       console.error('Failed to select files:', error)
     }
+  }
+
+  // 处理移动端文件选择
+  async function handleFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    const newImages: ImageAttachment[] = []
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const url = URL.createObjectURL(file)
+      newImages.push({
+        id: `local-${Date.now()}-${Math.random()}`,
+        url,
+        name: file.name,
+        source: 'file' as const
+      })
+    }
+
+    const allSelected = [
+      ...selectedImages.filter(img => img.source !== 'file'),
+      ...newImages
+    ]
+    onSelect(allSelected)
+    onClose()
+    
+    // 重置 input
+    event.target.value = ''
   }
 
   function toggleRecordImage(mark: typeof imageMarks[0]) {
@@ -100,6 +138,18 @@ export function ImageSelector({ isOpen, onClose, onSelect, selectedImages }: Ima
         <DialogHeader>
           <DialogTitle>{t('record.chat.imageSelector.title')}</DialogTitle>
         </DialogHeader>
+        
+        {/* 移动端文件选择 */}
+        {isMobile && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileInputChange}
+            className="hidden"
+          />
+        )}
         
         <Tabs defaultValue="local" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
