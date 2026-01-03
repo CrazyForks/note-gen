@@ -21,6 +21,7 @@ import { SearchDialog } from "@/components/search-dialog"
 import { reportAppStart } from "@/lib/event-report"
 import { TitleBar } from "@/components/title-bar"
 import { Store } from '@tauri-apps/plugin-store'
+import { TextSizeProvider } from "@/contexts/text-size-context"
 
 export default function RootLayout({
   children,
@@ -144,11 +145,13 @@ export default function RootLayout({
       enableSystem
       disableTransitionOnChange
     >
-      <TitleBar onSearchClick={() => setSearchOpen(true)} />
-      <main className="flex flex-1 flex-col overflow-hidden w-full h-[calc(100vh-36px)] mt-9">
-        {children}
-      </main>
-      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <TextSizeProvider>
+        <TitleBar onSearchClick={() => setSearchOpen(true)} />
+        <main className="flex flex-1 flex-col overflow-hidden w-full h-[calc(100vh-36px)] mt-9">
+          {children}
+        </main>
+        <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      </TextSizeProvider>
     </ThemeProvider>
   );
 }

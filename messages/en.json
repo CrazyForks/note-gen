@@ -56,6 +56,14 @@
           "title": "Content Scale",
           "desc": "Adjust the text size in editor and chat Markdown content"
         },
+        "fileManagerTextSize": {
+          "title": "File Manager Text Size",
+          "desc": "Adjust the text size of file and folder lists in the file manager"
+        },
+        "recordTextSize": {
+          "title": "Record Text Size",
+          "desc": "Adjust the text size of record items in the record list"
+        },
         "customCss": {
           "title": "Custom CSS",
           "desc": "Add custom CSS styles to override the application's default styles",

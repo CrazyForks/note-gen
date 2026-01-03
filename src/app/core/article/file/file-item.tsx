@@ -1,4 +1,4 @@
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/enhanced-context-menu";
 import { Input } from "@/components/ui/input";
 import useArticleStore, { DirTree } from "@/stores/article";
 import { BaseDirectory, exists, readTextFile, remove, rename, writeTextFile } from "@tauri-apps/plugin-fs";
@@ -20,6 +20,7 @@ import { deleteFile as deleteGitlabFile } from "@/lib/sync/gitlab";
 import { generateUniqueFilename } from "@/lib/default-filename";
 import { MobileActionMenu, MobileMenuItem, MobileSeparator } from "./mobile-action-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
+import useSettingStore from "@/stores/setting";
 
 export function FileItem({ item }: { item: DirTree }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
@@ -28,8 +29,23 @@ export function FileItem({ item }: { item: DirTree }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const { activeFilePath, setActiveFilePath, readArticle, setCurrentArticle, fileTree, setFileTree, loadFileTree } = useArticleStore()
   const { setClipboardItem, clipboardItem, clipboardOperation } = useClipboardStore()
+  const { fileManagerTextSize } = useSettingStore()
   const t = useTranslations('article.file')
   const isMobile = useIsMobile()
+
+  // 根据文字大小映射图标大小
+  const getIconSize = (textSize: string) => {
+    const sizeMap = {
+      'xs': 'size-3',
+      'sm': 'size-3.5', 
+      'md': 'size-4',
+      'lg': 'size-5',
+      'xl': 'size-6'
+    }
+    return sizeMap[textSize as keyof typeof sizeMap] || 'size-4'
+  }
+
+  const iconSize = getIconSize(fileManagerTextSize)
   
   const path = computedParentPath(item)
   const isRoot = path.split('/').length === 1
@@ -492,11 +508,11 @@ export function FileItem({ item }: { item: DirTree }) {
             {
               isEditing ? 
               <div className="flex gap-1 items-center w-full select-none">
-                <span className={item.parent ? 'size-0' : 'size-4 ml-1'} />
-                <File className="size-4" />
+                <span className={item.parent ? 'size-0' : `${iconSize} ml-1`} />
+                <File className={iconSize} />
                 <Input
                   ref={inputRef}
-                  className="h-5 rounded-sm text-xs px-1 font-normal flex-1 mr-1"
+                  className={`h-5 rounded-sm text-${fileManagerTextSize} px-1 font-normal flex-1 mr-1`}
                   value={name}
                   onBlur={handleRename}
                   onChange={handleInputChange}
@@ -517,13 +533,13 @@ export function FileItem({ item }: { item: DirTree }) {
                 onDragStart={handleDragStart}
                 title={item.name}
                 className={`${item.isLocale ? '' : 'opacity-50'} flex justify-between flex-1 select-none items-center gap-1 dark:hover:text-white`}>
-                <div className="flex flex-1 gap-1 select-none relative">
-                  <span className={item.parent ? 'size-0' : 'size-4 ml-1'}></span>
-                  <div className="relative">
-                    <ImageIcon className="size-4" />
+                <div className="flex flex-1 gap-1 select-none relative items-center">
+                  <span className={item.parent ? 'size-0' : `${iconSize} ml-1`}></span>
+                  <div className="relative flex items-center">
+                    <ImageIcon className={iconSize} />
                     { item.sha && item.isLocale && <Cloud className="size-2.5 absolute left-0 bottom-0 z-10 bg-primary-foreground" /> }
                   </div>
-                  <span className="text-xs flex-1 line-clamp-1">{item.name}</span>
+                  <span className={`text-${fileManagerTextSize} flex-1 line-clamp-1`}>{item.name}</span>
                 </div>
                 {isMobile && (
                   <MobileActionMenu className="ml-1">
@@ -558,13 +574,13 @@ export function FileItem({ item }: { item: DirTree }) {
                 onDragStart={handleDragStart}
                 title={item.name}
                 className={`${item.isLocale ? '' : 'opacity-50'} flex justify-between flex-1 select-none items-center gap-1 dark:hover:text-white`}>
-                <div className="flex flex-1 gap-1 select-none relative">
-                  <span className={item.parent ? 'size-0' : 'size-4 ml-1'}></span>
-                  <div className="relative">
-                    { item.isLocale ? <File className="size-4" /> : <CloudDownload className="size-4" /> }
+                <div className="flex flex-1 gap-1 select-none relative items-center">
+                  <span className={item.parent ? 'size-0' : `${iconSize} ml-1`}></span>
+                  <div className="relative flex items-center">
+                    { item.isLocale ? <File className={iconSize} /> : <CloudDownload className={iconSize} /> }
                     { item.sha && item.isLocale && <Cloud className="size-2.5 absolute left-0 bottom-0 z-10 bg-primary-foreground" /> }
                   </div>
-                  <span className="text-xs flex-1 line-clamp-1">{item.name}</span>
+                  <span className={`text-${fileManagerTextSize} flex-1 line-clamp-1`}>{item.name}</span>
                 </div>
                 {isMobile && (
                   <MobileActionMenu className="ml-1">
@@ -598,27 +614,27 @@ export function FileItem({ item }: { item: DirTree }) {
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem inset onClick={handleShowFileManager}>
+          <ContextMenuItem inset onClick={handleShowFileManager} menuType="file">
             {t('context.viewDirectory')}
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem inset disabled={!item.isLocale} onClick={handleCutFile}>
+          <ContextMenuItem inset disabled={!item.isLocale} onClick={handleCutFile} menuType="file">
             {t('context.cut')}
           </ContextMenuItem>
-          <ContextMenuItem inset onClick={handleCopyFile}>
+          <ContextMenuItem inset onClick={handleCopyFile} menuType="file">
             {t('context.copy')}
           </ContextMenuItem>
-          <ContextMenuItem inset disabled={!clipboardItem} onClick={handlePasteFile}>
+          <ContextMenuItem inset disabled={!clipboardItem} onClick={handlePasteFile} menuType="file">
             {t('context.paste')}
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem disabled={!item.isLocale} inset onClick={handleStartRename}>
+          <ContextMenuItem disabled={!item.isLocale} inset onClick={handleStartRename} menuType="file">
             {t('context.rename')}
           </ContextMenuItem>
-          <ContextMenuItem disabled={!item.sha} inset className="text-red-900" onClick={handleDeleteSyncFile}>
+          <ContextMenuItem disabled={!item.sha} inset className="text-red-900" onClick={handleDeleteSyncFile} menuType="file">
             {t('context.deleteSyncFile')}
           </ContextMenuItem>
-          <ContextMenuItem disabled={!item.isLocale || item.name === ''} inset className="text-red-900" onClick={handleDeleteFile}>
+          <ContextMenuItem disabled={!item.isLocale || item.name === ''} inset className="text-red-900" onClick={handleDeleteFile} menuType="file">
             {t('context.deleteLocalFile')}
           </ContextMenuItem>
         </ContextMenuContent>

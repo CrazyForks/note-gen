@@ -1,4 +1,4 @@
-import { ContextMenuItem } from "@/components/ui/context-menu";
+import { ContextMenuItem } from "@/components/ui/enhanced-context-menu";
 import { RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Store } from "@tauri-apps/plugin-store";
@@ -166,7 +166,7 @@ export default function SyncFolder({ item }: { item: DirTree }) {
     setIsSyncing(false);
   }
 
-  return <ContextMenuItem inset disabled={isSyncing || !item.isLocale} onClick={handleSyncFolder}>
+  return <ContextMenuItem inset disabled={isSyncing || !item.isLocale} onClick={handleSyncFolder} menuType="file">
     {isSyncing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : null}
     {t('context.syncFolder')}
   </ContextMenuItem>

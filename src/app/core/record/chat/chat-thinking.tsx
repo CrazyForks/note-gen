@@ -28,7 +28,6 @@ export default function ChatThinking({chat}: { chat: Chat }) {
   }, [thinkingContent, isThinking, isExpanded])
   
   if (!chat.thinking) {
-    console.log('[ChatThinking] No thinking content, returning null')
     return null
   }
   

@@ -56,6 +56,14 @@
           "title": "Escala do Conteúdo",
           "desc": "Ajuste o tamanho do texto no editor e no conteúdo Markdown do chat"
         },
+        "fileManagerTextSize": {
+          "title": "Tamanho do Texto do Gerenciador de Arquivos",
+          "desc": "Ajuste o tamanho do texto das listas de arquivos e pastas no gerenciador de arquivos"
+        },
+        "recordTextSize": {
+          "title": "Tamanho do Texto dos Registros",
+          "desc": "Ajuste o tamanho do texto dos itens de registro na lista de registros"
+        },
         "customCss": {
           "title": "CSS Personalizado",
           "desc": "Adicione estilos CSS personalizados para substituir os estilos padrão do aplicativo",

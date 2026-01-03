@@ -5,6 +5,8 @@ import { ThemeSettings } from './theme'
 import { LanguageSettings } from './language'
 import { ScaleSettings } from './scale'
 import { ContentTextScaleSettings } from './content-text-scale'
+import { FileManagerTextSizeSettings } from './file-manager-text-size'
+import { RecordTextSizeSettings } from './record-text-size'
 import { CustomCssSettings } from './custom-css'
 import { TraySettings } from './tray-settings'
 
@@ -18,6 +20,8 @@ export function InterfaceSettings() {
       <LanguageSettings />
       <ScaleSettings />
       <ContentTextScaleSettings />
+      <FileManagerTextSizeSettings />
+      <RecordTextSizeSettings />
       <CustomCssSettings />
       <TraySettings />
     </div>

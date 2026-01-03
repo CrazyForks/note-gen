@@ -22,7 +22,6 @@ export default function AutoCompletionToggle() {
 
   // 同步初始状态
   useEffect(() => {
-    console.log('[AutoCompletionToggle] Initial state:', isEnabled);
     emitter.emit('auto-completion-enabled-changed', isEnabled);
   }, []);
 

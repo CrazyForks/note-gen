@@ -193,6 +193,14 @@ interface SettingState {
   contentTextScale: number
   setContentTextScale: (scale: number) => Promise<void>
 
+  // 文件管理器文字大小设置
+  fileManagerTextSize: string
+  setFileManagerTextSize: (size: string) => Promise<void>
+
+  // 记录文字大小设置
+  recordTextSize: string
+  setRecordTextSize: (size: string) => Promise<void>
+
   // 自定义 CSS 设置
   customCss: string
   setCustomCss: (css: string) => Promise<void>
@@ -815,6 +823,24 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ contentTextScale: scale })
     const store = await Store.load('store.json');
     await store.set('contentTextScale', scale)
+    await store.save()
+  },
+
+  // 文件管理器文字大小设置 (xs, sm, md, lg, xl)
+  fileManagerTextSize: 'sm',
+  setFileManagerTextSize: async (size: string) => {
+    set({ fileManagerTextSize: size })
+    const store = await Store.load('store.json');
+    await store.set('fileManagerTextSize', size)
+    await store.save()
+  },
+
+  // 记录文字大小设置 (xs, sm, md, lg, xl)
+  recordTextSize: 'sm',
+  setRecordTextSize: async (size: string) => {
+    set({ recordTextSize: size })
+    const store = await Store.load('store.json');
+    await store.set('recordTextSize', size)
     await store.save()
   },
 

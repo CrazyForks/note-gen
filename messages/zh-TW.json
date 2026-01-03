@@ -54,6 +54,14 @@
           "title": "正文縮放",
           "desc": "調整編輯器和對話中 Markdown 內容的文字大小"
         },
+        "fileManagerTextSize": {
+          "title": "文件管理器文字大小",
+          "desc": "調整文件管理器中文件和文件夾列表的文字大小"
+        },
+        "recordTextSize": {
+          "title": "記錄文字大小",
+          "desc": "調整記錄列表中記錄項的文字大小"
+        },
         "customCss": {
           "title": "自訂 CSS",
           "desc": "添加自訂 CSS 樣式來覆蓋應用的默認樣式",

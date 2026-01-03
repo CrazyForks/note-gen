@@ -10,8 +10,6 @@ export function AiCompletionPreview({ completion, isLoading, editorElement }: Ai
   useEffect(() => {
     if (!editorElement) return
 
-    console.log('[AiCompletionPreview] Effect triggered, completion:', completion ? completion.substring(0, 30) : 'none')
-
     // 清除所有之前的补全预览
     const existingPreviews = editorElement.querySelectorAll('.ai-completion-preview')
     existingPreviews.forEach(preview => preview.remove())
