@@ -46,6 +46,12 @@
     ],
     "iOS": {
       "bundleVersion": "0.23.4"
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "signingIdentity": null,
+      "entitlements": null,
+      "exceptionDomain": null
     }
   },
   "plugins": {
