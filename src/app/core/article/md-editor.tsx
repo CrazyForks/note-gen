@@ -817,10 +817,11 @@ export function MdEditor() {
 
     // 根据宽度计算当前应该显示的工具栏级别
     const getToolbarLevel = (width: number) => {
-      if (width >= 868) return 4 // 显示所有组
-      if (width >= 489) return 3 // 显示到 group3
-      if (width >= 326) return 2 // 显示到 groupLast
-      return 1 // 只显示基础组
+      const BUTTON_WIDTH = 36
+      const PADDING = 16
+      const availableWidth = width - PADDING
+      const maxButtons = Math.floor(availableWidth / BUTTON_WIDTH)
+      return maxButtons // 直接返回可显示的按钮数量
     }
 
     const resizeObserver = new ResizeObserver((entries) => {
@@ -834,11 +835,18 @@ export function MdEditor() {
 
         // 防抖：等待拖拽结束后再更新
         resizeTimer = setTimeout(() => {
-          const currentLevel = getToolbarLevel(width)
+          const currentButtonCount = getToolbarLevel(width)
           
-          // 只在跨越阈值时才更新工具栏
-          if (currentLevel !== lastToolbarLevel && lastToolbarLevel !== -1) {
+          // 只在按钮数量发生变化时才更新工具栏
+          if (currentButtonCount !== lastToolbarLevel && lastToolbarLevel !== -1) {
             setEditorWidth(width)
+            
+            // 在重建编辑器之前先保存当前内容
+            const currentContent = editor.getValue()
+            if (currentContent && activeFilePath) {
+              // 立即保存当前内容到文件
+              saveCurrentArticle(currentContent)
+            }
             
             const newToolbarConfig = createToolbarConfig(t, width)
             const toolbarElement = editor.vditor.toolbar?.element
@@ -850,7 +858,6 @@ export function MdEditor() {
                 const enableOutline = await s.get<boolean>('enableOutline') || false
                 const enableLineNumber = await s.get<boolean>('enableLineNumber') || false
                 
-                const currentContent = editor.getValue()
                 const currentMode = editor.vditor.currentMode
                 
                 editor.destroy()
@@ -882,6 +889,7 @@ export function MdEditor() {
                     resetSelectedText()
                   },
                   after: () => {
+                    // 重建后恢复内容，使用 false 参数保留撤销历史
                     vditor.setValue(currentContent, false)
                     setEditor(vditor)
                     setEditorPadding(vditor)
@@ -905,7 +913,7 @@ export function MdEditor() {
             }
           }
           
-          lastToolbarLevel = currentLevel
+          lastToolbarLevel = currentButtonCount
         }, 300) // 300ms 防抖延迟
       }
     })
