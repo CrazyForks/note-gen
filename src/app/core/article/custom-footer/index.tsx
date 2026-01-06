@@ -1,12 +1,13 @@
 import Vditor from 'vditor'
 import Sync from "./sync";
-import History from "./history";
+import HistoryComponent from "./history";
 import TextNumber from "./text-number";
 import PrimarySync from "./primary-sync";
 import Copy from "./copy";
 import Export from "./export";
 import VectorCalc from "./vector-calc";
 import AutoCompletionToggle from "./auto-completion-toggle";
+import PullButton from "./pull";
 import useArticleStore from "@/stores/article";
 
 export default function CustomFooter({editor}: {editor?: Vditor}) {
@@ -21,7 +22,8 @@ export default function CustomFooter({editor}: {editor?: Vditor}) {
     <div className="flex items-center gap-1">
       <VectorCalc />
       <PrimarySync />
-      <History editor={editor} disabled={!activeFilePath} />
+      <HistoryComponent editor={editor} disabled={!activeFilePath} />
+      <PullButton />
       <Sync editor={editor} disabled={!activeFilePath} />
     </div>
   </div>

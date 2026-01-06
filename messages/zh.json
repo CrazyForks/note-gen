@@ -265,6 +265,10 @@
           "title": "快速补全",
           "desc": "用于 Markdown 编辑器的 AI 内联补全，类似 GitHub Copilot，快速生成续写内容。"
         },
+        "commit": {
+          "title": "自动生成 commit 信息",
+          "desc": "用于自动生成 Git 提交信息，基于文件内容变化智能生成描述性提交信息。"
+        },
         "embedding": {
           "title": "嵌入模型",
           "desc": "用于处理文本嵌入和向量化的场景。"
@@ -1329,6 +1333,21 @@
     }
   },
   "article": {
+    "sync": {
+      "syncingRemote": "正在拉取远程文件...",
+      "syncComplete": "同步完成"
+    },
+    "syncConfirm": {
+      "title": "检测到远程文件更新",
+      "description": "文件 {fileName} 有远程更新",
+      "commitInfo": "最新提交信息",
+      "commitMessage": "提交消息",
+      "author": "作者",
+      "changes": "变更",
+      "confirmMessage": "确认要拉取远程版本并覆盖本地文件吗？此操作无法撤销。",
+      "cancel": "取消",
+      "confirmPull": "确认拉取"
+    },
     "emptyState": {
       "title": "开始创作",
       "subtitle": "选择一个文件开始编辑，或创建新的笔记",
@@ -1377,6 +1396,12 @@
         "importSuccess": "导入成功",
         "importSuccessDesc": "成功导入 {count} 个文件",
         "importError": "导入失败"
+      },
+      "sync": {
+        "syncingRemote": "正在拉取远程文件",
+        "syncComplete": "同步完成",
+        "pullingRemote": "正在从远程服务器获取最新内容...",
+        "pullComplete": "拉取完成"
       },
       "context": {
         "viewDirectory": "查看目录",
@@ -1483,11 +1508,21 @@
     },
     "footer": {
       "wordCount": "字数",
+      "pull": {
+        "pull": "拉取",
+        "checking": "检查更新中...",
+        "noUpdate": "无远程更新",
+        "clickToPull": "点击拉取远程更新",
+        "pullSuccess": "拉取成功",
+        "pullFailed": "拉取失败",
+        "ignored": "已忽略",
+        "ignoreUpdate": "忽略此更新"
+      },
       "sync": {
-        "sync": "同步",
-        "synced": "已同步",
-        "syncing": "同步中",
-        "syncFailed": "同步失败",
+        "push": "推送",
+        "pushed": "已推送",
+        "syncing": "推送中",
+        "syncFailed": "推送失败",
         "checkNetworkOrToken": "请检查网络连接或令牌是否正确",
         "quickSync": "快速同步"
       },

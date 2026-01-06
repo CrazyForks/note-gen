@@ -25,7 +25,7 @@ export default function Sync({editor, disabled}: {editor?: Vditor, disabled?: bo
   const [isLoading, setIsLoading] = useState(false)
   const syncTimeoutRef = useRef<number | null>(null)
   const t = useTranslations('article.footer.sync')
-  const [syncText, setSyncText] = useState(t('sync'))
+  const [syncText, setSyncText] = useState(t('push'))
   const [progressPercentage, setProgressPercentage] = useState(0)
   const progressIntervalRef = useRef<number | null>(null)
   const username = useUsername()
@@ -111,7 +111,7 @@ export default function Sync({editor, disabled}: {editor?: Vditor, disabled?: bo
             删除了内容：${removeDiff}
             对比后对本次修改返回一条标准的提交描述，仅返回描述内容，字数不能超过50个字。
           `;
-          const aiMessage = await fetchAi(text);
+          const aiMessage = await fetchAi(text, 'commit');
           if (!aiMessage.includes('请求失败')) {
             message = aiMessage;
           }
@@ -206,10 +206,39 @@ export default function Sync({editor, disabled}: {editor?: Vditor, disabled?: bo
       }
       // 检查上传结果并更新状态
       if (uploadRes?.data?.commit?.message || uploadRes?.data?.file_path) {
-        setSyncText(t('synced'));
+        setSyncText(t('pushed'));
         emitter.emit('sync-success');
+        
+        // 推送成功后，更新本地文件树状态
+        const { loadFileTree } = useArticleStore.getState()
+        await loadFileTree()
+        
+        // 强制更新本地文件内容，确保 SHA 正确
+        const currentContent = currentArticle
+        
+        // 重新保存文件内容，这会更新文件的 SHA
+        const { saveLocalFile } = await import('@/lib/sync/auto-sync')
+        await saveLocalFile(activeFilePath, currentContent)
+        
+        // 更新本地文件的同步时间
+        const { updateFileSyncTime } = await import('@/lib/sync/conflict-resolution')
+        await updateFileSyncTime(activeFilePath)
+        
+        // 发送最新 commit 信息给 Pull 组件，清除拉取状态
+        if (uploadRes?.data?.commit?.sha) {
+          const commitInfo = {
+            sha: uploadRes.data.commit.sha,
+            message: uploadRes.data.commit.message || message,
+            author: uploadRes.data.commit.author?.name || 'User',
+            date: new Date(uploadRes.data.commit.author?.date || Date.now()),
+            additions: uploadRes.data.commit.stats?.additions,
+            deletions: uploadRes.data.commit.stats?.deletions
+          }
+          emitter.emit('latest-commit-info', commitInfo)
+        }
+        
         setTimeout(() => {
-          setSyncText(t('sync'));
+          setSyncText(t('push'));
         }, 3000);
       }
     } catch (error) {
@@ -338,9 +367,42 @@ export default function Sync({editor, disabled}: {editor?: Vditor, disabled?: bo
       
       // 检查上传结果并更新状态
       if (uploadRes?.data?.commit?.message) {
-        setSyncText(t('synced'));
+        setSyncText(t('pushed'));
         setProgressPercentage(0);
         emitter.emit('sync-success');
+        
+        // 推送成功后，更新本地文件树状态
+        const { loadFileTree } = useArticleStore.getState()
+        await loadFileTree()
+        
+        // 强制更新本地文件内容，确保 SHA 正确
+        const currentContent = currentArticle
+        
+        // 重新保存文件内容，这会更新文件的 SHA
+        const { saveLocalFile } = await import('@/lib/sync/auto-sync')
+        await saveLocalFile(activeFilePath, currentContent)
+        
+        // 更新本地文件的同步时间
+        const { updateFileSyncTime } = await import('@/lib/sync/conflict-resolution')
+        await updateFileSyncTime(activeFilePath)
+        
+        // 发送最新 commit 信息给 Pull 组件，清除拉取状态
+        if (uploadRes?.data?.commit?.sha) {
+          const commitInfo = {
+            sha: uploadRes.data.commit.sha,
+            message: uploadRes.data.commit.message || message,
+            author: uploadRes.data.commit.author?.name || 'User',
+            date: new Date(uploadRes.data.commit.author?.date || Date.now()),
+            additions: uploadRes.data.commit.stats?.additions,
+            deletions: uploadRes.data.commit.stats?.deletions
+          }
+          emitter.emit('latest-commit-info', commitInfo)
+          
+          // 延迟一下再发送一次，确保状态同步
+          setTimeout(() => {
+            emitter.emit('latest-commit-info', commitInfo)
+          }, 100)
+        }
       }
     } catch (error) {
       console.error('Sync error:', error);
@@ -396,8 +458,8 @@ export default function Sync({editor, disabled}: {editor?: Vditor, disabled?: bo
     // 处理编辑器输入事件
     const handleInput = () => {
       // 更改同步状态文本
-      if (syncText !== t('sync')) {
-        setSyncText(t('sync'));
+      if (syncText !== t('push')) {
+        setSyncText(t('push'));
       }
       
       // 清除现有的定时器

@@ -1,4 +1,4 @@
-import { GitPullRequestArrow, HistoryIcon, LoaderCircle } from "lucide-react";
+import { GitPullRequestArrow, History as HistoryIcon, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { decodeBase64ToString, getFileCommits as getGithubFileCommits, getFiles as getGithubFiles } from "@/lib/sync/github";
@@ -24,7 +24,7 @@ import { Store } from "@tauri-apps/plugin-store";
 
 dayjs.extend(relativeTime)
 
-export default function History({editor, disabled}: {editor?: Vditor, disabled?: boolean}) {
+export default function HistoryComponent({editor, disabled}: {editor?: Vditor, disabled?: boolean}) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { activeFilePath, setCurrentArticle, currentArticle, loadFileTree, saveCurrentArticle } = useArticleStore()
   const [commits, setCommits] = useState<ResCommit[]>([])
@@ -114,6 +114,20 @@ export default function History({editor, disabled}: {editor?: Vditor, disabled?:
 
     setCommits(res || [])
     setCommitsLoading(false)
+    
+    // 通知 Pull 组件最新的 commit 信息
+    if (res && res.length > 0) {
+      const latestCommit = res[0]
+      const commitInfo = {
+        sha: latestCommit.sha,
+        message: latestCommit.commit?.message || 'No message',
+        author: latestCommit.commit?.author?.name || latestCommit.author?.login || 'Unknown',
+        date: new Date(latestCommit.commit?.author?.date || latestCommit.commit?.committer?.date || Date.now()),
+        additions: latestCommit.stats?.additions,
+        deletions: latestCommit.stats?.deletions
+      }
+      emitter.emit('latest-commit-info', commitInfo)
+    }
   }
 
   async function handleCommit(sha: string) {
@@ -263,11 +277,13 @@ export default function History({editor, disabled}: {editor?: Vditor, disabled?:
               disabled={commitsLoading || disabled} 
               className="outline-none">
               {
-                commitsLoading && <LoaderCircle className="animate-spin !size-3" />
+                commitsLoading ? 
+                  <LoaderCircle className="animate-spin !size-3" /> :
+                  <HistoryIcon className="!size-3" />
               }
               <span className="text-xs">
                 {commitsLoading ? t('loadingHistory') : commits.length ? 
-                  `${t('historyRecords')} (${dayjs(commits[0].commit.committer.date).fromNow()})` : t('noHistory')}
+                  `${t('historyRecords')} (${commits.length})` : t('noHistory')}
               </span>
             </Button> :
             null

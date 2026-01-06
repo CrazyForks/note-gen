@@ -278,6 +278,14 @@
           "title": "Sugestão da IA",
           "desc": "Prompts de sugestão da IA são usados para geração de conteúdo no placeholder da conversa de IA da página de registro."
         },
+        "completion": {
+          "title": "Conclusão Rápida",
+          "desc": "Conclusão inline de IA para editor Markdown, semelhante ao GitHub Copilot, gera rapidamente conteúdo de continuação"
+        },
+        "commit": {
+          "title": "Gerar Mensagem de Commit Automaticamente",
+          "desc": "Usado para gerar automaticamente mensagens de commit Git, gerando inteligentemente mensagens de commit descritivas com base nas alterações do conteúdo do arquivo."
+        },
         "translate": {
           "title": "Tradução",
           "desc": "Usado para cenários de tradução de conteúdo."
@@ -722,6 +730,10 @@
           "name": "Conclusão Rápida",
           "type": "Modelo de Conclusão",
           "desc": "Conclusão inline de IA para editor Markdown, semelhante ao GitHub Copilot, gera rapidamente conteúdo de continuação"
+        },
+        "commit": {
+          "title": "Mensagem de Commit",
+          "desc": "Usado para gerar automaticamente mensagens de commit Git, gerando inteligentemente mensagens de commit descritivas com base nas alterações do conteúdo do arquivo."
         },
         "poweredBy": "Fornecido por SiliconFlow"
       }
@@ -1276,6 +1288,21 @@
     }
   },
   "article": {
+    "sync": {
+      "syncingRemote": "Buscando arquivo remoto...",
+      "syncComplete": "Sincronização Concluída"
+    },
+    "syncConfirm": {
+      "title": "Atualização de Arquivo Remoto Detectada",
+      "description": "Arquivo {fileName} tem atualizações remotas",
+      "commitInfo": "Informações do Último Commit",
+      "commitMessage": "Mensagem do Commit",
+      "author": "Autor",
+      "changes": "Alterações",
+      "confirmMessage": "Tem certeza de que deseja buscar a versão remota e substituir o arquivo local? Esta ação não pode ser desfeita.",
+      "cancel": "Cancelar",
+      "confirmPull": "Confirmar Busca"
+    },
     "emptyState": {
       "title": "Começar a Criar",
       "subtitle": "Selecione um arquivo para começar a editar ou crie uma nova nota",
@@ -1324,6 +1351,12 @@
         "importSuccess": "Importação Bem-sucedida",
         "importSuccessDesc": "Importados {count} arquivos com sucesso",
         "importError": "Falha na Importação"
+      },
+      "sync": {
+        "syncingRemote": "Buscando arquivo remoto...",
+        "syncComplete": "Sincronização Concluída",
+        "pullingRemote": "Buscando conteúdo mais recente do servidor remoto...",
+        "pullComplete": "Pull Concluído"
       },
       "context": {
         "viewDirectory": "Ver Diretório",
@@ -1458,7 +1491,17 @@
       }
     },
     "footer": {
-      "wordCount": "Palavras",
+      "wordCount": "Contagem de Palavras",
+      "pull": {
+        "pull": "Pull",
+        "checking": "Verificando atualizações...",
+        "noUpdate": "Sem atualizações remotas",
+        "clickToPull": "Clique para puxar atualizações remotas",
+        "pullSuccess": "Pull Bem-sucedido",
+        "pullFailed": "Pull Falhou",
+        "ignored": "Ignorado",
+        "ignoreUpdate": "Ignorar Esta Atualização"
+      },
       "sync": {
         "sync": "Sincronizar",
         "synced": "Sincronizado",
@@ -1583,13 +1626,13 @@
   "footer": {
     "wordCount": "Palavras",
     "sync": {
-      "sync": "Sincronizar",
-      "synced": "Sincronizado",
-      "syncing": "Sincronizando",
-      "syncFailed": "Falha na Sincronização",
-      "checkNetworkOrToken": "Por favor, verifique a conexão de rede ou o token",
-      "quickSync": "Sincronização Rápida"
-    },
+        "push": "Push",
+        "pushed": "Enviado",
+        "syncing": "Enviando",
+        "syncFailed": "Falha no Push",
+        "checkNetworkOrToken": "Por favor, verifique a conexão de rede ou o token",
+        "quickSync": "Sincronização Rápida"
+      },
     "history": {
       "loadingHistory": "Carregando histórico",
       "historyRecords": "Registros do Histórico",

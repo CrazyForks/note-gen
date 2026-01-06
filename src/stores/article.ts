@@ -1,10 +1,12 @@
-import { decodeBase64ToString, getFiles as getGithubFiles } from '@/lib/sync/github'
+import { getFiles as getGithubFiles } from '@/lib/sync/github'
 import { GithubContent } from '@/lib/sync/github.types'
 import { getFiles as getGiteeFiles } from '@/lib/sync/gitee'
-import { getFiles as getGitlabFiles, getFileContent as getGitlabFileContent } from '@/lib/sync/gitlab'
+import { getFiles as getGitlabFiles } from '@/lib/sync/gitlab'
 import { GiteeFile } from '@/lib/sync/gitee'
 import { getSyncRepoName } from '@/lib/sync/repo-utils'
-import { getCurrentFolder } from '@/lib/path'
+import { autoSyncIfNeeded, hasNetworkConnection, ensureDirectoryExists } from '@/lib/sync/auto-sync'
+import { sanitizeFilePath, hasInvalidFileNameChars } from '@/lib/sync/filename-utils'
+import { getCurrentFolder, computedParentPath } from '@/lib/path'
 import useVectorStore from './vector'
 import { join, appDataDir } from '@tauri-apps/api/path'
 import { BaseDirectory, DirEntry, exists, mkdir, readDir, readTextFile, writeTextFile, stat } from '@tauri-apps/plugin-fs'
@@ -12,6 +14,7 @@ import { Store } from '@tauri-apps/plugin-store'
 import { cloneDeep, uniq } from 'lodash-es'
 import { create } from 'zustand'
 import { getFilePathOptions, getWorkspacePath, toWorkspaceRelativePath } from '@/lib/workspace'
+import emitter from '@/lib/emitter'
 
 export type SortType = 'name' | 'created' | 'modified' | 'none'
 export type SortDirection = 'asc' | 'desc'
@@ -56,7 +59,6 @@ interface NoteState {
 
   fileTree: DirTree[]
   fileTreeLoading: boolean
-  remoteSyncLoading: boolean
   setFileTree: (tree: DirTree[]) => void
   addFile: (file: DirTree) => void
   loadFileTree: () => Promise<void>
@@ -77,8 +79,10 @@ interface NoteState {
   clearCollapsibleList: () => Promise<void>
 
   currentArticle: string
-  readArticle: (path: string, sha?: string, isLocale?: boolean) => Promise<void>
+  isPulling: boolean // 新增：拉取状态
+  readArticle: (path: string, sha?: string, isLocale?: boolean, autoSync?: boolean) => Promise<void>
   setCurrentArticle: (content: string) => void
+  setIsPulling: (pulling: boolean) => void
   saveCurrentArticle: (content: string) => Promise<void>
 
   // 向量计算相关
@@ -217,7 +221,6 @@ const useArticleStore = create<NoteState>((set, get) => ({
     set({ fileTree: [file, ...get().fileTree] })
   },
   fileTreeLoading: false,
-  remoteSyncLoading: false,
   updateFileStats: async (basePath: string, tree: DirTree[]) => {
     const workspace = await getWorkspacePath()
     
@@ -415,29 +418,23 @@ const useArticleStore = create<NoteState>((set, get) => ({
   
   // 加载远程同步文件（后台任务）
   loadRemoteSyncFiles: async () => {
-    set({ remoteSyncLoading: true })
-    
     try {
       const store = await Store.load('store.json');
-      const primaryBackupMethod = await store.get<string>('primaryBackupMethod') || 'github';
+      const primaryBackupMethod = await store.get<string>('primaryBackupMethod') || 'github'
       
-      // 检查是否配置了访问令牌
       if (primaryBackupMethod === 'github') {
         const accessToken = await store.get<string>('accessToken')
         if (!accessToken) {
-          set({ remoteSyncLoading: false })
           return
         }
       } else if (primaryBackupMethod === 'gitee') {
         const giteeAccessToken = await store.get<string>('giteeAccessToken')
         if (!giteeAccessToken) {
-          set({ remoteSyncLoading: false })
           return
         }
       } else if (primaryBackupMethod === 'gitlab') {
         const gitlabAccessToken = await store.get<string>('gitlabAccessToken')
         if (!gitlabAccessToken) {
-          set({ remoteSyncLoading: false })
           return
         }
       }
@@ -561,8 +558,6 @@ const useArticleStore = create<NoteState>((set, get) => ({
     await Promise.all(loadPromises)
     } catch (error) {
       console.error('Failed to load remote sync files:', error)
-    } finally {
-      set({ remoteSyncLoading: false })
     }
   },
   // 加载文件夹内部的本地和远程文件（按需加载）
@@ -991,73 +986,173 @@ const useArticleStore = create<NoteState>((set, get) => ({
   },
 
   currentArticle: '',
-  readArticle: async (path: string, sha?: string, isLocale = true) => {
+  isPulling: false, // 新增：拉取状态
+  readArticle: async (path: string, sha?: string, autoSync = true) => {
     get().setLoading(true)
-    if (isLocale) {
-      try {
-        const workspace = await getWorkspacePath()
-        const pathOptions = await getFilePathOptions(path)
-        let content = ''
-        if (workspace.isCustom) {
-          content = await readTextFile(pathOptions.path)
-        } else {
-          content = await readTextFile(pathOptions.path, { baseDir: pathOptions.baseDir })
-        }
-        set({ currentArticle: content })
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (_) {
-        try {
-          // 如果本地文件不存在，尝试从Github/Gitee读取
-          const store = await Store.load('store.json');
-          const primaryBackupMethod = await store.get<string>('primaryBackupMethod') || 'github';
-          let content = '';
-          switch (primaryBackupMethod) {
-            case 'github':
-              const githubRepo2 = await getSyncRepoName('github');
-              content = decodeBase64ToString(await getGithubFiles({ path, repo: githubRepo2 }))
-              break;
-            case 'gitee':
-              const giteeRepo2 = await getSyncRepoName('gitee');
-              content = decodeBase64ToString(await getGiteeFiles({ path, repo: giteeRepo2 }))
-              break;
-            case 'gitlab':
-              const gitlabRepo2 = await getSyncRepoName('gitlab');
-              content = decodeBase64ToString((await getGitlabFileContent({ path, ref: 'main', repo: gitlabRepo2 })).content)
-              break;
-            default:
-              break;
-          }
-          set({ currentArticle: content })
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (_) {
-          // 文件既不在本地也不在远程
-        }
-      }
-    } else {
-      const store = await Store.load('store.json');
-      const primaryBackupMethod = await store.get<string>('primaryBackupMethod') || 'github';
-      
-      let res;
-      switch (primaryBackupMethod) {
-        case 'github':
-          const githubRepo3 = await getSyncRepoName('github');
-          res = await getGithubFiles({ path, repo: githubRepo3 })
-          break;
-        case 'gitee':
-          const giteeRepo3 = await getSyncRepoName('gitee');
-          res = await getGiteeFiles({ path, repo: giteeRepo3 })
-          break;
-        case 'gitlab':
-          const gitlabRepo3 = await getSyncRepoName('gitlab');
-          res = await getGitlabFileContent({ path, ref: 'main', repo: gitlabRepo3 })
-          break;
-        default:
-          break;
-      }
-      set({ currentArticle: decodeBase64ToString(res.content) })
-      get().saveCurrentArticle(decodeBase64ToString(res.content))
+    
+    // 处理文件名兼容性问题
+    let actualPath = path
+    if (hasInvalidFileNameChars(path)) {
+      actualPath = sanitizeFilePath(path)
+      console.warn(`文件路径包含不安全字符，已自动转换: "${path}" -> "${actualPath}"`)
+      // 更新活动文件路径为清理后的路径
+      await get().setActiveFilePath(actualPath)
     }
-    get().setLoading(false)
+    
+    // 优先加载本地内容（快速响应）
+    let localContent = ''
+    
+    try {
+      const workspace = await getWorkspacePath()
+      const pathOptions = await getFilePathOptions(actualPath)
+      if (workspace.isCustom) {
+        localContent = await readTextFile(pathOptions.path)
+      } else {
+        localContent = await readTextFile(pathOptions.path, { baseDir: pathOptions.baseDir })
+      }
+      
+      // 检查是否是远程文件且本地内容为空
+      const fileTree = get().fileTree
+      const findFileInTree = (tree: DirTree[], targetPath: string): DirTree | null => {
+        for (const item of tree) {
+          const itemPath = computedParentPath(item)
+          if (itemPath === targetPath && item.isFile) {
+            return item
+          }
+          if (item.children && item.children.length > 0) {
+            const found = findFileInTree(item.children, targetPath)
+            if (found) return found
+          }
+        }
+        return null
+      }
+      
+      const fileInfo = findFileInTree(fileTree, actualPath)
+      const isRemoteFile = fileInfo && !fileInfo.isLocale
+      
+      // 如果是远程文件且本地内容为空，立即拉取
+      if (isRemoteFile && (!localContent || localContent.trim() === '')) {
+        console.log('Remote file with empty local content detected, starting immediate pull')
+        get().setIsPulling(true)
+        
+        // 立即触发拉取，不等待历史记录组件
+        emitter.emit('immediate-pull-needed', {
+          filePath: actualPath,
+          isRemoteFile: true
+        })
+        
+        // 设置空内容但不解除加载状态
+        set({ currentArticle: '' })
+        // 不调用 setLoading(false)，保持加载状态直到拉取完成
+        return
+      }
+      
+      // 正常的本地文件，显示内容
+      set({ currentArticle: localContent })
+      // 本地内容加载完成，解除加载状态
+      get().setLoading(false)
+    } catch (error) {
+      // 本地文件不存在，检查是否是远程文件
+      if (error instanceof Error && 
+          (error.message.includes('no such file') || 
+           error.message.includes('not found') ||
+           error.message.includes('系统找不到指定的路径'))) {
+        console.log(`Local file does not exist: ${actualPath}`)
+        
+        // 检查是否是远程文件（通过文件管理器状态判断）
+        const fileTree = get().fileTree
+        const findFileInTree = (tree: DirTree[], targetPath: string): DirTree | null => {
+          for (const item of tree) {
+            const itemPath = computedParentPath(item)
+            if (itemPath === targetPath && item.isFile) {
+              return item
+            }
+            if (item.children && item.children.length > 0) {
+              const found = findFileInTree(item.children, targetPath)
+              if (found) return found
+            }
+          }
+          return null
+        }
+        
+        const fileInfo = findFileInTree(fileTree, actualPath)
+        const isRemoteFile = fileInfo && !fileInfo.isLocale
+        
+        if (isRemoteFile) {
+          // 远程文件且本地不存在，立即开始拉取
+          console.log('Remote file detected, starting immediate pull')
+          get().setIsPulling(true)
+          
+          // 立即触发拉取，不等待历史记录组件
+          emitter.emit('immediate-pull-needed', {
+            filePath: actualPath,
+            isRemoteFile: true
+          })
+          
+          // 创建空白文件但不设置到编辑器
+          await ensureDirectoryExists(actualPath)
+          const workspace = await getWorkspacePath()
+          const pathOptions = await getFilePathOptions(actualPath)
+          
+          try {
+            if (workspace.isCustom) {
+              await writeTextFile(pathOptions.path, '')
+            } else {
+              await writeTextFile(pathOptions.path, '', { baseDir: pathOptions.baseDir })
+            }
+            // 不设置 currentArticle，保持空白直到拉取完成
+            set({ currentArticle: '' })
+            // 不调用 setLoading(false)，保持加载状态
+          } catch (createError) {
+            console.error('Failed to create empty file:', createError)
+            set({ currentArticle: '' })
+            get().setIsPulling(false)
+            get().setLoading(false)
+          }
+        } else {
+          // 本地文件，创建空白文件
+          console.log(`Creating empty local file: ${actualPath}`)
+          await ensureDirectoryExists(actualPath)
+          const workspace = await getWorkspacePath()
+          const pathOptions = await getFilePathOptions(actualPath)
+          
+          try {
+            if (workspace.isCustom) {
+              await writeTextFile(pathOptions.path, '')
+            } else {
+              await writeTextFile(pathOptions.path, '', { baseDir: pathOptions.baseDir })
+            }
+            set({ currentArticle: '' })
+            get().setLoading(false)
+          } catch (createError) {
+            console.error('Failed to create empty file:', createError)
+            set({ currentArticle: '' })
+            get().setLoading(false)
+          }
+        }
+      } else {
+        console.warn(`Unexpected error reading local file ${actualPath}:`, error)
+        set({ currentArticle: '' })
+        get().setLoading(false)
+      }
+    }
+    
+    // 异步检查远程更新（不阻塞界面）
+    if (autoSync && await hasNetworkConnection()) {
+      try {
+        const syncedContent = await autoSyncIfNeeded(actualPath, {
+          autoPull: false, // 不自动拉取，只检查更新
+          showConfirm: false // 不显示确认对话框
+        })
+        
+        if (syncedContent !== null && syncedContent !== localContent) {
+          // 远程内容不同，但这里不自动更新，让用户通过 Pull 按钮手动处理
+          console.log('Remote update detected, user can pull via button')
+        }
+      } catch (error) {
+        console.warn('Async sync check failed:', error)
+      }
+    }
   },
 
   // 向量计算相关状态
@@ -1070,6 +1165,10 @@ const useArticleStore = create<NoteState>((set, get) => ({
 
   setCurrentArticle: (content: string) => {
     set({ currentArticle: content })
+  },
+  
+  setIsPulling: (pulling: boolean) => {
+    set({ isPulling: pulling })
   },
   
   saveCurrentArticle: async (content: string) => {

@@ -251,6 +251,10 @@
           "title": "高速補完",
           "desc": "Markdownエディタ用のAIインライン補完、GitHub Copilotに類似、素早く続きの内容を生成します。"
         },
+        "commit": {
+          "title": "コミットメッセージを自動生成",
+          "desc": "Gitコミットメッセージを自動生成するために使用され、ファイルの内容変更に基づいて記述的なコミットメッセージをインテリジェントに生成します。"
+        },
         "embedding": {
           "title": "埋め込みモデル",
           "desc": "テキスト埋め込みとベクトル化のシナリオに使用されます。"
@@ -1362,6 +1366,21 @@
     }
   },
   "article": {
+    "sync": {
+      "syncingRemote": "リモートファイルをプル中...",
+      "syncComplete": "同期完了"
+    },
+    "syncConfirm": {
+      "title": "リモートファイルの更新を検出",
+      "description": "ファイル {fileName} にリモート更新があります",
+      "commitInfo": "最新コミット情報",
+      "commitMessage": "コミットメッセージ",
+      "author": "作者",
+      "changes": "変更",
+      "confirmMessage": "リモートバージョンをプルしてローカルファイルを上書きしてもよろしいですか？この操作は元に戻せません。",
+      "cancel": "キャンセル",
+      "confirmPull": "プルを確認"
+    },
     "emptyState": {
       "title": "作成を開始",
       "subtitle": "ファイルを選択して編集を開始するか、新しいノートを作成してください",
@@ -1410,6 +1429,12 @@
         "importSuccess": "インポート成功",
         "importSuccessDesc": "{count} 個のファイルをインポートしました",
         "importError": "インポート失敗"
+      },
+      "sync": {
+        "syncingRemote": "リモートファイルをプル中...",
+        "syncComplete": "同期完了",
+        "pullingRemote": "リモートサーバーから最新コンテンツを取得中...",
+        "pullComplete": "プル完了"
       },
       "context": {
         "viewDirectory": "ディレクトリを表示",
@@ -1510,11 +1535,21 @@
     },
     "footer": {
       "wordCount": "文字数",
+      "pull": {
+        "pull": "プル",
+        "checking": "更新を確認中...",
+        "noUpdate": "リモート更新なし",
+        "clickToPull": "クリックしてリモート更新をプル",
+        "pullSuccess": "プル成功",
+        "pullFailed": "プル失敗",
+        "ignored": "無視しました",
+        "ignoreUpdate": "この更新を無視"
+      },
       "sync": {
-        "sync": "同期",
-        "synced": "同期済み",
-        "syncing": "同期中",
-        "syncFailed": "同期に失敗しました",
+        "push": "プッシュ",
+        "pushed": "プッシュ済み",
+        "syncing": "プッシュ中",
+        "syncFailed": "プッシュに失敗しました",
         "checkNetworkOrToken": "ネットワーク接続またはトークンを確認してください",
         "quickSync": "クイック同期"
       },

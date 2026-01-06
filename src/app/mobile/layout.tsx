@@ -17,6 +17,7 @@ import { initMcp } from "@/lib/mcp/init"
 import { reportAppStart } from "@/lib/event-report"
 import { MobileStatusBar } from "@/components/mobile-statusbar"
 import { TextSizeProvider } from "@/contexts/text-size-context"
+import { SyncConfirmDialog } from "@/components/sync-confirm-dialog"
 
 export default function RootLayout({
   children,
@@ -72,6 +73,7 @@ export default function RootLayout({
             <AppFootbar />
           </div>
         </TooltipProvider>
+        <SyncConfirmDialog />
       </TextSizeProvider>
     </ThemeProvider>
   );
