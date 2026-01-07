@@ -12,9 +12,6 @@ echo "同步版本号: $VERSION"
 PLIST_PATH="src-tauri/gen/apple/note-gen_iOS/Info.plist"
 
 if [ -f "$PLIST_PATH" ]; then
-    # 备份原文件
-    cp "$PLIST_PATH" "$PLIST_PATH.backup"
-    
     # 更新版本号
     sed -i '' "s/<key>CFBundleShortVersionString<\/key>/<key>CFBundleShortVersionString<\/key>/; s/<string>.*<\/string>/<string>$VERSION<\/string>/" "$PLIST_PATH"
     sed -i '' "s/<key>CFBundleVersion<\/key>/<key>CFBundleVersion<\/key>/; s/<string>.*<\/string>/<string>$VERSION<\/string>/" "$PLIST_PATH"

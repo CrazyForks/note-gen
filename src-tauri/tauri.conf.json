@@ -45,7 +45,8 @@
       "icons/icon.ico"
     ],
     "iOS": {
-      "bundleVersion": "0.23.6"
+      "bundleVersion": "0.23.6",
+      "developmentTeam": "RGZC4ZTJMU"
     },
     "macOS": {
       "minimumSystemVersion": "10.13",
