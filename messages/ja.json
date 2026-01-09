@@ -801,6 +801,7 @@
         "text": "テキスト",
         "file": "ファイル",
         "link": "リンク",
+        "pdf": "PDF",
         "upload": "アップロード",
         "download": "ダウンロード",
         "uploadTo": "ローカルから {provider} へ同期",

@@ -796,6 +796,7 @@
         "text": "文本",
         "file": "文件",
         "link": "連結",
+        "pdf": "PDF",
         "upload": "上傳記錄",
         "download": "下載記錄",
         "uploadTo": "從本地同步到 {provider}",

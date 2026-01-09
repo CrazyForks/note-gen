@@ -831,6 +831,7 @@
         "recording": "Gravação",
         "file": "Arquivo",
         "link": "Vínculo",
+        "pdf": "PDF",
         "upload": "Upload de Registro",
         "download": "Download de Registro",
         "uploadTo": "Sincronizar do local para {provider}",

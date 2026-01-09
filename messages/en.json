@@ -828,6 +828,7 @@
         "recording": "Recording",
         "file": "File",
         "link": "Link",
+        "pdf": "PDF",
         "upload": "Upload Record",
         "download": "Download Record",
         "uploadTo": "Sync from local to {provider}",
