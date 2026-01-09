@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageSquare, Highlighter, SquarePen, Settings, User, Plus, CopySlash, Mic, ScanText, ImagePlus, Link, FileText } from "lucide-react"
+import { MessageSquare, Highlighter, SquarePen, Settings, User, Plus } from "lucide-react"
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from "@/lib/utils"
 import { Store } from "@tauri-apps/plugin-store"
@@ -13,13 +13,11 @@ import { UserInfo } from "@/lib/sync/github.types"
 import { getUserInfo } from "@/lib/sync/github"
 import { useEffect, useState } from "react"
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer'
-import emitter from '@/lib/emitter'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { MobileRecordTools } from '@/components/mobile-record-tools'
 
 // 普通导航按钮组件
 interface NormalNavButtonProps {
@@ -89,18 +87,6 @@ function AvatarNavButton({ item, isActive, avatarUrl, onClick }: AvatarNavButton
   )
 }
 
-// 快捷记录按钮组件
-interface QuickRecordNavButtonProps {
-  onClick: () => void
-}
-function QuickRecordNavButton({ onClick }: QuickRecordNavButtonProps) {
-  return (
-    <button className="w-1/5 flex items-center justify-center" onClick={onClick}>
-      <Plus className="size-10 bg-primary text-primary-foreground rounded-full p-2" />
-    </button>
-  )
-}
-
 export function AppFootbar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -116,7 +102,6 @@ export function AppFootbar() {
     setGithubUsername,
     setGitlabUsername,
     setGiteaUsername,
-    recordToolbarConfig,
   } = useSettingStore()
   const {
     setUserInfo,
@@ -224,35 +209,6 @@ export function AppFootbar() {
   }
 
   const avatarUrl = getAvatarUrl()
-
-  // 获取启用的记录工具
-  const enabledTools = recordToolbarConfig
-    .filter(item => item.enabled)
-    .sort((a, b) => a.order - b.order)
-
-  const getToolIcon = (toolId: string) => {
-    switch (toolId) {
-      case 'text':
-        return <CopySlash className="h-6 w-6" />
-      case 'recording':
-        return <Mic className="h-6 w-6" />
-      case 'scan':
-        return <ScanText className="h-6 w-6" />
-      case 'image':
-        return <ImagePlus className="h-6 w-6" />
-      case 'link':
-        return <Link className="h-6 w-6" />
-      case 'file':
-        return <FileText className="h-6 w-6" />
-      default:
-        return null
-    }
-  }
-
-  const handleToolClick = (toolId: string) => {
-    // 发射工具快捷键事件
-    emitter.emit(`toolbar-shortcut-${toolId}`)
-  }
     
   // 底部导航菜单项
   const items = [
@@ -311,13 +267,19 @@ export function AppFootbar() {
     <div className="w-full border-t bg-background h-14 relative">
       <div className="flex h-full items-center justify-around">
         {items.map((item, index) => {
-          // 快捷记录按钮
+          // 快捷记录按钮 - 使用 Popover
           if (item.isQuickRecord) {
             return (
-              <QuickRecordNavButton
-                key={index}
-                onClick={() => setQuickRecordOpen(!quickRecordOpen)}
-              />
+              <Popover key={index} open={quickRecordOpen} onOpenChange={setQuickRecordOpen}>
+                <PopoverTrigger asChild>
+                  <div className="w-1/5 flex items-center justify-center">
+                    <Plus className="size-10 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:scale-105 transition-transform" />
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent align="center" side="top">
+                    <MobileRecordTools onClose={() => setQuickRecordOpen(false)} />
+                </PopoverContent>
+              </Popover>
             )
           }
           
@@ -346,35 +308,6 @@ export function AppFootbar() {
           )
         })}
       </div>
-      
-      {/* 快捷记录抽屉 */}
-      <Drawer open={quickRecordOpen} onOpenChange={setQuickRecordOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>{t('navigation.quickRecord')}</DrawerTitle>
-          </DrawerHeader>
-          
-          <div className="p-6">
-            <div className="grid grid-cols-3 gap-4">
-              {enabledTools.map((tool) => (
-                <DrawerClose asChild key={tool.id}>
-                  <button
-                    className="flex flex-col items-center justify-center p-6 rounded-xl border-2 hover:bg-accent hover:border-primary transition-all duration-200 cursor-pointer group active:scale-95"
-                    onClick={() => handleToolClick(tool.id)}
-                  >
-                    <div className="mb-3 text-primary group-hover:scale-110 transition-transform duration-200">
-                      {getToolIcon(tool.id)}
-                    </div>
-                    <span className="text-sm font-medium text-center text-muted-foreground group-hover:text-foreground transition-colors duration-200">
-                      {t(`record.mark.type.${tool.id}`)}
-                    </span>
-                  </button>
-                </DrawerClose>
-              ))}
-            </div>
-          </div>
-        </DrawerContent>
-      </Drawer>
     </div>
   )
 }
