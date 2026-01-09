@@ -890,6 +890,27 @@
           "text": "Texto"
         },
         "chat": {
+          "modeSelect": {
+            "chat": "Chat",
+            "agent": "Agente"
+          },
+          "agent": {
+            "running": "Agente em Execução",
+            "thinking": "Pensando",
+            "acting": "Agindo",
+            "observation": "Observação",
+            "toolCalls": "Chamadas de Ferramenta",
+            "confirmation": {
+              "title": "Confirmar Ação",
+              "description": "O agente deseja executar a seguinte ação. Por favor, confirme para continuar.",
+              "tool": "Ferramenta",
+              "parameters": "Parâmetros",
+              "cancel": "Cancelar",
+              "confirm": "Confirmar",
+              "confirmed": "Confirmado",
+              "cancelled": "Cancelado"
+            }
+          },
           "placeholder": {
             "default": "Faça perguntas ou organize suas notas em um artigo...",
             "noApiKey": "Chave de API não configurada, recurso de chat com IA indisponível..."
@@ -912,17 +933,7 @@
             }
           },
           "messageControl": {
-            "words": "palavras",
-            "confirmation": {
-              "title": "Confirmar Ação",
-              "description": "O agente deseja executar a seguinte ação. Por favor, confirme para continuar.",
-              "tool": "Ferramenta",
-              "parameters": "Parâmetros",
-              "cancel": "Cancelar",
-              "confirm": "Confirmar",
-              "confirmed": "Confirmado",
-              "cancelled": "Cancelado"
-            }
+            "words": "palavras"
           },
           "mcp": {
             "maxIterationsReached": "Número máximo de iterações de chamada de ferramenta atingido",
@@ -1156,6 +1167,21 @@
           "agentDescription": "Assistente inteligente, pode executar ações"
         },
         "attachImage": "Anexar imagens",
+        "agent": {
+          "running": "Agente em Execução",
+          "thinking": "Pensando",
+          "acting": "Agindo",
+          "observation": "Observação",
+          "toolCalls": "Chamadas de Ferramenta",
+          "confirmation": {
+            "title": "Confirmar Ação",
+            "description": "O agente deseja executar a seguinte ação. Por favor, confirme para continuar.",
+            "tool": "Ferramenta",
+            "parameters": "Parâmetros",
+            "cancel": "Cancelar",
+            "confirm": "Confirmar"
+          }
+        },
         "imageSelector": {
           "title": "Selecionar Imagens",
           "local": "Arquivos Locais",
