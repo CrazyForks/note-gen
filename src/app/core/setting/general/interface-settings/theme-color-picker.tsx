@@ -55,7 +55,7 @@ export function ThemeColorPicker({ colors, onColorChange, t }: ThemeColorPickerP
   const rightColumn = colorConfig.slice(half)
 
   return (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
       <div className="space-y-2">
         {leftColumn.map((config) => (
           <ColorInput
@@ -127,8 +127,8 @@ function ColorInput({ label, value, defaultColor, onChange }: ColorInputProps) {
         {label}
       </Label>
 
-      {/* 颜色值 */}
-      <span className="text-xs text-muted-foreground font-mono w-16 text-right tabular-nums">
+      {/* 颜色值 - 移动端隐藏 */}
+      <span className="hidden md:inline text-xs text-muted-foreground font-mono w-16 text-right tabular-nums">
         {hexValue}
       </span>
 
