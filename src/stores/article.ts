@@ -51,6 +51,7 @@ interface NoteState {
 
   sortType: SortType
   sortDirection: SortDirection
+  initSortSettings: () => Promise<void>
   setSortType: (sortType: SortType) => Promise<void>
   setSortDirection: (direction: SortDirection) => Promise<void>
   sortFileTree: (tree: DirTree[]) => DirTree[]
@@ -112,6 +113,18 @@ const useArticleStore = create<NoteState>((set, get) => ({
 
   sortType: 'none',
   sortDirection: 'asc',
+  initSortSettings: async () => {
+    const store = await Store.load('store.json')
+    const sortType = await store.get<SortType>('sortType')
+    const sortDirection = await store.get<SortDirection>('sortDirection')
+    if (sortType) set({ sortType })
+    if (sortDirection) set({ sortDirection })
+
+    // 如果需要按时间排序，加载统计信息
+    if (sortType === 'created' || sortType === 'modified') {
+      await get().loadFileStatsIfNeeded()
+    }
+  },
   setSortType: async (sortType: SortType) => {
     set({ sortType })
     const store = await Store.load('store.json')
@@ -149,33 +162,32 @@ const useArticleStore = create<NoteState>((set, get) => ({
     
     const sortedTree = cloneDeep(tree)
     
-    const sortFunction = (a: DirTree, b: DirTree) => {
-      if (a.isDirectory && !b.isDirectory) return -1
-      if (!a.isDirectory && b.isDirectory) return 1
-      
-      let result = 0
+    const compareItems = (a: DirTree, b: DirTree): number => {
       switch (sortType) {
         case 'name':
-          result = a.name.localeCompare(b.name)
-          break
+          return a.name.localeCompare(b.name)
         case 'created':
           if (a.createdAt && b.createdAt) {
-            result = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          } else {
-            result = a.name.localeCompare(b.name)
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           }
-          break
+          return a.name.localeCompare(b.name)
         case 'modified':
           if (a.modifiedAt && b.modifiedAt) {
-            result = new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime()
-          } else {
-            result = a.name.localeCompare(b.name)
+            return new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime()
           }
-          break
+          return a.name.localeCompare(b.name)
         default:
-          result = 0
+          return 0
       }
-      
+    }
+
+    const sortFunction = (a: DirTree, b: DirTree) => {
+      // 文件夹始终在文件上方
+      if (a.isDirectory && !b.isDirectory) return -1
+      if (!a.isDirectory && b.isDirectory) return 1
+
+      // 同类型的进行排序
+      const result = compareItems(a, b)
       return sortDirection === 'asc' ? result : -result
     }
     
