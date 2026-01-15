@@ -95,6 +95,11 @@ interface NoteState {
   scheduleVectorCalculation: (path: string, content: string) => void
   executeVectorCalculation: () => Promise<void>
   cancelVectorCalculation: () => void
+  triggerVectorCalculation: () => Promise<void> // 手动触发向量计算
+  // 向量索引状态
+  vectorIndexedFiles: Map<string, number> // 文件名 -> 向量索引时间戳
+  checkFileVectorIndexed: (filename: string) => Promise<boolean>
+  clearFileVector: (filename: string) => Promise<void>
 
   allArticle: Article[]
   loadAllArticle: () => Promise<void>
@@ -1051,6 +1056,9 @@ const useArticleStore = create<NoteState>((set, get) => ({
       set({ currentArticle: localContent })
       // 本地内容加载完成，解除加载状态
       get().setLoading(false)
+      // 检查文件的向量索引状态
+      const filename = actualPath.split('/').pop() || actualPath
+      get().checkFileVectorIndexed(filename)
     } catch (error) {
       // 本地文件不存在，检查是否是远程文件
       if (error instanceof Error && 
@@ -1162,6 +1170,8 @@ const useArticleStore = create<NoteState>((set, get) => ({
   isVectorCalculating: false,
   lastEditTime: 0,
   pendingVectorContent: null as { path: string; content: string } | null,
+  // 向量索引状态
+  vectorIndexedFiles: new Map<string, number>(), // 文件名 -> 向量索引时间戳
 
   setCurrentArticle: (content: string) => {
     set({ currentArticle: content })
@@ -1335,8 +1345,13 @@ const useArticleStore = create<NoteState>((set, get) => ({
       // 如果向量数据库已启用，执行向量计算
       if (vectorStore.isVectorDbEnabled) {
         await vectorStore.processDocument(path, content)
+        // 更新向量索引状态
+        const filename = path.split('/').pop() || path
+        const newMap = new Map(get().vectorIndexedFiles)
+        newMap.set(filename, Date.now())
+        set({ vectorIndexedFiles: newMap })
       }
-      
+
       // 清除待处理内容和定时器
       if (state.vectorCalcTimer) {
         clearTimeout(state.vectorCalcTimer)
@@ -1367,12 +1382,68 @@ const useArticleStore = create<NoteState>((set, get) => ({
     if (state.vectorCalcProgressInterval) {
       clearInterval(state.vectorCalcProgressInterval)
     }
-    set({ 
+    set({
       vectorCalcTimer: null,
       vectorCalcProgressInterval: null,
       vectorCalcProgress: 0,
       pendingVectorContent: null
     })
+  },
+
+  // 检查文件是否已被向量索引
+  checkFileVectorIndexed: async (filename: string) => {
+    const { checkVectorDocumentExists, getVectorDocumentsByFilename } = await import('@/db/vector')
+    const hasVector = await checkVectorDocumentExists(filename)
+    if (hasVector) {
+      // 获取向量文档记录更新时间
+      const docs = await getVectorDocumentsByFilename(filename)
+      if (docs.length > 0) {
+        const latestTime = Math.max(...docs.map(d => d.updated_at))
+        const newMap = new Map(get().vectorIndexedFiles)
+        newMap.set(filename, latestTime)
+        set({ vectorIndexedFiles: newMap })
+        return true
+      }
+    }
+    // 如果没有向量，从映射中移除
+    const newMap = new Map(get().vectorIndexedFiles)
+    newMap.delete(filename)
+    set({ vectorIndexedFiles: newMap })
+    return false
+  },
+
+  // 清除文件的向量数据
+  clearFileVector: async (filename: string) => {
+    const { deleteVectorDocumentsByFilename } = await import('@/db/vector')
+    await deleteVectorDocumentsByFilename(filename)
+    // 从映射中移除
+    const newMap = new Map(get().vectorIndexedFiles)
+    newMap.delete(filename)
+    set({ vectorIndexedFiles: newMap })
+  },
+
+  // 手动触发向量计算（使用当前文章内容）
+  triggerVectorCalculation: async () => {
+    const state = get()
+    if (!state.activeFilePath || state.isVectorCalculating) {
+      return
+    }
+
+    // 使用当前文章内容
+    const content = state.currentArticle
+    if (!content) {
+      return
+    }
+
+    // 设置待处理内容并执行
+    set({
+      pendingVectorContent: {
+        path: state.activeFilePath,
+        content
+      }
+    })
+
+    await get().executeVectorCalculation()
   },
 
   allArticle: [],

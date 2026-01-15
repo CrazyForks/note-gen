@@ -1558,10 +1558,16 @@
         "quickSync": "Sincronização Rápida"
       },
       "vectorCalc": {
-        "tooltip": "Cálculo Vetorial: Cálculo automático 30s após a edição, ou clique para calcular agora",
-        "calculating": "Calculando",
-        "pending": "Pendente {progress}%",
-        "synced": "Sincronizado"
+        "tooltip": {
+          "default": "Status do Índice Vetorial",
+          "none": "Clique para iniciar o cálculo vetorial",
+          "indexed": "Indexado",
+          "pending": "Atualização pendente, clique para calcular agora",
+          "calculating": "Calculando..."
+        },
+        "status": {
+          "calculating": "Calculando"
+        }
       }
     }
   },

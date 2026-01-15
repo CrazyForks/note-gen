@@ -1638,10 +1638,16 @@
         "quickSync": "快速同步"
       },
       "vectorCalc": {
-        "tooltip": "向量计算：编辑完成30秒后自动计算，或点击立即计算",
-        "calculating": "计算中",
-        "pending": "待计算 {progress}%",
-        "synced": "已同步"
+        "tooltip": {
+          "default": "向量索引状态",
+          "none": "点击开始向量计算",
+          "indexed": "已索引",
+          "pending": "待更新，点击立即计算",
+          "calculating": "计算中..."
+        },
+        "status": {
+          "calculating": "计算中"
+        }
       }
     }
   },

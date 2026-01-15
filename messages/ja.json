@@ -1620,10 +1620,16 @@
         "quickSync": "クイック同期"
       },
       "vectorCalc": {
-        "tooltip": "ベクトル計算：編集完了30秒後に自動計算、またはクリックして即座に計算",
-        "calculating": "計算中",
-        "pending": "計算待ち {progress}%",
-        "synced": "同期済み"
+        "tooltip": {
+          "default": "ベクトルインデックス状態",
+          "none": "クリックしてベクトル計算を開始",
+          "indexed": "インデックス済み",
+          "pending": "更新待ち、クリックして今すぐ計算",
+          "calculating": "計算中..."
+        },
+        "status": {
+          "calculating": "計算中"
+        }
       }
     }
   },

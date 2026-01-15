@@ -1650,10 +1650,16 @@
         "quickSync": "Quick Sync"
       },
       "vectorCalc": {
-        "tooltip": "Vector Calculation: Auto-calculate 30s after editing, or click to calculate now",
-        "calculating": "Calculating",
-        "pending": "Pending {progress}%",
-        "synced": "Synced"
+        "tooltip": {
+          "default": "Vector Index Status",
+          "none": "Click to start vector calculation",
+          "indexed": "Indexed",
+          "pending": "Pending update, click to calculate now",
+          "calculating": "Calculating..."
+        },
+        "status": {
+          "calculating": "Calculating"
+        }
       }
     }
   },

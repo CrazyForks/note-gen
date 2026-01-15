@@ -536,8 +536,8 @@ export default function Sync({editor, disabled}: {editor?: Vditor, disabled?: bo
       >
         {/* 进度条背景 */}
         {progressPercentage > 0 && (
-          <div 
-            className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 transition-all duration-100 z-0" 
+          <div
+            className="absolute inset-0 bg-primary/20 transition-all duration-100 z-0"
             style={{ width: `${progressPercentage}%` }}
           />
         )}

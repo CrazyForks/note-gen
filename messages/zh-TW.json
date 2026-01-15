@@ -1487,10 +1487,16 @@
         "quickSync": "快速同步"
       },
       "vectorCalc": {
-        "tooltip": "向量計算：編輯完成30秒後自動計算，或點擊立即計算",
-        "calculating": "計算中",
-        "pending": "待計算 {progress}%",
-        "synced": "已同步"
+        "tooltip": {
+          "default": "向量索引狀態",
+          "none": "點擊開始向量計算",
+          "indexed": "已索引",
+          "pending": "待更新，點擊立即計算",
+          "calculating": "計算中..."
+        },
+        "status": {
+          "calculating": "計算中"
+        }
       }
     }
   },
