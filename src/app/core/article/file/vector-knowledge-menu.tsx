@@ -8,6 +8,7 @@ import useVectorStore from "@/stores/vector"
 import { readTextFile } from "@tauri-apps/plugin-fs"
 import { computedParentPath } from "@/lib/path"
 import { useState, useEffect } from "react"
+import { useTranslations } from "next-intl"
 
 interface VectorKnowledgeMenuProps {
   item: {
@@ -19,6 +20,7 @@ interface VectorKnowledgeMenuProps {
 }
 
 export function VectorKnowledgeMenu({ item, hasVector, onVectorUpdated }: VectorKnowledgeMenuProps) {
+  const t = useTranslations('article.file')
   const { vectorIndexedFiles, clearFileVector, checkFileVectorIndexed } = useArticleStore()
   const [autoCalcEnabled, setAutoCalcEnabled] = useState(true)
   const [excludeFromKB, setExcludeFromKB] = useState(false)
@@ -62,11 +64,11 @@ export function VectorKnowledgeMenu({ item, hasVector, onVectorUpdated }: Vector
         await checkFileVectorIndexed(item.name)
         onVectorUpdated()
 
-        toast({ title: hasVector ? '向量已更新' : '向量计算完成' })
+        toast({ title: hasVector ? t('context.vectorCalculated') : t('context.vectorCalcCompleted') })
       }
     } catch (error) {
       console.error('向量计算失败:', error)
-      toast({ title: '向量计算失败', variant: 'destructive' })
+      toast({ title: t('context.vectorCalcFailed'), variant: 'destructive' })
     }
   }
 
@@ -76,10 +78,10 @@ export function VectorKnowledgeMenu({ item, hasVector, onVectorUpdated }: Vector
     try {
       await clearFileVector(item.name)
       onVectorUpdated()
-      toast({ title: '向量已删除' })
+      toast({ title: t('context.vectorDeleted') })
     } catch (error) {
       console.error('删除向量失败:', error)
-      toast({ title: '删除向量失败', variant: 'destructive' })
+      toast({ title: t('context.vectorDeleteFailed'), variant: 'destructive' })
     }
   }
 
@@ -129,20 +131,20 @@ export function VectorKnowledgeMenu({ item, hasVector, onVectorUpdated }: Vector
     <ContextMenuSub>
       <ContextMenuSubTrigger inset menuType="file">
         <Database className="mr-2 h-4 w-4" />
-        知识库
+        {t('context.knowledgeBase')}
       </ContextMenuSubTrigger>
       <ContextMenuSubContent>
         <ContextMenuItem inset onClick={handleVectorCalculation} menuType="file">
           <Database className="mr-2 h-4 w-4" />
-          {hasVector ? '更新向量' : '计算向量'}
+          {hasVector ? t('context.updateVectors') : t('context.calculateVectors')}
         </ContextMenuItem>
         <ContextMenuItem disabled={!hasVector} inset onClick={(e) => { e.stopPropagation(); handleDeleteVector(); }} menuType="file" className="text-red-600">
           <Trash2 className="mr-2 h-4 w-4" />
-          删除向量
+          {t('context.deleteVectors')}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <div className="flex items-center justify-between px-2 py-1.5 text-sm" onClick={(e) => e.stopPropagation()}>
-          <span>自动向量计算</span>
+          <span>{t('context.autoVectorCalc')}</span>
           <Switch
             checked={autoCalcEnabled}
             onCheckedChange={handleToggleAutoCalc}
@@ -150,7 +152,7 @@ export function VectorKnowledgeMenu({ item, hasVector, onVectorUpdated }: Vector
           />
         </div>
         <div className="flex items-center justify-between px-2 py-1.5 text-sm" onClick={(e) => e.stopPropagation()}>
-          <span>包含在知识库中</span>
+          <span>{t('context.includeInKBFile')}</span>
           <Switch
             checked={!excludeFromKB}
             onCheckedChange={handleToggleExcludeFromKB}

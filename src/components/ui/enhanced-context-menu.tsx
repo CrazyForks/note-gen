@@ -87,10 +87,18 @@ interface ContextMenuItemProps extends React.ComponentPropsWithoutRef<typeof Con
 const ContextMenuItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Item>,
   ContextMenuItemProps
->(({ className, inset, menuType = 'file', ...props }, ref) => {
+>(({ className, inset, menuType = 'file', onClick, ...props }, ref) => {
   const { getContextMenuTextSize } = useTextSize()
   const textSize = getContextMenuTextSize(menuType)
-  
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    // 阻止事件冒泡，防止触发父元素的点击事件（如文件夹折叠/展开）
+    e.stopPropagation();
+    if (onClick) {
+      onClick(e);
+    }
+  }
+
   return (
     <ContextMenuPrimitive.Item
       ref={ref}
@@ -99,6 +107,7 @@ const ContextMenuItem = React.forwardRef<
         inset && "pl-2",
         className
       )}
+      onClick={handleClick}
       {...props}
     />
   )

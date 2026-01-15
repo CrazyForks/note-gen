@@ -100,6 +100,7 @@ interface NoteState {
   vectorIndexedFiles: Map<string, number> // 文件名 -> 向量索引时间戳
   checkFileVectorIndexed: (filename: string) => Promise<boolean>
   clearFileVector: (filename: string) => Promise<void>
+  initVectorIndexedFiles: () => Promise<void> // 初始化向量索引状态
 
   allArticle: Article[]
   loadAllArticle: () => Promise<void>
@@ -413,10 +414,13 @@ const useArticleStore = create<NoteState>((set, get) => ({
     // 排序文件树
     const sortedDirs = get().sortFileTree(dirs)
     set({ fileTree: sortedDirs })
-    
+
     // 先显示本地文件树
     set({ fileTreeLoading: false })
-    
+
+    // 初始化向量索引状态（异步，不阻塞界面）
+    get().initVectorIndexedFiles()
+
     // 异步加载远程同步文件（不阻塞界面）
     get().loadRemoteSyncFiles()
   },
@@ -1420,6 +1424,28 @@ const useArticleStore = create<NoteState>((set, get) => ({
     const newMap = new Map(get().vectorIndexedFiles)
     newMap.delete(filename)
     set({ vectorIndexedFiles: newMap })
+  },
+
+  // 初始化向量索引状态 - 加载所有已索引的文件
+  initVectorIndexedFiles: async () => {
+    try {
+      const { getAllVectorDocumentFilenames, getVectorDocumentsByFilename } = await import('@/db/vector')
+      const indexedFiles = await getAllVectorDocumentFilenames()
+
+      // 构建 vectorIndexedFiles Map
+      const vectorIndexedMap = new Map<string, number>()
+      for (const file of indexedFiles) {
+        const docs = await getVectorDocumentsByFilename(file.filename)
+        if (docs.length > 0) {
+          const latestTime = Math.max(...docs.map(d => d.updated_at))
+          vectorIndexedMap.set(file.filename, latestTime)
+        }
+      }
+
+      set({ vectorIndexedFiles: vectorIndexedMap })
+    } catch (error) {
+      console.error('初始化向量索引状态失败:', error)
+    }
   },
 
   // 手动触发向量计算（使用当前文章内容）
