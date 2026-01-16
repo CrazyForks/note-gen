@@ -87,6 +87,7 @@ interface NoteState {
   newFolderInFolder: (path: string) => void
 
   collapsibleList: string[]
+  collapsibleListInitialized: boolean
   initCollapsibleList: () => Promise<void>
   setCollapsibleList: (name: string, value: boolean) => Promise<void>
   expandAllFolders: () => Promise<void>
@@ -310,7 +311,12 @@ const useArticleStore = create<NoteState>((set, get) => ({
   loadFileTree: async () => {
     set({ fileTreeLoading: true })
     set({ fileTree: [] })
-    
+
+    // 确保 collapsibleList 已初始化
+    if (!get().collapsibleListInitialized) {
+      await get().initCollapsibleList()
+    }
+
     // 获取当前工作区路径
     const workspace = await getWorkspacePath()
     
@@ -948,11 +954,20 @@ const useArticleStore = create<NoteState>((set, get) => ({
   },
 
   collapsibleList: [],
+  collapsibleListInitialized: false,
   initCollapsibleList: async () => {
+    // 防止重复初始化
+    if (get().collapsibleListInitialized) {
+      return
+    }
+
     const store = await Store.load('store.json');
     const res = await store.get<string[]>('collapsibleList')
     const activeFilePath = await store.get<string>('activeFilePath')
-    set({ collapsibleList: res ? uniq(res.filter(item => !item.includes('.md'))) : [] })
+    set({
+      collapsibleList: res ? uniq(res.filter(item => !item.includes('.md'))) : [],
+      collapsibleListInitialized: true
+    })
 
     if (activeFilePath) {
       set({ activeFilePath })
