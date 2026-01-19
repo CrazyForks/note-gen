@@ -303,3 +303,17 @@
   padding: 0.25rem;
   transform: translateY(-1rem);
 }
+
+/* 搜索高亮样式 */
+.vditor-search-highlight {
+  background-color: #ffeb3b !important;
+  padding: 0 2px !important;
+  border-radius: 2px !important;
+}
+
+.vditor-search-highlight-current {
+  background-color: #ff9632 !important;
+  color: white !important;
+  padding: 0 2px !important;
+  border-radius: 2px !important;
+}

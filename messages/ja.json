@@ -1569,6 +1569,15 @@
     "editor": {
       "copySuccess": "コピー成功",
       "copySuccessDescription": "クリップボードにコピーしました",
+      "search": {
+        "placeholder": "ドキュメント内を検索",
+        "replacePlaceholder": "置換後の文字列",
+        "caseSensitive": "大文字小文字を区別",
+        "replace": "置換",
+        "replaceAll": "すべて置換",
+        "findPrev": "前へ",
+        "findNext": "次へ"
+      },
       "upload": {
         "error": "画像のアップロードに失敗しました",
         "needToken": "画像のアップロードには accessToken の設定が必要です",

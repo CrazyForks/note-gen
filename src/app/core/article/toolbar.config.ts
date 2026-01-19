@@ -20,6 +20,8 @@ export const createToolbarConfig = () => {
     { name: 'link', tipPosition: 's' },
     { name: 'table', tipPosition: 's' },
     { name: 'edit-mode', tipPosition: 's', className: 'bottom edit-mode-button' },
+    // 注意：editor-search 是动态添加的自定义按钮，不在这里定义
+    // 实际的按钮会在 MdEditor 组件中动态添加到工具栏
     { name: 'preview', tipPosition: 's' },
     { name: 'outline', tipPosition: 's' },
   ]

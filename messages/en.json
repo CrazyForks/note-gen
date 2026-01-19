@@ -1648,6 +1648,15 @@
     "editor": {
       "copySuccess": "Copy Success",
       "copySuccessDescription": "Copied to clipboard",
+      "search": {
+        "placeholder": "Find in document",
+        "replacePlaceholder": "Replace with",
+        "caseSensitive": "Case sensitive",
+        "replace": "Replace",
+        "replaceAll": "Replace all",
+        "findPrev": "Previous",
+        "findNext": "Next"
+      },
       "floatbar": {
         "quote": {
           "tooltip": "Quote"

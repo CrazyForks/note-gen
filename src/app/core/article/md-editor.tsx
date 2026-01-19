@@ -30,6 +30,7 @@ import { useAiCompletion } from '@/hooks/useAiCompletion'
 import { AiCompletionPreview } from './ai-completion-preview'
 import { isMobileDevice } from '@/lib/check'
 import { Loader2, Download } from 'lucide-react'
+import { EditorSearch } from './editor-search'
 import { infographicRenderer, renderInfographicElements } from '@/lib/infographic'
 
 export function MdEditor() {
@@ -56,6 +57,7 @@ export function MdEditor() {
   const completionRef = useRef<string>('') // 用 ref 存储最新的 completion 值
   const editorRef = useRef<Vditor | undefined>(undefined) // 用 ref 存储最新的 editor 实例
   const justAcceptedCompletionRef = useRef(false) // 标记是否刚刚接受了补全
+  const [searchOpen, setSearchOpen] = useState(false) // 编辑器搜索对话框状态
   const autoCompletionEnabledRef = useRef(autoCompletionEnabled !== undefined ? autoCompletionEnabled : true) // 用 ref 存储最新的开关状态
   
   // 同步 autoCompletionEnabled 到 ref
@@ -185,6 +187,7 @@ export function MdEditor() {
       after: () => {
         setEditor(vditor);
         editorRef.current = vditor;
+
         // 切换记录编辑模式
         const editModeButtons = vditor.vditor.element.querySelectorAll('.edit-mode-button .vditor-hint button')
         editModeButtons.forEach(button => {
@@ -194,11 +197,12 @@ export function MdEditor() {
             setLocalMode(mode as 'ir' | 'sv' | 'wysiwyg')
           })
         })
+
         if (activeFilePath === '') {
           vditor.setValue('', true)
         }
         setEditorPadding(vditor)
-        
+
         // 保存编辑器元素引用
         const editorElement = vditor.vditor.element
         setEditorElement(editorElement)
@@ -969,6 +973,19 @@ export function MdEditor() {
     }
   }, [editor])
 
+  // 全局快捷键：Ctrl+F / Cmd+F 打开搜索框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
 
   return <div 
     id="article-editor" 
@@ -1005,5 +1022,6 @@ export function MdEditor() {
     </div>
     <CustomFooter editor={editor} />
     <FloatBar left={floatBarPosition?.left} top={floatBarPosition?.top} value={selectedText} editor={editor} />
+    <EditorSearch open={searchOpen} onOpenChange={setSearchOpen} editor={editor} />
   </div>
 }

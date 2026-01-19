@@ -102,6 +102,21 @@ export default function RootLayout({
     const handleKeyDown = (e: KeyboardEvent) => {
       // 搜索快捷键：Cmd+F (macOS) 或 Ctrl+F (Windows/Linux)
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        // 检查焦点是否在编辑器内
+        const target = e.target as HTMLElement
+        const editorElement = document.getElementById('aritcle-md-editor')
+        const isFocusInEditor = editorElement && editorElement.contains(target)
+
+        // 如果焦点在编辑器内，触发编辑器搜索
+        if (isFocusInEditor) {
+          e.preventDefault()
+          // 触发编辑器内搜索
+          const searchButton = document.getElementById('editor-search-button-container')
+          searchButton?.click()
+          return
+        }
+
+        // 否则打开全局搜索
         e.preventDefault()
         setSearchOpen(true)
         return
@@ -110,17 +125,17 @@ export default function RootLayout({
       // 如果按下 Backspace 键，且不在可编辑元素中
       if (e.key === 'Backspace') {
         const target = e.target as HTMLElement
-        const isEditable = 
+        const isEditable =
           target.tagName === 'INPUT' ||
           target.tagName === 'TEXTAREA' ||
           target.isContentEditable ||
           target.getAttribute('contenteditable') === 'true'
-        
+
         // 如果在可编辑元素中，允许正常删除
         if (isEditable) {
           return
         }
-        
+
         // 否则阻止默认的后退行为
         e.preventDefault()
       }

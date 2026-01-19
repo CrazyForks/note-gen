@@ -179,13 +179,11 @@ export async function testS3Connection(config: S3Config): Promise<boolean> {
          url = urlObj.toString();
          // 移除末尾斜杠
          if (url.endsWith('/')) url = url.slice(0, -1);
-         console.log('[S3] Switched to Virtual Hosted Style for optimization:', url);
        } catch {
          console.warn('[S3] Failed to construct Virtual Hosted URL, falling back to Path Style');
        }
     }
     
-    console.log('[S3 Test] Testing connection to:', url);
 
     const emptyPayload = new ArrayBuffer(0);
     const payloadHash = await crypto.subtle.digest('SHA-256', emptyPayload);
@@ -249,7 +247,6 @@ export async function testS3Connection(config: S3Config): Promise<boolean> {
         });
         
         if (putResponse.status === 200 || putResponse.status === 204) {
-            console.log('PutObject verification successful!');
             return true;
         } else {
              const putErrorText = await putResponse.text();
