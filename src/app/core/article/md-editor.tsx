@@ -332,6 +332,7 @@ export function MdEditor() {
         }
         if (activeFilePathRef.current) {
           saveCurrentArticle(value)
+          setCurrentArticle(value) // 同时更新 store 中的 currentArticle，避免切换页面时内容丢失
           emitter.emit('editor-input')
           handleLocalImage(vditor)
           
