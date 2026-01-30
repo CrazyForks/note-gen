@@ -141,16 +141,90 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
     agentHandlerRef.current = agentHandler
 
     try {
-      // 构建上下文信息：如果有当前打开的笔记，自动传入其内容
+      // 构建上下文信息
       let context = ''
+      let ragSources: string[] = []
+
+      // 1. 如果有当前打开的笔记，自动传入其内容
       const useArticleStore = (await import('@/stores/article')).default
       const articleStore = useArticleStore.getState()
-      
+
       if (articleStore.activeFilePath && articleStore.currentArticle) {
-        context = `## 当前打开的笔记\n文件路径: ${articleStore.activeFilePath}\n\n内容:\n${articleStore.currentArticle}`
+        context = `## 当前打开的笔记\n文件路径: ${articleStore.activeFilePath}\n\n内容:\n${articleStore.currentArticle}\n\n`
       }
-      
+
+      // 2. 如果启用 RAG，获取知识库相关上下文
+      if (isRagEnabled) {
+        try {
+          // 基于 TextRank 算法提取前 5 个关键词
+          const keywords = await invoke<{text: string, weight: number}[]>('rank_keywords', { text: inputValue, topK: 5 })
+
+          // 根据关联资源类型选择检索方式
+          let ragResult: { context: string; sources: string[] }
+
+          if (linkedResource && isLinkedFolder(linkedResource)) {
+            // 文件夹关联：限定检索范围到文件夹
+            ragResult = await getContextForQueryInFolder(keywords, linkedResource.relativePath)
+          } else {
+            // 文件关联或无关联：全局检索
+            ragResult = await getContextForQuery(keywords)
+          }
+
+          ragSources = ragResult.sources
+
+          if (ragResult.context) {
+            // 将知识库内容添加到上下文
+            context += `## 知识库检索结果\n\nYour knowledge library is the most relevant content related to this question. Please use these information to answer the question:\n${ragResult.context}\n`
+          }
+        } catch (error) {
+          console.error('Failed to get RAG context in Agent mode:', error)
+        }
+      }
+
+      // 3. 如果有关联文件（非文件夹），读取文件内容
+      if (linkedResource && !isLinkedFolder(linkedResource)) {
+        try {
+          const workspace = await getWorkspacePath()
+          let linkedFileContent = ''
+          if (workspace.isCustom) {
+            linkedFileContent = await readTextFile(linkedResource.path)
+          } else {
+            const { path, baseDir } = await getFilePathOptions(linkedResource.path)
+            linkedFileContent = await readTextFile(path, { baseDir })
+          }
+
+          if (linkedFileContent) {
+            context += `\n## 关联文件内容\n\nThe following is the content of the linked file "${linkedResource.name}" (${linkedResource.relativePath}):\n${linkedFileContent}\n`
+          }
+        } catch (error) {
+          console.error('Failed to read linked file in Agent mode:', error)
+        }
+      }
+
+      // 4. 如果有引用内容，添加引用上下文
+      if (quoteData) {
+        const { fileName, startLine, endLine, fullContent } = quoteData
+        let lineInfo = ''
+        if (startLine !== -1 && endLine !== -1) {
+          if (startLine === endLine) {
+            lineInfo = `第 ${startLine} 行`
+          } else {
+            lineInfo = `第 ${startLine}-${endLine} 行`
+          }
+        }
+
+        context += `\n## 引用内容\n\n用户引用了笔记 "${fileName}" ${lineInfo}的以下内容：\n${fullContent}\n\n请基于这段引用内容回答用户的问题。\n`
+      }
+
       await agentHandler.execute(inputValue, context, imageUrls)
+
+      // 保存 RAG 来源到消息中
+      if (ragSources.length > 0) {
+        await saveChat({
+          ...placeholderMessage,
+          ragSources: JSON.stringify(ragSources),
+        }, true)
+      }
     } catch (error) {
       console.error('Agent execution error:', error)
     } finally {
