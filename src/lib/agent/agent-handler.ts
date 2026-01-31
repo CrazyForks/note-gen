@@ -78,11 +78,17 @@ export class AgentHandler {
             }
           }
 
+          // 计算步骤耗时
+          const duration = currentState.agentState.currentStepStartTime
+            ? Date.now() - currentState.agentState.currentStepStartTime
+            : undefined
+
           // 创建完整的步骤
           const completedStep: ReActStep = {
             thought: currentState.agentState.currentThought,
             action: action,
-            observation: currentState.agentState.currentObservation
+            observation: currentState.agentState.currentObservation,
+            duration
           }
 
           const newHistory = [...currentState.agentState.thoughtHistory, currentState.agentState.currentThought]
@@ -93,11 +99,15 @@ export class AgentHandler {
             currentThought: '',
             currentAction: undefined,
             currentObservation: undefined,
+            currentStepStartTime: Date.now(),  // 记录新步骤的开始时间
             isThinking: true  // 标记正在等待 AI 生成新的思考
           })
         } else {
           // 第一次迭代
-          store.setAgentState({ isThinking: true })
+          store.setAgentState({
+            isThinking: true,
+            currentStepStartTime: Date.now()  // 记录第一个步骤的开始时间
+          })
         }
       },
       onThought: (thought: string) => {

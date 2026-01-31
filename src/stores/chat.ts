@@ -112,6 +112,7 @@ const useChatStore = create<ChatState>((set, get) => ({
     confirmationHistory: [],
     loadedSkills: undefined,
     selectedSkills: undefined,
+    currentStepStartTime: undefined,
   },
 
   setAgentState: (state: Partial<AgentState>) => {
@@ -135,6 +136,7 @@ const useChatStore = create<ChatState>((set, get) => ({
         confirmationHistory: [],
         loadedSkills: undefined,
         selectedSkills: undefined,
+        currentStepStartTime: undefined,
       }
     })
   },

@@ -61,6 +61,7 @@ export function AgentExecutionStatus() {
       confirmationHistory={agentState.confirmationHistory}
       loadedSkills={agentState.loadedSkills}
       selectedSkills={agentState.selectedSkills}
+      currentStepStartTime={agentState.currentStepStartTime}
       onConfirm={handleConfirm}
       onCancel={handleCancel}
     />

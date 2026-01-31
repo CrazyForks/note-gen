@@ -75,6 +75,7 @@ interface AgentPlanProps {
     description?: string;
   }>;
   selectedSkills?: string[]; // AI 选择的 Skill ID 列表
+  currentStepStartTime?: number; // 当前步骤开始时间戳
 
   // Props for history mode
   historyJson?: string;
@@ -99,6 +100,7 @@ interface DisplayStep {
   status: "completed" | "in-progress" | "pending" | "need-help" | "failed";
   confirmation?: ConfirmationRecord;
   tools?: string[];
+  duration?: number;  // 耗时（毫秒）
 }
 
 export function AgentPlan({
@@ -115,6 +117,7 @@ export function AgentPlan({
   confirmationHistory = [],
   loadedSkills = [],
   selectedSkills,
+  currentStepStartTime,
   historyJson,
   onConfirm,
   onCancel,
@@ -123,6 +126,24 @@ export function AgentPlan({
   const t = useTranslations(i18nNs);
   const [expandedTasks, setExpandedTasks] = React.useState<string[]>([]);
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const [currentStepDuration, setCurrentStepDuration] = React.useState<number>(0);
+
+  // 实时更新当前步骤的耗时
+  React.useEffect(() => {
+    if (mode === "live" && isRunning && currentStepStartTime) {
+      // 立即更新一次
+      setCurrentStepDuration(Date.now() - currentStepStartTime);
+
+      // 设置定时器，每 100ms 更新一次
+      const interval = setInterval(() => {
+        setCurrentStepDuration(Date.now() - currentStepStartTime);
+      }, 100);
+
+      return () => clearInterval(interval);
+    } else {
+      setCurrentStepDuration(0);
+    }
+  }, [mode, isRunning, currentStepStartTime]);
 
   // Parse history JSON in history mode
   const parseHistory = (): DisplayStep[] => {
@@ -156,6 +177,7 @@ export function AgentPlan({
             action: step.action,
             observation: step.observation,
             status,
+            duration: step.duration,
             tools: toolCall ? [toolCall.toolName] : undefined,
           };
         });
@@ -203,6 +225,7 @@ export function AgentPlan({
           action: step.action,
           observation: step.observation,
           status,
+          duration: step.duration,
           confirmation,
         });
       });
@@ -243,6 +266,7 @@ export function AgentPlan({
         id: "current",
         thought: currentThought || "",
         status,
+        duration: currentStepDuration, // 使用实时计算的耗时
       };
 
       if (currentAction) {
@@ -273,6 +297,7 @@ export function AgentPlan({
         id: "thinking-placeholder",
         thought: "",
         status: "pending",
+        duration: currentStepDuration, // 使用实时计算的耗时
       });
     }
 
@@ -287,7 +312,7 @@ export function AgentPlan({
     if (mode === "live" && (currentThought || currentObservation) && contentRef.current) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
-  }, [currentThought, currentObservation, mode]);
+  }, [currentThought, currentObservation, currentStepDuration, mode]);
 
   // Auto-expand current step in live mode
   React.useEffect(() => {
@@ -441,6 +466,16 @@ export function AgentPlan({
     }
   };
 
+  // 格式化耗时显示
+  const formatDuration = (duration?: number): string => {
+    if (duration === undefined || duration === null) return "";
+    if (duration < 1000) return `${duration}ms`;
+    if (duration < 60000) return `${(duration / 1000).toFixed(1)}s`;
+    const minutes = Math.floor(duration / 60000);
+    const seconds = ((duration % 60000) / 1000).toFixed(0);
+    return `${minutes}m ${seconds}s`;
+  };
+
   // Show loading state in live mode
   if (mode === "live" && isRunning && displaySteps.length === 0) {
     // 获取选择的 Skills 详情
@@ -578,7 +613,13 @@ export function AgentPlan({
                         </span>
                       </div>
 
-                      <div className="flex flex-shrink-0 items-center">
+                      <div className="flex flex-shrink-0 items-center gap-2">
+                        {/* 耗时显示 */}
+                        {step.duration !== undefined && (
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {formatDuration(step.duration)}
+                          </span>
+                        )}
                         <ChevronRight
                           className={`size-4 text-muted-foreground flex-shrink-0 transition-transform ${
                             isExpanded ? "rotate-90" : ""

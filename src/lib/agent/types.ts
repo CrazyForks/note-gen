@@ -62,6 +62,7 @@ export interface AgentState {
     description?: string
   }> // 当前对话加载的 Skills 列表
   selectedSkills?: string[] // AI 选择的 Skill ID 列表
+  currentStepStartTime?: number // 当前步骤开始时间戳（用于实时计算耗时）
 }
 
 export interface ReActStep {
@@ -71,4 +72,5 @@ export interface ReActStep {
     params: Record<string, any>
   }
   observation?: string
+  duration?: number  // 耗时（毫秒）
 }

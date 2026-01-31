@@ -113,8 +113,9 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
       onComplete: async (result, steps, stopped) => {
         // 获取 Agent 执行历史，保存完整的 ReAct 步骤
         const { agentState } = useChatStore.getState()
+        // 使用 agentState.completedSteps 而不是 steps 参数，因为 completedSteps 包含 duration 信息
         const agentHistory = {
-          steps: steps || [], // 保存完整的 ReAct 步骤（包含 thought, action, observation）
+          steps: agentState.completedSteps || [], // 保存完整的 ReAct 步骤（包含 thought, action, observation, duration）
           toolCalls: agentState.toolCalls,
           iterations: agentState.currentIteration,
         }
@@ -123,10 +124,10 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
         let finalContent = result
         if (stopped) {
           // 保留已产生的步骤，并添加终止信息
-          const stepCount = steps?.length || 0
+          const stepCount = agentState.completedSteps?.length || 0
           if (stepCount > 0) {
             // 有已完成的步骤，显示这些步骤的内容
-            finalContent = `${t('record.chat.input.stopped')}\n\n已完成 ${stepCount} 个步骤：\n${steps!.map((step, i) =>
+            finalContent = `${t('record.chat.input.stopped')}\n\n已完成 ${stepCount} 个步骤：\n${agentState.completedSteps!.map((step, i) =>
               `${i + 1}. ${step.action?.tool || '思考'}`
             ).join('\n')}`
           } else {
