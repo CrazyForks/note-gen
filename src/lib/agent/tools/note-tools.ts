@@ -1,6 +1,6 @@
 import { Tool, ToolResult } from '../types'
 import { readTextFile, writeTextFile, remove } from '@tauri-apps/plugin-fs'
-import { getAllMarkdownFiles } from '@/lib/files'
+import { getAllMarkdownFiles, MarkdownFile } from '@/lib/files'
 import { getFilePathOptions } from '@/lib/workspace'
 import useArticleStore from '@/stores/article'
 import useChatStore from '@/stores/chat'
@@ -667,6 +667,135 @@ export const deleteMarkdownFilesBatchTool: Tool = {
   },
 }
 
+export const listMarkdownFilesByDateTool: Tool = {
+  name: 'list_markdown_files_by_date',
+  description: '列出指定时间范围内更新的 Markdown 笔记文件。支持按相对时间（如近 N 天、N 天之前）或绝对时间范围过滤。',
+  category: 'note',
+  requiresConfirmation: false,
+  parameters: [
+    {
+      name: 'lastNDays',
+      type: 'number',
+      description: '可选：获取最近 N 天内修改的文件。与 olderThanDays/startDate/endDate 互斥，优先级最高。',
+      required: false,
+    },
+    {
+      name: 'olderThanDays',
+      type: 'number',
+      description: '可选：获取 N 天之前修改的文件（不含最近 N 天）。与 lastNDays/startDate/endDate 互斥。',
+      required: false,
+    },
+    {
+      name: 'startDate',
+      type: 'string',
+      description: '可选：开始日期（ISO 8601 格式，如 2024-01-01 或 2024-01-01T00:00:00Z）',
+      required: false,
+    },
+    {
+      name: 'endDate',
+      type: 'string',
+      description: '可选：结束日期（ISO 8601 格式，如 2024-12-31 或 2024-12-31T23:59:59Z），默认为当前时间',
+      required: false,
+    },
+  ],
+  execute: async (params): Promise<ToolResult> => {
+    try {
+      let startDate: Date | undefined
+      let endDate: Date | undefined
+
+      // 优先使用 lastNDays 参数（最近 N 天）
+      if (params.lastNDays && typeof params.lastNDays === 'number') {
+        const now = new Date()
+        startDate = new Date(now.getTime() - params.lastNDays * 24 * 60 * 60 * 1000)
+        endDate = now
+      }
+      // 其次使用 olderThanDays 参数（N 天之前）
+      else if (params.olderThanDays && typeof params.olderThanDays === 'number') {
+        const now = new Date()
+        endDate = new Date(now.getTime() - params.olderThanDays * 24 * 60 * 60 * 1000)
+        // startDate 不设置，表示从最早开始到 endDate
+      }
+      // 最后使用 startDate/ endDate 参数（绝对时间范围）
+      else {
+        if (params.startDate) {
+          startDate = new Date(params.startDate)
+          if (isNaN(startDate.getTime())) {
+            return {
+              success: false,
+              error: `无效的 startDate 格式: ${params.startDate}，请使用 ISO 8601 格式（如 2024-01-01）`,
+            }
+          }
+        }
+        if (params.endDate) {
+          endDate = new Date(params.endDate)
+          if (isNaN(endDate.getTime())) {
+            return {
+              success: false,
+              error: `无效的 endDate 格式: ${params.endDate}，请使用 ISO 8601 格式（如 2024-12-31）`,
+            }
+          }
+        } else {
+          endDate = new Date()
+        }
+      }
+
+      // 获取包含元数据的文件列表
+      const allFiles = await getAllMarkdownFiles(true)
+
+      // 根据时间范围过滤
+      const filteredFiles: MarkdownFile[] = []
+      for (const file of allFiles) {
+        if (!file.modifiedAt) {
+          continue // 没有修改时间的文件跳过
+        }
+
+        const modifiedTime = new Date(file.modifiedAt)
+
+        // 检查是否在时间范围内
+        if (startDate && modifiedTime < startDate) {
+          continue
+        }
+        if (endDate && modifiedTime > endDate) {
+          continue
+        }
+
+        filteredFiles.push(file)
+      }
+
+      // 按修改时间倒序排列
+      filteredFiles.sort((a, b) => {
+        const aTime = a.modifiedAt ? new Date(a.modifiedAt).getTime() : 0
+        const bTime = b.modifiedAt ? new Date(b.modifiedAt).getTime() : 0
+        return bTime - aTime
+      })
+
+      return {
+        success: true,
+        data: filteredFiles.map(({ name, relativePath, modifiedAt, metadata }) => ({
+          name,
+          relativePath,
+          modifiedAt: modifiedAt?.toISOString(),
+          size: metadata?.size,
+          createdAt: metadata?.createdAt?.toISOString(),
+          accessedAt: metadata?.accessedAt?.toISOString(),
+          isReadOnly: metadata?.isReadOnly,
+        })),
+        message: `找到 ${filteredFiles.length} 个符合条件的文件（${startDate ? `从 ${startDate.toISOString()}` : ''}${endDate ? `到 ${endDate.toISOString()}` : ''}）`,
+      }
+    } catch (error) {
+      console.error('[list_markdown_files_by_date] 获取文件列表失败', {
+        error: String(error),
+        errorName: error instanceof Error ? error.name : 'unknown',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      return {
+        success: false,
+        error: `按时间获取 Markdown 文件列表失败: ${error}`,
+      }
+    }
+  },
+}
+
 export const noteTools: Tool[] = [
   listMarkdownFilesTool,
   readMarkdownFileTool,
@@ -677,4 +806,5 @@ export const noteTools: Tool[] = [
   modifyCurrentNoteTool,
   readMarkdownFilesBatchTool,
   deleteMarkdownFilesBatchTool,
+  listMarkdownFilesByDateTool,
 ]
