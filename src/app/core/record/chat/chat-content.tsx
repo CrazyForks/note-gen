@@ -1,7 +1,7 @@
 import React from 'react'
 import useChatStore from '@/stores/chat'
 import useTagStore from '@/stores/tag'
-import { ArrowDownToLine, X } from 'lucide-react'
+import { ArrowDownToLine, X, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Chat } from '@/db/chats'
 import ChatPreview from './chat-preview'
@@ -23,7 +23,7 @@ import { AgentHistory } from './agent-history'
 import { ChatImages } from "./chat-images"
 
 const ChatContent = React.memo(function ChatContent() {
-  const { chats, init, agentState } = useChatStore()
+  const { chats, init, agentState, loading } = useChatStore()
   const { currentTagId } = useTagStore()
   const [isOnBottom, setIsOnBottom] = useState(true)
 
@@ -60,6 +60,27 @@ const ChatContent = React.memo(function ChatContent() {
     }
   }, [agentState.currentThought, agentState.thoughtHistory, agentState.pendingConfirmation, agentState.isRunning])
 
+  // Loading 状态变化时自动滚动到底部
+  useEffect(() => {
+    if (loading) {
+      scrollToBottom()
+    }
+  }, [loading])
+
+  // 判断是否应该显示 loading：loading=true 且最后一个 AI 消息还没有内容
+  const shouldShowLoading = useMemo(() => {
+    if (!loading) return false
+    if (agentState.isRunning) return false
+
+    const lastChat = chats[chats.length - 1]
+    // 如果最后一个消息是 system 角色且有内容或思考内容，说明 AI 已经开始输出了
+    if (lastChat?.role === 'system' && (lastChat.content || lastChat.thinking)) {
+      return false
+    }
+
+    return true
+  }, [loading, agentState.isRunning, chats])
+
   return <div id="chats-wrapper" className="flex-1 relative overflow-y-auto overflow-x-hidden w-full flex flex-col items-end p-4 gap-6">
     {
       chats.length ? chats.map((chat) => {
@@ -67,8 +88,19 @@ const ChatContent = React.memo(function ChatContent() {
       }) : <ChatEmpty />
     }
 
-    {/* Agent 执行状态 - 在底部实时显示，包裹在 MessageWrapper 中保持布局一致 */}
+    {/* Agent 执行状态 - 在底部实时显示 */}
     <AgentExecutionStatusWrapper />
+
+    {/* Loading 指示器 - 服务器等待时显示 */}
+    {shouldShowLoading && (
+      <div className="flex w-full min-w-0 -mt-6">
+        <div className='text-sm leading-6 flex-1 flex items-center gap-2 text-muted-foreground'>
+          <Loader2 className="size-4 animate-spin" />
+          <span>正在思考...</span>
+        </div>
+      </div>
+    )}
+
     {
       !isOnBottom && <Button variant="outline" className='sticky bottom-0 size-8 right-0' onClick={scrollToBottom}>
         <ArrowDownToLine className='size-4' />
@@ -95,7 +127,7 @@ const MessageWrapper = React.memo(function MessageWrapper({ chat, children }: { 
           onMouseEnter={() => setShowDelete(true)}
           onMouseLeave={() => setShowDelete(false)}
         >
-          <div className='text-sm leading-6 break-words text-primary-foreground'>
+          <div className='text-sm leading-6 wrap-break-word text-primary-foreground'>
             {children}
           </div>
           {showDelete && (
@@ -134,7 +166,7 @@ const AgentExecutionStatusWrapper = React.memo(function AgentExecutionStatusWrap
 
   return (
     <div className="flex w-full min-w-0">
-      <div className='text-sm leading-6 flex-1 break-words min-w-0 overflow-hidden'>
+      <div className='text-sm leading-6 flex-1 wrap-break-word min-w-0 overflow-hidden'>
         <AgentExecutionStatus />
       </div>
     </div>
@@ -144,14 +176,14 @@ AgentExecutionStatusWrapper.displayName = 'AgentExecutionStatusWrapper'
 
 const Message = React.memo(function Message({ chat }: { chat: Chat }) {
   const t = useTranslations()
-  const { deleteChat, getMcpToolCallsByChatId, agentState } = useChatStore()
+  const { deleteChat, getMcpToolCallsByChatId } = useChatStore()
   const content = chat.content
 
   const handleRemoveClearContext = useCallback(() => {
     deleteChat(chat.id)
   }, [chat.id, deleteChat])
 
-  // 使用 useMemo 优化解析操作
+  // 解析 RAG 来源
   const ragSources = useMemo(() => {
     if (!chat.ragSources) return []
     try {
@@ -205,11 +237,6 @@ const Message = React.memo(function Message({ chat }: { chat: Chat }) {
     }
   }, [chat.quoteData])
 
-  // 如果是空内容的 AI 消息且 Agent 正在运行，不显示（避免双头像）
-  if (chat.role === 'system' && !chat.content && agentState.isRunning) {
-    return null
-  }
-
   switch (chat.type) {
     case 'clear':
       return <div className="w-full flex justify-center items-center gap-4 px-10">
@@ -249,6 +276,11 @@ const Message = React.memo(function Message({ chat }: { chat: Chat }) {
     default:
       return <MessageWrapper chat={chat}>
         <div className="w-full">
+          {/* RAG 来源 - 显示在 AI 消息的最上方，在 Agent 执行历史之前 */}
+          {chat.role === 'system' && ragSources.length > 0 && (
+            <RagSources sources={ragSources} sourceDetails={ragSourceDetails} />
+          )}
+
           {/* Agent 执行历史 - 显示保存的历史记录 */}
           {chat.role === 'system' && chat.agentHistory && (
             <div className="flex w-full min-w-0">
@@ -296,7 +328,6 @@ const Message = React.memo(function Message({ chat }: { chat: Chat }) {
             <>
               <ChatThinking chat={chat} />
               <ChatPreview text={content || ''} />
-              <RagSources sources={ragSources} sourceDetails={ragSourceDetails} />
               <MessageControl chat={chat}>
                 <MarkText chat={chat} />
               </MessageControl>

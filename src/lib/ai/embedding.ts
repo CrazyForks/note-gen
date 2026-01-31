@@ -267,7 +267,7 @@ export async function rerankDocuments(
         ...originalDoc,
         similarity: result.relevance_score || result.score || documents[index].similarity
       };
-    }).filter((doc): doc is {id: number, filename: string, content: string, similarity: number} => doc !== undefined);
+    }).filter((doc: any): doc is {id: number, filename: string, content: string, similarity: number} => doc !== undefined);
 
     return rerankResults.sort((a: {similarity: number}, b: {similarity: number}) => b.similarity - a.similarity);
   } catch (error) {

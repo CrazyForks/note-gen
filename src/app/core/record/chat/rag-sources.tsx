@@ -52,7 +52,7 @@ export function RagSources({ sources, sourceDetails = [] }: RagSourcesProps) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mt-4 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-2 mb-3 text-xs text-muted-foreground">
       <FileText className="size-3" />
       <span>{t('record.chat.ragSources.label')}:</span>
       {sources.map((source, index) => {

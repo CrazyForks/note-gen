@@ -16,7 +16,6 @@ import { ChatLanguage } from "./chat-language"
 import { ChatSend } from "./chat-send"
 import { LinkedFileDisplay } from "./file-link"
 import { FileSelector } from "./file-selector"
-import { ChatModeSelect } from "./chat-mode-select"
 import { LinkedResource, MarkdownFile, LinkedFolder } from "@/lib/files"
 import emitter from "@/lib/emitter"
 import { ChatSettingsDrawer } from "@/app/mobile/chat/components/chat-settings-drawer"
@@ -640,7 +639,6 @@ export const ChatInput = React.memo(function ChatInput() {
                 disabled={!primaryModel || loading}
               />
             )}
-            <ChatModeSelect />
             <ChatSend inputValue={text} onSent={handleSent} linkedResource={linkedResource} attachedImages={attachedImages} quoteData={quoteData} ref={chatSendRef} />
           </div>
         </div>

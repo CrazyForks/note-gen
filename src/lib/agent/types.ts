@@ -33,8 +33,6 @@ export interface ToolCall {
   timestamp: number
 }
 
-export type ChatMode = 'chat' | 'agent'
-
 export interface ConfirmationRecord {
   toolName: string
   params: Record<string, any>

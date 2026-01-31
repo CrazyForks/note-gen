@@ -3,8 +3,6 @@ import { Send, Square } from "lucide-react"
 import useSettingStore from "@/stores/setting"
 import useChatStore from "@/stores/chat"
 import useTagStore from "@/stores/tag"
-import useMarkStore from "@/stores/mark"
-import { fetchAiStream } from "@/lib/ai/chat"
 import { TooltipButton } from "@/components/tooltip-button"
 import { useImperativeHandle, forwardRef, useRef } from "react"
 import { useTranslations } from "next-intl"
@@ -14,8 +12,6 @@ import { invoke } from "@tauri-apps/api/core"
 import { LinkedResource, isLinkedFolder } from "@/lib/files"
 import { readTextFile } from "@tauri-apps/plugin-fs"
 import { getFilePathOptions, getWorkspacePath } from "@/lib/workspace"
-import { useMcpStore } from "@/stores/mcp"
-import { getOpenAIFunctions } from "@/lib/mcp/tools"
 import { AgentHandler } from "@/lib/agent/agent-handler"
 import { ImageAttachment } from "./image-attachments"
 import type { RagSource } from "@/lib/rag"
@@ -40,11 +36,8 @@ interface ChatSendProps {
 export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ inputValue, onSent, linkedResource, attachedImages = [], quoteData = null }, ref) => {
   const { primaryModel } = useSettingStore()
   const { currentTagId } = useTagStore()
-  const { insert, loading, setLoading, saveChat, chats, chatMode, setAgentState } = useChatStore()
-  const { fetchMarks, marks } = useMarkStore()
-  const { isLinkMark } = useChatStore()
+  const { insert, loading, setLoading, saveChat, setAgentState } = useChatStore()
   const { isRagEnabled } = useVectorStore()
-  const { selectedServerIds } = useMcpStore()
   const abortControllerRef = useRef<AbortController | null>(null)
   const agentHandlerRef = useRef<AgentHandler | null>(null)
   const t = useTranslations()
@@ -142,9 +135,14 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
           }
         }
 
-        // 更新占位消息
+        // 获取当前消息状态，保留 ragSources 和 ragSourceDetails
+        const currentState = useChatStore.getState()
+        const currentMessage = currentState.chats.find(c => c.id === placeholderMessage.id)
+
+        // 更新占位消息，保留 RAG 相关字段
         await saveChat({
           ...placeholderMessage,
+          ...(currentMessage || {}), // 保留当前消息的所有字段（包括 ragSources 等）
           content: finalContent,
           agentHistory: JSON.stringify(agentHistory),
         }, true)
@@ -153,9 +151,14 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
         agentHandlerRef.current = null
       },
       onError: async (error) => {
-        // 更新占位消息为错误信息
+        // 获取当前消息状态，保留 ragSources 和 ragSourceDetails
+        const currentState = useChatStore.getState()
+        const currentMessage = currentState.chats.find(c => c.id === placeholderMessage.id)
+
+        // 更新占位消息为错误信息，保留 RAG 相关字段
         await saveChat({
           ...placeholderMessage,
+          ...(currentMessage || {}), // 保留当前消息的所有字段（包括 ragSources 等）
           content: `Error: ${error}`,
         }, true)
 
@@ -184,33 +187,56 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
       // 2. 如果启用 RAG，获取知识库相关上下文
       if (isRagEnabled) {
         try {
-          // 基于 TextRank 算法提取前 5 个关键词
-          let keywords = await invoke<{text: string, weight: number}[]>('rank_keywords', { text: inputValue, topK: 5 })
+          // 基于 TextRank 算法提取前 15 个关键词（增加数量以提高召回率）
+          let keywords = await invoke<{text: string, weight: number}[]>('rank_keywords', { text: inputValue, topK: 15 })
+
           // 过滤掉停用词（如"是"、"的"等没有检索意义的虚词）
           keywords = filterRAGKeywords(keywords)
-          console.log('[RAG Chat] 过滤后关键词:', keywords.map(k => `${k.text}(${k.weight.toFixed(2)})`).join(', '))
 
-          // 根据关联资源类型选择检索方式
-          let ragResult: { context: string; sources: string[]; sourceDetails: RagSource[] }
-
-          if (linkedResource && isLinkedFolder(linkedResource)) {
-            // 文件夹关联：限定检索范围到文件夹
-            ragResult = await getContextForQueryInFolder(keywords, linkedResource.relativePath)
+          // 如果过滤后没有有效关键词，明确告知
+          if (keywords.length === 0) {
+            context += `## 知识库检索结果\n\n由于用户问题中没有有效的关键词（仅包含停用词如"的"、"是"等），无法进行知识库检索。如果用户询问的是具体笔记内容，请告知用户需要提供更多具体信息。\n`
           } else {
-            // 文件关联或无关联：全局检索
-            ragResult = await getContextForQuery(keywords)
-          }
+            // 根据关联资源类型选择检索方式
+            let ragResult: { context: string; sources: string[]; sourceDetails: RagSource[] }
 
-          ragSources = ragResult.sources
-          ragSourceDetails = ragResult.sourceDetails
+            if (linkedResource && isLinkedFolder(linkedResource)) {
+              // 文件夹关联：限定检索范围到文件夹
+              ragResult = await getContextForQueryInFolder(keywords, linkedResource.relativePath)
+            } else {
+              // 文件关联或无关联：全局检索
+              ragResult = await getContextForQuery(keywords)
+            }
 
-          if (ragResult.context) {
-            // 将知识库内容添加到上下文
-            context += `## 知识库检索结果\n\nYour knowledge library is the most relevant content related to this question. Please use these information to answer the question:\n${ragResult.context}\n`
+            ragSources = ragResult.sources
+            ragSourceDetails = ragResult.sourceDetails
+
+            if (ragResult.context) {
+              // 找到相关内容
+              context += `## 知识库检索结果\n\n已在知识库中找到与用户问题相关的笔记内容。请优先使用以下信息回答用户问题：\n\n${ragResult.context}\n`
+            } else {
+              // 未找到相关内容
+              const searchScope = linkedResource && isLinkedFolder(linkedResource)
+                ? `在关联文件夹"${linkedResource.name}"中`
+                : '在知识库中'
+
+              context += `## 知识库检索结果\n\n${searchScope}未找到与用户问题相关的笔记内容。\n\n请根据情况处理：\n- 如果用户询问的是具体笔记内容，请告知用户${searchScope}可能没有相关资料\n- 如果问题可以基于一般知识回答，请使用你的知识回答\n- 如果需要更多信息，可以请用户提供更具体的关键词或问题\n`
+            }
           }
         } catch (error) {
           console.error('Failed to get RAG context in Agent mode:', error)
+          // 检索出错时的处理
+          context += `## 知识库检索结果\n\n知识库检索过程中出现错误。如果用户询问的是具体笔记内容，请告知用户暂时无法访问知识库。\n`
         }
+      }
+
+      // 保存 RAG 来源到消息中（在 Agent 执行前保存，这样引用文件会在最上方显示）
+      if (ragSources.length > 0) {
+        await saveChat({
+          ...placeholderMessage,
+          ragSources: JSON.stringify(ragSources),
+          ragSourceDetails: ragSourceDetails.length > 0 ? JSON.stringify(ragSourceDetails) : undefined,
+        }, true)
       }
 
       // 3. 如果有关联文件（非文件夹），读取文件内容
@@ -249,15 +275,6 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
       }
 
       await agentHandler.execute(inputValue, context, imageUrls)
-
-      // 保存 RAG 来源到消息中
-      if (ragSources.length > 0) {
-        await saveChat({
-          ...placeholderMessage,
-          ragSources: JSON.stringify(ragSources),
-          ragSourceDetails: ragSourceDetails.length > 0 ? JSON.stringify(ragSourceDetails) : undefined,
-        }, true)
-      }
     } catch (error) {
       console.error('Agent execution error:', error)
     } finally {
@@ -266,30 +283,11 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
     }
   }
 
-  // 对话
+  // 对话（Agent 模式）
   async function handleSubmit() {
     if (inputValue === '') return
     onSent?.()
-    
-    // Agent 模式
-    if (chatMode === 'agent') {
-      setLoading(true)
-      const imageUrls = attachedImages.map(img => img.url)
-      await insert({
-        tagId: currentTagId,
-        role: 'user',
-        content: inputValue,
-        type: 'chat',
-        inserted: false,
-        images: imageUrls.length > 0 ? JSON.stringify(imageUrls) : undefined,
-        quoteData: quoteData ? JSON.stringify(quoteData) : undefined,
-      })
-      await handleAgentMode(imageUrls)
-      setLoading(false)
-      return
-    }
 
-    // Chat 模式（原有逻辑）
     setLoading(true)
     const imageUrls = attachedImages.map(img => img.url)
     await insert({
@@ -298,200 +296,11 @@ export const ChatSend = forwardRef<{ sendChat: () => void }, ChatSendProps>(({ i
       content: inputValue,
       type: 'chat',
       inserted: false,
-      image: undefined,
       images: imageUrls.length > 0 ? JSON.stringify(imageUrls) : undefined,
       quoteData: quoteData ? JSON.stringify(quoteData) : undefined,
     })
-
-    const message = await insert({
-      tagId: currentTagId,
-      role: 'system',
-      content: '',
-      type: 'chat',
-      inserted: false,
-      image: undefined,
-      ragSources: undefined,
-    })
-    if (!message) return
-
-    await fetchMarks()
-    const scanMarks = isLinkMark ? marks.filter(item => item.type === 'scan') : []
-    const textMarks = isLinkMark ? marks.filter(item => item.type === 'text') : []
-    const imageMarks = isLinkMark ? marks.filter(item => item.type === 'image') : []
-    const linkMarks = isLinkMark ? marks.filter(item => item.type === 'link') : []
-    const fileMarks = isLinkMark ? marks.filter(item => item.type === 'file') : []
-    const lastClearIndex = chats.findLastIndex(item => item.type === 'clear')
-    const chatsAfterClear = chats.slice(lastClearIndex + 1)
-    
-    // 准备请求内容
-    let ragContext = ''
-    let ragSources: string[] = []
-    let ragSourceDetails: RagSource[] = []
-    let linkedFileContent = ''
-    let quoteContent = ''
-
-    // 如果有引用内容，构建引用上下文
-    if (quoteData) {
-      const { fileName, startLine, endLine, fullContent } = quoteData
-      let lineInfo = ''
-      if (startLine !== -1 && endLine !== -1) {
-        if (startLine === endLine) {
-          lineInfo = `第 ${startLine} 行`
-        } else {
-          lineInfo = `第 ${startLine}-${endLine} 行`
-        }
-      }
-
-      quoteContent = `
-用户引用了笔记 "${fileName}" ${lineInfo}的以下内容：
-${fullContent}
-
-请基于这段引用内容回答用户的问题。
-`
-    }
-
-    // 如果有关联文件，读取文件内容
-    if (linkedResource && !isLinkedFolder(linkedResource)) {
-      try {
-        const workspace = await getWorkspacePath()
-        if (workspace.isCustom) {
-          linkedFileContent = await readTextFile(linkedResource.path)
-        } else {
-          const { path, baseDir } = await getFilePathOptions(linkedResource.path)
-          linkedFileContent = await readTextFile(path, { baseDir })
-        }
-
-        if (linkedFileContent) {
-          linkedFileContent = `
-The following is the content of the linked file "${linkedResource.name}" (${linkedResource.relativePath}):
-${linkedFileContent}
-`
-        }
-      } catch (error) {
-        console.error('Failed to read linked file:', error)
-      }
-    }
-
-    // 如果启用RAG，获取相关上下文
-    if (isRagEnabled) {
-      try {
-        // 基于TextRank算法提取前3个关键词
-        let keywords = await invoke<{text: string, weight: number}[]>('rank_keywords', { text: inputValue, topK: 5 })
-        // 过滤掉停用词（如"是"、"的"等没有检索意义的虚词）
-        keywords = filterRAGKeywords(keywords)
-        console.log('[RAG Chat] 过滤后关键词:', keywords.map(k => `${k.text}(${k.weight.toFixed(2)})`).join(', '))
-
-        // 根据关联资源类型选择检索方式
-        let ragResult: { context: string; sources: string[]; sourceDetails: RagSource[] }
-
-        if (linkedResource && isLinkedFolder(linkedResource)) {
-          // 文件夹关联：限定检索范围到文件夹
-          ragResult = await getContextForQueryInFolder(keywords, linkedResource.relativePath)
-        } else {
-          // 文件关联或无关联：全局检索
-          ragResult = await getContextForQuery(keywords)
-        }
-
-        ragContext = ragResult.context
-        ragSources = ragResult.sources
-        ragSourceDetails = ragResult.sourceDetails
-
-        if (ragContext) {
-          // 如果获取到了相关内容，将其作为独立部分添加到请求中
-          ragContext = `
-Your knowledge library is the most relevant content related to this question. Please use these information to answer the question:
-${ragContext}
-`
-        }
-      } catch (error) {
-        console.error('Failed to get RAG context:', error)
-      }
-    }
-
-    const request_content = `
-      ${quoteContent.trim()}
-      ${[...scanMarks, ...textMarks, ...imageMarks, ...fileMarks, ...linkMarks].length ? 'You can refer to the following content notes:' : ''}
-      ${scanMarks.length ? 'The following are screenshots after using OCR to identify text fragments:' : ''}
-      ${scanMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
-      ${textMarks.length ? 'The following are text copy records:' : ''}
-      ${textMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
-      ${imageMarks.length ? 'The following are image records:' : ''}
-      ${imageMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
-      ${linkMarks.length ? 'The following are link records:' : ''}
-      ${linkMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
-      ${fileMarks.length ? 'The following are file records:' : ''}
-      ${fileMarks.map((item, index) => `${index + 1}. ${item.content}`).join(';\n\n')}
-      ${chatsAfterClear.length ? 'Refer to the following chat records:' : ''}
-      ${
-        chatsAfterClear
-          .filter((item) => item.tagId === currentTagId && item.type === "chat")
-          .map((item, index) => `${index + 1}. ${item.content}`)
-          .join(';\n\n')
-      }
-      ${linkedFileContent.trim()}
-      ${ragContext.trim()}
-      ${inputValue.trim()}
-    `.trim()
-
-    // 先保存空消息，然后通过流式请求更新
-    await saveChat({
-      ...message,
-      content: '',
-      ragSources: ragSources.length > 0 ? JSON.stringify(ragSources) : undefined,
-      ragSourceDetails: ragSourceDetails.length > 0 ? JSON.stringify(ragSourceDetails) : undefined,
-    }, true)
-    
-    // 创建新的 AbortController 用于终止请求
-    abortControllerRef.current = new AbortController()
-    const signal = abortControllerRef.current.signal
-    
-    // 准备 MCP 工具（如果有选中的服务器）
-    let mcpTools: any[] | undefined
-    if (selectedServerIds.length > 0) {
-      mcpTools = getOpenAIFunctions(selectedServerIds)
-    }
-    
-    // 使用流式方式获取AI结果
-    let cache_content = '';
-    let cache_thinking = '';
-    try {
-      await fetchAiStream(request_content, async (content) => {
-        cache_content = content
-
-        // 每次收到流式内容时更新消息
-        await saveChat({
-          ...message,
-          content: content,
-          thinking: cache_thinking || undefined
-        }, false)
-      }, signal, mcpTools, t, message.id, imageUrls, async (thinking) => {
-        cache_thinking = thinking
-
-        // 每次收到思考内容时更新消息
-        await saveChat({
-          ...message,
-          content: cache_content,
-          thinking: thinking
-        }, false)
-      })
-    } catch (error: any) {
-      // 如果不是中止错误，则记录错误信息
-      if (error.name !== 'AbortError') {
-        console.error('Stream error:', error)
-      }
-    } finally {
-      abortControllerRef.current = null
-      setLoading(false)
-
-      // 最终保存
-      await saveChat({
-        ...message,
-        content: cache_content,
-        thinking: cache_thinking || undefined,
-        ragSources: ragSources.length > 0 ? JSON.stringify(ragSources) : undefined,
-        ragSourceDetails: ragSourceDetails.length > 0 ? JSON.stringify(ragSourceDetails) : undefined,
-      }, true)
-    }
+    await handleAgentMode(imageUrls)
+    setLoading(false)
   }
 
   const handleStop = async () => {

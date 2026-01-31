@@ -7,7 +7,7 @@ import { uploadFile as uploadGiteaFile, getFiles as giteaGetFiles, getFileConten
 import { getSyncRepoName } from '@/lib/sync/repo-utils';
 import { Store } from '@tauri-apps/plugin-store';
 import { locales } from '@/lib/locales';
-import { ChatMode, AgentState, ToolCall } from '@/lib/agent/types';
+import { AgentState, ToolCall } from '@/lib/agent/types'
 
 // MCP 工具调用记录（临时，不保存到数据库）
 export interface McpToolCall {
@@ -60,9 +60,6 @@ interface ChatState {
   clearMcpToolCalls: () => void
 
   // Agent 模式
-  chatMode: ChatMode
-  setChatMode: (mode: ChatMode) => void
-  
   agentState: AgentState
   setAgentState: (state: Partial<AgentState>) => void
   resetAgentState: () => void
@@ -97,14 +94,6 @@ const useChatStore = create<ChatState>((set, get) => ({
       } else {
         set({ isLinkMark: stored === 'true' })
       }
-    }
-  },
-
-  chatMode: (typeof window !== 'undefined' ? localStorage.getItem('chatMode') as ChatMode : null) || 'chat',
-  setChatMode: (mode: ChatMode) => {
-    set({ chatMode: mode })
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('chatMode', mode)
     }
   },
 
@@ -203,7 +192,14 @@ const useChatStore = create<ChatState>((set, get) => ({
     const chats = get().chats
     const newChats = chats.map(item => {
       if (item.id === chat.id) {
-        return chat
+        // 合并更新，只覆盖非 undefined 的字段，保留已存在的字段（如 ragSources）
+        const result = { ...item }
+        for (const key in chat) {
+          if ((chat as any)[key] !== undefined) {
+            (result as any)[key] = (chat as any)[key]
+          }
+        }
+        return result
       }
       return item
     })
