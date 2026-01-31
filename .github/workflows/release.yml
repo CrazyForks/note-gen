@@ -333,15 +333,21 @@ jobs:
           security delete-keychain $KEYCHAIN_PATH || true
 
   upgradeLink-upload:
-      needs:  publish-tauri
-      permissions:
-        contents: write
-      runs-on: ubuntu-latest
-      steps:
-        - name: Send a request to UpgradeLink
-          uses: toolsetlink/upgradelink-action@v5
-          with:
-            source-url: 'https://github.com/codexu/note-gen/releases/download/note-gen-v${{ needs.publish-tauri.outputs.appVersion }}/latest.json'
-            access-key: ${{ secrets.UPGRADE_LINK_ACCESS_KEY }}
-            tauri-key: ${{ secrets.UPGRADE_LINK_TAURI_KEY }}
-            github-token: ${{ secrets.GITHUB_TOKEN }}
+    needs: publish-tauri
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send a request to UpgradeLink
+        uses: toolsetlink/upgradelink-action@3.0.2
+        with:
+          access_key: ${{ secrets.UPGRADE_LINK_ACCESS_KEY }}
+          access_secret: ${{ secrets.UPGRADE_LINK_ACCESS_SECRET }}
+          config: |
+            {
+              "app_type": "tauri",
+              "request": {
+                "app_key": "${{ secrets.UPGRADE_LINK_TAURI_KEY }}",
+                "latest_json_url": "https://github.com/${{ github.repository }}/releases/download/note-gen-v${{ needs.publish-tauri.outputs.appVersion }}/latest.json"
+              }
+            }
