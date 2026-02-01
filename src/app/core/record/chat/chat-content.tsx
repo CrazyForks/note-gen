@@ -288,6 +288,21 @@ const Message = React.memo(function Message({ chat }: { chat: Chat }) {
       </MessageWrapper>
 
     default:
+      // 检查 AI 消息是否有实际内容（没有内容时不渲染）
+      const hasContent = chat.role === 'system' && (
+        !!content ||
+        !!chat.thinking ||
+        (chat.agentHistory && chat.agentHistory.length > 0) ||
+        ragSources.length > 0 ||
+        ragSourceDetails.length > 0 ||
+        mcpToolCalls.length > 0
+      )
+
+      // 用户消息或有内容的 AI 消息才渲染
+      if (chat.role === 'system' && !hasContent) {
+        return null
+      }
+
       return <MessageWrapper chat={chat}>
         {chat.role === 'system' ? (
           // AI 消息：所有内容放在一个容器中

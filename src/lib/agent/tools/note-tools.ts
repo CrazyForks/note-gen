@@ -289,6 +289,15 @@ export const deleteMarkdownFileTool: Tool = {
       // 刷新文件列表
       await articleStore.loadFileTree()
 
+      // 删除向量数据库中的记录
+      const filename = params.filePath.split('/').pop() || params.filePath
+      try {
+        const { deleteVectorDocumentsByFilename } = await import('@/db/vector')
+        await deleteVectorDocumentsByFilename(filename)
+      } catch (error) {
+        console.error(`删除文件 ${filename} 的向量数据失败:`, error)
+      }
+
       // 如果删除的是当前打开的文件，取消选择并清空内容
       if (isCurrentFile) {
         await articleStore.setActiveFilePath('')
@@ -654,17 +663,21 @@ export const readMarkdownFilesBatchTool: Tool = {
       }
 
       // 只要有任何文件读取失败，就标记为失败状态
+      const hasErrors = errors.length > 0
       return {
-        success: errors.length === 0,
+        success: !hasErrors,
         data: {
           files: results,
           failed: errors,
           successCount: results.length,
           failCount: errors.length,
         },
-        message: errors.length === 0
-          ? `成功读取 ${results.length} 个文件`
-          : `部分失败：成功读取 ${results.length} 个文件，${errors.length} 个失败`,
+        message: hasErrors
+          ? `部分失败：成功读取 ${results.length} 个文件，${errors.length} 个失败`
+          : `成功读取 ${results.length} 个文件`,
+        error: hasErrors
+          ? `部分文件读取失败：${errors.map(e => `${e.filePath}: ${e.error}`).join('; ')}`
+          : undefined,
       }
     } catch (error) {
       return {
@@ -723,6 +736,17 @@ export const deleteMarkdownFilesBatchTool: Tool = {
         }
       }
 
+      // 批量删除向量数据库中的记录（只删除成功的文件）
+      const { deleteVectorDocumentsByFilename } = await import('@/db/vector')
+      for (const filePath of results) {
+        const filename = filePath.split('/').pop() || filePath
+        try {
+          await deleteVectorDocumentsByFilename(filename)
+        } catch (error) {
+          console.error(`删除文件 ${filename} 的向量数据失败:`, error)
+        }
+      }
+
       await articleStore.loadFileTree()
 
       if (currentFileDeleted) {
@@ -731,17 +755,21 @@ export const deleteMarkdownFilesBatchTool: Tool = {
       }
 
       // 只要有任何文件删除失败，就标记为失败状态
+      const hasErrors = errors.length > 0
       return {
-        success: errors.length === 0,
+        success: !hasErrors,
         data: {
           deleted: results,
           failed: errors,
           successCount: results.length,
           failCount: errors.length,
         },
-        message: errors.length === 0
-          ? `成功删除 ${results.length} 个文件`
-          : `部分失败：成功删除 ${results.length} 个文件，${errors.length} 个失败`,
+        message: hasErrors
+          ? `部分失败：成功删除 ${results.length} 个文件，${errors.length} 个失败`
+          : `成功删除 ${results.length} 个文件`,
+        error: hasErrors
+          ? `部分文件删除失败：${errors.map(e => `${e.filePath}: ${e.error}`).join('; ')}`
+          : undefined,
       }
     } catch (error) {
       return {

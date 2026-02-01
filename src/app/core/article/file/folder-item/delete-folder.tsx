@@ -74,6 +74,29 @@ export function DeleteFolder({ item }: DeleteFolderProps) {
 
       setFileTree(cacheTree);
 
+      // 删除向量数据库中该文件夹下所有文件的记录
+      try {
+        const { getAllMarkdownFiles } = await import('@/lib/files')
+        const { deleteVectorDocumentsByFilename } = await import('@/db/vector')
+        const allFiles = await getAllMarkdownFiles()
+
+        // 找出该文件夹下的所有 Markdown 文件
+        const folderPrefix = path.endsWith('/') ? path : path + '/'
+        const filesInFolder = allFiles.filter(file => file.relativePath.startsWith(folderPrefix))
+
+        // 删除这些文件的向量数据
+        for (const file of filesInFolder) {
+          const filename = file.name
+          try {
+            await deleteVectorDocumentsByFilename(filename)
+          } catch (error) {
+            console.error(`删除文件 ${filename} 的向量数据失败:`, error)
+          }
+        }
+      } catch (error) {
+        console.error('删除文件夹向量数据失败:', error)
+      }
+
       // 如果启用了同步，同步删除操作
       if (primaryBackupMethod === 'github') {
         const { deleteFile: deleteGithubFile } = await import('@/lib/sync/github');

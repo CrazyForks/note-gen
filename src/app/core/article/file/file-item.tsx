@@ -244,6 +244,18 @@ export function FileItem({ item }: { item: DirTree }) {
           }
         }
         setFileTree(cacheTree)
+
+        // 删除向量数据库中的记录
+        try {
+          const { deleteVectorDocumentsByFilename } = await import('@/db/vector')
+          await deleteVectorDocumentsByFilename(item.name)
+          // 从向量索引映射中移除
+          const newMap = new Map(vectorIndexedFiles)
+          newMap.delete(item.name)
+          setVectorIndexedFiles(newMap)
+        } catch (error) {
+          console.error(`删除文件 ${item.name} 的向量数据失败:`, error)
+        }
         // 只有删除的是当前选中的文件时，才清空选中状态
         if (activeFilePath === currentPath) {
           setActiveFilePath('')

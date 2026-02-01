@@ -162,12 +162,12 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
 
     const selection = window.getSelection()
     const selectedText = selection?.toString().trim()
-    
+
     if (selectedText) {
       // 设置拖拽数据为选中的文本
       e.dataTransfer.setData('text/plain', selectedText)
       e.dataTransfer.effectAllowed = 'copy'
-      
+
       // 创建自定义拖拽预览图像，只显示选中的文本
       const dragPreview = document.createElement('div')
       dragPreview.style.position = 'absolute'
@@ -180,10 +180,10 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
       dragPreview.style.maxWidth = '300px'
       dragPreview.style.wordWrap = 'break-word'
       dragPreview.textContent = selectedText.length > 50 ? selectedText.substring(0, 50) + '...' : selectedText
-      
+
       document.body.appendChild(dragPreview)
       e.dataTransfer.setDragImage(dragPreview, 0, 0)
-      
+
       // 拖拽结束后移除预览元素
       setTimeout(() => {
         document.body.removeChild(dragPreview)
@@ -192,6 +192,11 @@ export default function ChatPreview({text}: {text: string, themeReverse?: boolea
       // 如果没有选中文本，阻止拖拽
       e.preventDefault()
     }
+  }
+
+  // 没有内容时不渲染
+  if (!text || !text.trim()) {
+    return null
   }
 
   return (
