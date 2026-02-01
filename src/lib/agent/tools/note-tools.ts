@@ -1,5 +1,5 @@
 import { Tool, ToolResult } from '../types'
-import { readTextFile, writeTextFile, remove } from '@tauri-apps/plugin-fs'
+import { readTextFile, writeTextFile, remove, rename, copyFile } from '@tauri-apps/plugin-fs'
 import { getAllMarkdownFiles, MarkdownFile } from '@/lib/files'
 import { getFilePathOptions } from '@/lib/workspace'
 import useArticleStore from '@/stores/article'
@@ -909,6 +909,330 @@ export const listMarkdownFilesByDateTool: Tool = {
   },
 }
 
+export const renameFileTool: Tool = {
+  name: 'rename_file',
+  description: '重命名指定的 Markdown 文件。只改变文件名，不改变文件所在的文件夹。',
+  category: 'note',
+  requiresConfirmation: true,
+  parameters: [
+    {
+      name: 'filePath',
+      type: 'string',
+      description: '要重命名的 Markdown 文件路径',
+      required: true,
+    },
+    {
+      name: 'newName',
+      type: 'string',
+      description: '新文件名（包含 .md 扩展名，如 "新笔记.md"）',
+      required: true,
+    },
+  ],
+  execute: async (params): Promise<ToolResult> => {
+    try {
+      const articleStore = useArticleStore.getState()
+
+      // 检查是否是当前打开的文件
+      const isCurrentFile = articleStore.activeFilePath === params.filePath
+
+      // 验证新文件名以 .md 结尾
+      let newName = params.newName
+      if (!newName.endsWith('.md')) {
+        newName += '.md'
+      }
+
+      // 获取原文件的完整路径信息
+      const { path: oldPath, baseDir } = await getFilePathOptions(params.filePath)
+
+      // 构建新路径（保持原文件夹，只改文件名）
+      const pathParts = params.filePath.split('/')
+      pathParts[pathParts.length - 1] = newName
+      const newRelativePath = pathParts.join('/')
+
+      const { path: newPath, baseDir: newBaseDir } = await getFilePathOptions(newRelativePath)
+
+      // 检查新文件名是否已存在
+      const { exists } = await import('@tauri-apps/plugin-fs')
+      const targetExists = newBaseDir
+        ? await exists(newPath, { baseDir: newBaseDir })
+        : await exists(newPath)
+
+      if (targetExists) {
+        return {
+          success: false,
+          error: `文件名 "${newName}" 已存在，请使用其他文件名`,
+        }
+      }
+
+      // 执行重命名
+      if (baseDir) {
+        await rename(oldPath, newPath, { oldPathBaseDir: baseDir, newPathBaseDir: baseDir })
+      } else {
+        await rename(oldPath, newPath)
+      }
+
+      // 刷新文件列表
+      await articleStore.loadFileTree()
+
+      // 如果重命名的是当前打开的文件，更新 activeFilePath 并重新读取内容
+      if (isCurrentFile) {
+        await articleStore.setActiveFilePath(newRelativePath)
+        await articleStore.readArticle(newRelativePath)
+      }
+
+      return {
+        success: true,
+        data: {
+          oldPath: params.filePath,
+          newPath: newRelativePath,
+          newName,
+        },
+        message: `成功将 "${params.filePath}" 重命名为 "${newRelativePath}"`,
+      }
+    } catch (error) {
+      console.error('[rename_file] 重命名失败', {
+        filePath: params.filePath,
+        newName: params.newName,
+        error: String(error),
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      return {
+        success: false,
+        error: `重命名文件失败: ${error}`,
+      }
+    }
+  },
+}
+
+export const moveFileTool: Tool = {
+  name: 'move_file',
+  description: '将指定的 Markdown 文件移动到另一个文件夹。文件名保持不变。',
+  category: 'note',
+  requiresConfirmation: true,
+  parameters: [
+    {
+      name: 'filePath',
+      type: 'string',
+      description: '要移动的 Markdown 文件路径',
+      required: true,
+    },
+    {
+      name: 'targetFolderPath',
+      type: 'string',
+      description: '目标文件夹路径（相对于笔记根目录，如 "前端/React" 或 "学习笔记"）',
+      required: true,
+    },
+  ],
+  execute: async (params): Promise<ToolResult> => {
+    try {
+      const articleStore = useArticleStore.getState()
+
+      // 检查是否是当前打开的文件
+      const isCurrentFile = articleStore.activeFilePath === params.filePath
+
+      // 提取原文件名
+      const fileName = params.filePath.split('/').pop() || params.filePath
+
+      // 构建新路径
+      const newRelativePath = params.targetFolderPath
+        ? `${params.targetFolderPath}/${fileName}`
+        : fileName
+
+      // 验证目标文件夹是否存在
+      const { exists } = await import('@tauri-apps/plugin-fs')
+      const { path: targetFolderDir, baseDir: targetBaseDir } = await getFilePathOptions(params.targetFolderPath)
+
+      const targetFolderExists = targetBaseDir
+        ? await exists(targetFolderDir, { baseDir: targetBaseDir })
+        : await exists(targetFolderDir)
+
+      if (!targetFolderExists) {
+        return {
+          success: false,
+          error: `目标文件夹 "${params.targetFolderPath}" 不存在，请先创建该文件夹`,
+        }
+      }
+
+      // 获取原文件和新文件的完整路径信息
+      const { path: oldPath, baseDir: oldBaseDir } = await getFilePathOptions(params.filePath)
+      const { path: newPath, baseDir: newBaseDir } = await getFilePathOptions(newRelativePath)
+
+      // 检查目标位置是否已存在同名文件
+      const targetExists = newBaseDir
+        ? await exists(newPath, { baseDir: newBaseDir })
+        : await exists(newPath)
+
+      if (targetExists) {
+        return {
+          success: false,
+          error: `目标位置已存在同名文件 "${fileName}"，请先重命名或删除该文件`,
+        }
+      }
+
+      // 执行移动（使用 rename）
+      if (oldBaseDir) {
+        await rename(oldPath, newPath, { oldPathBaseDir: oldBaseDir, newPathBaseDir: oldBaseDir })
+      } else {
+        await rename(oldPath, newPath)
+      }
+
+      // 刷新文件列表
+      await articleStore.loadFileTree()
+
+      // 如果移动的是当前打开的文件，更新 activeFilePath 并重新读取内容
+      if (isCurrentFile) {
+        await articleStore.setActiveFilePath(newRelativePath)
+        await articleStore.readArticle(newRelativePath)
+      }
+
+      return {
+        success: true,
+        data: {
+          oldPath: params.filePath,
+          newPath: newRelativePath,
+        },
+        message: `成功将 "${params.filePath}" 移动到 "${newRelativePath}"`,
+      }
+    } catch (error) {
+      console.error('[move_file] 移动失败', {
+        filePath: params.filePath,
+        targetFolderPath: params.targetFolderPath,
+        error: String(error),
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      return {
+        success: false,
+        error: `移动文件失败: ${error}`,
+      }
+    }
+  },
+}
+
+export const copyFileTool: Tool = {
+  name: 'copy_file',
+  description: '复制指定的 Markdown 文件到另一个文件夹。原文件保持不变。',
+  category: 'note',
+  requiresConfirmation: true,
+  parameters: [
+    {
+      name: 'filePath',
+      type: 'string',
+      description: '要复制的 Markdown 文件路径',
+      required: true,
+    },
+    {
+      name: 'targetFolderPath',
+      type: 'string',
+      description: '目标文件夹路径（相对于笔记根目录，如 "前端/React" 或 "学习笔记"）。留空表示复制到当前文件夹',
+      required: false,
+    },
+    {
+      name: 'newName',
+      type: 'string',
+      description: '可选：新文件名（包含 .md 扩展名）。如果不指定，则使用原文件名，如果存在同名文件会自动添加序号',
+      required: false,
+    },
+  ],
+  execute: async (params): Promise<ToolResult> => {
+    try {
+      const articleStore = useArticleStore.getState()
+
+      // 提取原文件名
+      const originalFileName = params.filePath.split('/').pop() || params.filePath
+
+      // 确定新文件名
+      let newFileName = params.newName || originalFileName
+      if (!newFileName.endsWith('.md')) {
+        newFileName += '.md'
+      }
+
+      // 构建新路径
+      let newRelativePath = params.targetFolderPath
+        ? `${params.targetFolderPath}/${newFileName}`
+        : newFileName
+
+      // 验证目标文件夹是否存在（如果指定了目标文件夹）
+      if (params.targetFolderPath) {
+        const { exists } = await import('@tauri-apps/plugin-fs')
+        const { path: targetFolderDir, baseDir: targetBaseDir } = await getFilePathOptions(params.targetFolderPath)
+
+        const targetFolderExists = targetBaseDir
+          ? await exists(targetFolderDir, { baseDir: targetBaseDir })
+          : await exists(targetFolderDir)
+
+        if (!targetFolderExists) {
+          return {
+            success: false,
+            error: `目标文件夹 "${params.targetFolderPath}" 不存在，请先创建该文件夹`,
+          }
+        }
+      }
+
+      // 获取原文件和新文件的完整路径信息
+      const { path: oldPath, baseDir: oldBaseDir } = await getFilePathOptions(params.filePath)
+      const { path: newPath, baseDir: newBaseDir } = await getFilePathOptions(newRelativePath)
+
+      // 检查目标位置是否已存在同名文件
+      const { exists } = await import('@tauri-apps/plugin-fs')
+      let targetExists = newBaseDir
+        ? await exists(newPath, { baseDir: newBaseDir })
+        : await exists(newPath)
+
+      // 如果存在同名文件且没有指定新文件名，自动添加序号
+      if (targetExists && !params.newName) {
+        const baseName = newFileName.replace(/\.md$/, '')
+        let counter = 1
+        do {
+          newFileName = `${baseName} ${counter}.md`
+          newRelativePath = params.targetFolderPath
+            ? `${params.targetFolderPath}/${newFileName}`
+            : newFileName
+
+          const { path: checkPath, baseDir: checkBaseDir } = await getFilePathOptions(newRelativePath)
+          targetExists = checkBaseDir
+            ? await exists(checkPath, { baseDir: checkBaseDir })
+            : await exists(checkPath)
+          counter++
+        } while (targetExists && counter < 1000)
+      }
+
+      // 重新获取最终的新路径
+      const { path: finalNewPath, baseDir: finalNewBaseDir } = await getFilePathOptions(newRelativePath)
+
+      // 执行复制
+      if (oldBaseDir && finalNewBaseDir) {
+        await copyFile(oldPath, finalNewPath, { fromPathBaseDir: oldBaseDir, toPathBaseDir: finalNewBaseDir })
+      } else {
+        await copyFile(oldPath, finalNewPath)
+      }
+
+      // 刷新文件列表
+      await articleStore.loadFileTree()
+
+      return {
+        success: true,
+        data: {
+          sourcePath: params.filePath,
+          newPath: newRelativePath,
+          newName: newFileName,
+        },
+        message: `成功将 "${params.filePath}" 复制为 "${newRelativePath}"`,
+      }
+    } catch (error) {
+      console.error('[copy_file] 复制失败', {
+        filePath: params.filePath,
+        targetFolderPath: params.targetFolderPath,
+        error: String(error),
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      return {
+        success: false,
+        error: `复制文件失败: ${error}`,
+      }
+    }
+  },
+}
+
 export const noteTools: Tool[] = [
   listMarkdownFilesTool,
   readMarkdownFileTool,
@@ -920,4 +1244,7 @@ export const noteTools: Tool[] = [
   readMarkdownFilesBatchTool,
   deleteMarkdownFilesBatchTool,
   listMarkdownFilesByDateTool,
+  renameFileTool,
+  moveFileTool,
+  copyFileTool,
 ]
