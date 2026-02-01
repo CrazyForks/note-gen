@@ -42,7 +42,7 @@ export function WritingHeader() {
                 <FileActions />
             </div>
             <div className="flex-1">
-              <FileManager />
+              <FileManager focusSidebar={() => {}} />
             </div>
           </div>
         </DrawerContent>

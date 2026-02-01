@@ -755,6 +755,10 @@ export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar
                     onCompositionStart={handleCompositionStart}
                     onCompositionEnd={handleCompositionEnd}
                     onKeyDown={(e) => {
+                      // 阻止删除快捷键冒泡到全局快捷键处理器
+                      if (e.key === 'Backspace' || e.key === 'Delete') {
+                        e.stopPropagation()
+                      }
                       if (e.code === 'Enter' && !e.nativeEvent.isComposing) {
                         handleRename()
                       } else if (e.code === 'Escape') {
