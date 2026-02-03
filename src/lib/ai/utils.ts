@@ -32,7 +32,7 @@ export async function getAISettings(modelType?: string): Promise<AiConfig | unde
   const store = await Store.load('store.json')
   const aiConfigs = await store.get<AiConfig[]>('aiModelList')
   const modelId = await store.get(modelType || 'primaryModel')
-  
+
   if (!modelId || !aiConfigs) {
     return undefined
   }
@@ -43,7 +43,7 @@ export async function getAISettings(modelType?: string): Promise<AiConfig | unde
     if (config.models && config.models.length > 0) {
       // 首先尝试直接匹配模型ID
       let targetModel = config.models.find(model => model.id === modelId)
-      
+
       // 如果没找到，尝试匹配组合键格式 ${config.key}-${model.id}
       if (!targetModel && typeof modelId === 'string' && modelId.includes('-')) {
         const expectedPrefix = `${config.key}-`
@@ -52,10 +52,9 @@ export async function getAISettings(modelType?: string): Promise<AiConfig | unde
           targetModel = config.models.find(model => model.id === originalModelId)
         }
       }
-      
+
       if (targetModel) {
-        // 返回合并了模型配置的 AiConfig
-        return {
+        const result = {
           ...config,
           model: targetModel.model,
           modelType: targetModel.modelType,
@@ -64,6 +63,7 @@ export async function getAISettings(modelType?: string): Promise<AiConfig | unde
           voice: targetModel.voice,
           enableStream: targetModel.enableStream
         }
+        return result
       }
     } else {
       // 向后兼容：处理旧的单模型结构
@@ -72,7 +72,7 @@ export async function getAISettings(modelType?: string): Promise<AiConfig | unde
       }
     }
   }
-  
+
   return undefined
 }
 
@@ -165,36 +165,79 @@ export function handleAIError(error: any, showToast = true): string | null {
 
 /**
  * 为不同AI类型准备消息
+ * @param text 用户输入文本（如果提供了 baseMessages，此参数将作为最后一条用户消息）
+ * @param includeLanguage 是否包含语言设置
+ * @param baseMessages 基础消息数组（如对话历史），如果提供，将合并到返回结果中
  */
-export async function prepareMessages(text: string, includeLanguage = false): Promise<{
+export async function prepareMessages(
+  text: string,
+  includeLanguage = false,
+  baseMessages?: OpenAI.Chat.ChatCompletionMessageParam[]
+): Promise<{
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
   geminiText?: string
 }> {
   // 获取prompt内容
   let promptContent = await getPromptContent()
-  
+
   if (includeLanguage) {
     const store = await Store.load('store.json')
     const chatLanguage = await store.get<string>('chatLanguage') || 'English'
     promptContent += '\n\n' + `IMPORTANT: You MUST respond in ${chatLanguage} language. Do NOT use any other language under any circumstances.`
   }
-  
-  // 定义消息数组
+
+  // 如果提供了基础消息数组，直接使用它
+  if (baseMessages && baseMessages.length > 0) {
+    // 检查是否已经有 system 消息
+    const hasSystemMessage = baseMessages.some(msg => msg.role === 'system')
+
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = []
+
+    // 如果需要添加 system prompt 且当前没有 system 消息
+    if (promptContent && !hasSystemMessage) {
+      messages.push({
+        role: 'system',
+        content: promptContent
+      })
+    }
+
+    // 添加所有基础消息
+    messages.push(...baseMessages)
+
+    // 添加系统提示词（如果有且原消息中没有）
+    if (promptContent && hasSystemMessage) {
+      // 如果已有 system 消息，合并内容
+      const firstSystemIndex = messages.findIndex(msg => msg.role === 'system')
+      if (firstSystemIndex !== -1) {
+        const existingContent = typeof messages[firstSystemIndex].content === 'string'
+          ? messages[firstSystemIndex].content
+          : ''
+        messages[firstSystemIndex] = {
+          role: 'system',
+          content: existingContent + '\n\n' + promptContent
+        }
+      }
+    }
+
+    return { messages, geminiText: undefined }
+  }
+
+  // 定义消息数组（旧逻辑，保持向后兼容）
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = []
   let geminiText: string | undefined
-  
+
   if (promptContent) {
     messages.push({
       role: 'system',
       content: promptContent
     })
   }
-  
+
   messages.push({
     role: 'user',
     content: text
   })
-  
+
   return { messages, geminiText }
 }
 
@@ -213,7 +256,7 @@ export async function createOpenAIClient(AiConfig?: AiConfig) {
     apiKey = await store.get<string>('apiKey')
   }
   const proxyUrl = await store.get<string>('proxy')
-  
+
   // 创建OpenAI客户端
   return new OpenAI({
     apiKey: apiKey || '',

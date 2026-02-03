@@ -308,8 +308,8 @@
       "enableDesc": "Quando ativado, a IA pode chamar as ferramentas fornecidas pelos servidores MCP configurados."
     },
     "editor": {
-      "title": "Editor Markdown",
-      "desc": "Aqui, você pode personalizar o editor Markdown, criando uma experiência de escrita adaptada às suas necessidades.",
+      "title": "Configurações do Editor",
+      "desc": "Aqui, você pode personalizar o editor, criando uma experiência de escrita adaptada às suas necessidades.",
       "typewriterMode": "Modo Máquina de Escrever",
       "typewriterModeDesc": "No modo máquina de escrever, o editor simula o efeito de uma máquina de escrever, permitindo que você se concentre melhor na escrita.",
       "outlineEnable": "Sumário habilitado por padrão",
@@ -327,7 +327,40 @@
         "panoramaView": "Visualização Panorâmica"
       },
       "enableLineNumber": "Habilitar número da linha",
-      "enableLineNumberDesc": "Habilitar esta opção tornará o número da linha visível nos blocos de código."
+      "enableLineNumberDesc": "Habilitar esta opção tornará o número da linha visível nos blocos de código.",
+      "completion": {
+        "title": "Auto Completar",
+        "model": {
+          "title": "Modelo de Completamento Rápido",
+          "desc": "Selecione o modelo para preenchimento automático no editor"
+        }
+      },
+      "commit": {
+        "title": "Mensagem de Commit Automática",
+        "model": {
+          "title": "Modelo de Commit",
+          "desc": "Para gerar automaticamente mensagens de commit do Git com base nas alterações do arquivo"
+        }
+      }
+    },
+    "record": {
+      "title": "Configurações de Registro",
+      "desc": "Configure as configurações relacionadas a registros aqui, incluindo descrição de registro e configuração da barra de ferramentas.",
+      "model": {
+        "title": "Configurações do Modelo",
+        "markDesc": {
+          "title": "Descrição do Registro",
+          "desc": "Para processar registros reconhecidos por OCR e gerar descrições de registros"
+        }
+      },
+      "toolbar": {
+        "title": "Configurações da Barra de Ferramentas",
+        "recordToolbar": {
+          "title": "Barra de Ferramentas de Registro",
+          "desc": "Personalize a visibilidade e a ordem dos botões da barra de ferramentas de registro",
+          "button": "Configurar"
+        }
+      }
     },
     "uploadStore": {
       "uploadConfirm": "Configuração de Carregamento: Por favor, certifique-se de que o repositório de sincronização é privado, caso contrário, seus dados serão expostos!",
@@ -762,6 +795,62 @@
       "codeTheme": "Tema de destaque do bloco de código",
       "selectTheme": "Selecionar Tema"
     },
+    "chat": {
+      "title": "Configurações de Chat",
+      "desc": "Configure as configurações relacionadas ao chat aqui, incluindo geração de resumo.",
+      "primaryModel": {
+        "title": "Modelo Principal",
+        "model": {
+          "title": "Modelo de Chat Principal",
+          "desc": "Selecione o modelo de IA principal para conversas diárias"
+        }
+      },
+      "toolbar": {
+        "title": "Configuração da Barra de Ferramentas",
+        "chatToolbar": {
+          "title": "Barra de Ferramentas de Chat",
+          "desc": "Personalize a visibilidade e a ordem dos botões da barra de ferramentas de chat",
+          "button": "Configurar"
+        }
+      },
+      "condense": {
+        "title": "Resumo da Conversa",
+        "enable": {
+          "title": "Ativar Resumo",
+          "desc": "Comprimir automaticamente conversas longas para economizar uso de tokens"
+        },
+        "model": {
+          "title": "Modelo de Resumo",
+          "desc": "Selecione o modelo de IA para gerar resumos",
+          "placeholder": "Usar modelo principal"
+        },
+        "threshold": {
+          "title": "Limiar de Gatilho",
+          "desc": "Verificar compressão quando mensagens da IA excederem esta contagem"
+        },
+        "minToken": {
+          "title": "Contagem Mínima de Tokens",
+          "desc": "Comprimir apenas mensagens que excedam esta contagem de tokens"
+        },
+        "keepLatest": {
+          "title": "Manter Mais Recentes",
+          "desc": "Manter as últimas N mensagens da IA não compactadas"
+        },
+        "maxLength": {
+          "title": "Comprimento Máximo do Resumo",
+          "desc": "Controlar a contagem máxima de palavras dos resumos gerados"
+        },
+        "prompt": {
+          "title": "Prompt de Resumo Personalizado",
+          "desc": "Personalize o modelo de prompt para gerar resumos",
+          "label": "Modelo de Prompt",
+          "placeholder": "Digite o prompt personalizado...",
+          "help": "Use {content} como um espaço reservado para o conteúdo original",
+          "save": "Salvar",
+          "reset": "Redefinir para o Padrão"
+        }
+      }
+    },
     "dev": {
       "title": "Desenvolvedor",
       "desc": "Aqui você pode configurar opções de desenvolvedor, incluindo proxy de rede, limpeza de dados e gerenciamento de arquivos de configuração.",
@@ -1182,7 +1271,8 @@
             }
           },
           "messageControl": {
-            "words": "palavras"
+            "words": "palavras",
+            "summary": "Resumo"
           },
           "mcp": {
             "maxIterationsReached": "Número máximo de iterações de chamada de ferramenta atingido",
@@ -1514,6 +1604,7 @@
       },
       "messageControl": {
         "words": "palavras",
+        "summary": "Resumo",
         "readAloud": "Ler em Voz Alta",
         "playing": "Reproduzindo",
         "loading": "Carregando",

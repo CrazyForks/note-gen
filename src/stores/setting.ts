@@ -75,6 +75,9 @@ interface SettingState {
   sttModel: string
   setSttModel: (sttModel: string) => Promise<void>
 
+  condenseModel: string
+  setCondenseModel: (condenseModel: string) => Promise<void>
+
   templateList: GenTemplate[]
   setTemplateList: (templateList: GenTemplate[]) => Promise<void>
 
@@ -226,6 +229,14 @@ interface SettingState {
   // 托盘设置
   trayEnabled: boolean
   setTrayEnabled: (enabled: boolean) => Promise<void>
+
+  // 摘要设置
+  enableCondense: boolean
+  setEnableCondense: (enabled: boolean) => Promise<void>
+  keepLatestCount: number
+  setKeepLatestCount: (count: number) => Promise<void>
+  condenseMaxLength: number
+  setCondenseMaxLength: (length: number) => Promise<void>
 }
 
 export interface ChatToolbarItem {
@@ -364,7 +375,8 @@ const useSettingStore = create<SettingState>((set, get) => ({
     const modelTypes = [
       { storeKey: 'completionModel', modelType: 'chat' },
       { storeKey: 'markDescModel', modelType: 'chat' },
-      { storeKey: 'commitModel', modelType: 'chat' }
+      { storeKey: 'commitModel', modelType: 'chat' },
+      { storeKey: 'condenseModel', modelType: 'chat' }
     ]
 
     for (const { storeKey, modelType } of modelTypes) {
@@ -582,6 +594,13 @@ const useSettingStore = create<SettingState>((set, get) => ({
     const store = await Store.load('store.json');
     await store.set('sttModel', sttModel)
     set({ sttModel })
+  },
+
+  condenseModel: '',
+  setCondenseModel: async (condenseModel) => {
+    const store = await Store.load('store.json');
+    await store.set('condenseModel', condenseModel)
+    set({ condenseModel })
   },
 
   templateList: [
@@ -1077,6 +1096,31 @@ const useSettingStore = create<SettingState>((set, get) => ({
     set({ trayEnabled: enabled })
     const store = await Store.load('store.json');
     await store.set('trayEnabled', enabled)
+    await store.save()
+  },
+
+  // 摘要设置
+  enableCondense: true,
+  setEnableCondense: async (enabled: boolean) => {
+    set({ enableCondense: enabled })
+    const store = await Store.load('store.json');
+    await store.set('enableCondense', enabled)
+    await store.save()
+  },
+
+  keepLatestCount: 4,
+  setKeepLatestCount: async (count: number) => {
+    set({ keepLatestCount: count })
+    const store = await Store.load('store.json');
+    await store.set('keepLatestCount', count)
+    await store.save()
+  },
+
+  condenseMaxLength: 100,
+  setCondenseMaxLength: async (length: number) => {
+    set({ condenseMaxLength: length })
+    const store = await Store.load('store.json');
+    await store.set('condenseMaxLength', length)
     await store.save()
   },
 }))
