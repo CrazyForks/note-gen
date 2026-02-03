@@ -700,6 +700,9 @@
             "title": "クリップボード監視",
             "desc": "クリップボードの内容の変更を自動監視"
           },
+          "newChat": {
+            "desc": "新しい会話を開始"
+          },
           "clearContext": {
             "desc": "会話コンテキストをクリアし、チャット履歴を保持"
           },
@@ -743,6 +746,13 @@
           "help": "元のコンテンツのプレースホルダーとして {content} を使用",
           "save": "保存",
           "reset": "デフォルトにリセット"
+        }
+      },
+      "inspiration": {
+        "title": "インスピレーションモデル",
+        "model": {
+          "title": "クイックプロンプト生成",
+          "desc": "会話を開始するためのクイックプロンプト候補を生成します"
         }
       }
     },
@@ -1099,7 +1109,21 @@
             "currentMode": "会話モード",
             "noModel": "モデルが設定されていません",
             "noPrompt": "Promptが設定されていません",
-            "configureModel": "モデルを設定"
+            "configureModel": "モデルを設定",
+            "recentConversations": "最近の会話",
+            "deleteConversation": "会話を削除",
+            "viewMore": "もっと見る",
+            "messages": "件のメッセージ",
+            "searchPlaceholder": "会話を検索...",
+            "noMatchingConversations": "一致する会話が見つかりませんでした",
+            "noConversationHistory": "会話履歴はありません",
+            "quickPrompts": {
+              "title": "クイックスタート",
+              "writeNote": "ノートを書くのを手伝って",
+              "summarize": "この内容を要約して",
+              "brainstorm": "アイデアを出し合って",
+              "explain": "この概念を説明して"
+            }
           },
           "content": {
             "organize": "あなたの記録を文章に整理："

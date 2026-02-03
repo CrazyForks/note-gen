@@ -178,6 +178,7 @@
       },
       "tools": {
         "title": "Tool Settings",
+        "desc": "Configure display and sorting of various toolbar buttons",
         "chatToolbar": {
           "title": "Chat Toolbar",
           "desc": "Customize the display order and visibility of chat toolbar buttons",
@@ -916,6 +917,9 @@
             "title": "Clipboard Monitor",
             "desc": "Automatically monitor clipboard content changes"
           },
+          "newChat": {
+            "desc": "Start a new conversation"
+          },
           "clearContext": {
             "desc": "Clear conversation context, keep chat history"
           },
@@ -959,6 +963,20 @@
           "help": "Use {content} as a placeholder for original content",
           "save": "Save",
           "reset": "Reset to Default"
+        }
+      },
+      "conversationTitle": {
+        "title": "Conversation Title",
+        "model": {
+          "title": "Title Generation Model",
+          "desc": "Select the AI model for generating conversation titles"
+        }
+      },
+      "inspiration": {
+        "title": "Inspiration Model",
+        "model": {
+          "title": "Quick Prompt Generator",
+          "desc": "Generate quick prompt suggestions to help users start conversations"
         }
       }
     },
@@ -1296,7 +1314,21 @@
             "currentMode": "Conversation Mode",
             "noModel": "No model set",
             "noPrompt": "No prompt set",
-            "configureModel": "Configure Model"
+            "configureModel": "Configure Model",
+            "recentConversations": "Recent Conversations",
+            "deleteConversation": "Delete conversation",
+            "viewMore": "View more",
+            "messages": "messages",
+            "searchPlaceholder": "Search conversations...",
+            "noMatchingConversations": "No matching conversations found",
+            "noConversationHistory": "No conversation history",
+            "quickPrompts": {
+              "title": "Quick Start",
+              "writeNote": "Help me write a note",
+              "summarize": "Help me summarize this content",
+              "brainstorm": "Help me brainstorm ideas",
+              "explain": "Help me explain this concept"
+            }
           },
           "content": {
             "organize": "Organize your records into an article:"
@@ -1488,10 +1520,7 @@
           "tooltip": "Select prompt",
           "placeholder": "Search prompts"
         },
-        "clearChat": "Clear conversation",
-        "clearContext": {
-          "tooltip": "Clear context"
-        },
+        "newChat": "New Chat",
         "mcp": {
           "tooltip": "MCP server"
         },
@@ -1998,11 +2027,8 @@
         },
         "tools": {
           "title": "Tools",
-          "clearContext": "Clear Context",
-          "clearContextDesc": "Clear conversation context, keep chat history",
-          "clearChat": "Clear Chat",
-          "clearChatDesc": "Delete all chat records",
-          "clear": "Clear"
+          "newChat": "New Chat",
+          "start": "Start"
         },
         "attachments": {
           "title": "Attachments",

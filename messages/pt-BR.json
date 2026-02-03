@@ -842,6 +842,9 @@
             "title": "Monitorar Área de Transferência",
             "desc": "Monitorar automaticamente alterações no conteúdo da área de transferência"
           },
+          "newChat": {
+            "desc": "Iniciar nova conversa"
+          },
           "clearContext": {
             "desc": "Limpar contexto da conversa, manter histórico"
           },
@@ -885,6 +888,13 @@
           "help": "Use {content} como um espaço reservado para o conteúdo original",
           "save": "Salvar",
           "reset": "Redefinir para o Padrão"
+        }
+      },
+      "inspiration": {
+        "title": "Modelo de Inspiração",
+        "model": {
+          "title": "Gerador de Sugestões Rápidas",
+          "desc": "Gere sugestões de prompt rápidas para ajudar os usuários a iniciar conversas"
         }
       }
     },
@@ -1333,7 +1343,21 @@
             "noPrompt": "Nenhum prompt definido",
             "configureModel": "Configurar Modelo",
             "modeHint": "Toque no botão à esquerda do campo de entrada",
-            "modeHintSuffix": "para alternar o modo de conversa"
+            "modeHintSuffix": "para alternar o modo de conversa",
+            "recentConversations": "Conversas Recentes",
+            "deleteConversation": "Excluir conversa",
+            "viewMore": "Ver mais",
+            "messages": "mensagens",
+            "searchPlaceholder": "Pesquisar conversas...",
+            "noMatchingConversations": "Nenhuma conversa correspondente encontrada",
+            "noConversationHistory": "Sem histórico de conversa",
+            "quickPrompts": {
+              "title": "Início Rápido",
+              "writeNote": "Ajude-me a escrever uma nota",
+              "summarize": "Ajude-me a resumir este conteúdo",
+              "brainstorm": "Ajude-me a brainstormar ideias",
+              "explain": "Ajude-me a explicar este conceito"
+            }
           },
           "content": {
             "organize": "Organize seus registros em um artigo:"
