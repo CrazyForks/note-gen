@@ -184,16 +184,23 @@ const useArticleStore = create<NoteState>((set, get) => ({
   sortFileTree: (tree: DirTree[]) => {
     const sortType = get().sortType
     const sortDirection = get().sortDirection
-    if (sortType === 'none') return tree
 
+    // 复制树结构，避免直接修改原始数据
     const sortedTree = cloneDeep(tree)
 
+    // skills 文件夹始终置顶（在任何排序方式下，包括 sortType 为 'none' 时）
     const sortFunction = (a: DirTree, b: DirTree) => {
-      // skills 文件夹始终置顶（在任何排序方式下）
       const aIsSkills = a.isDirectory && isSkillsFolder(a.name)
       const bIsSkills = b.isDirectory && isSkillsFolder(b.name)
       if (aIsSkills && !bIsSkills) return -1
       if (!aIsSkills && bIsSkills) return 1
+
+      // 如果排序类型为 'none'，在 skills 置顶后，文件夹在文件上方
+      if (sortType === 'none') {
+        if (a.isDirectory && !b.isDirectory) return -1
+        if (!a.isDirectory && b.isDirectory) return 1
+        return 0
+      }
 
       // 文件夹始终在文件上方
       if (a.isDirectory && !b.isDirectory) return -1
