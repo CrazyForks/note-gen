@@ -102,13 +102,13 @@ function SortableItem({ item, config, onToggle, t }: SortableItemProps) {
 
         {/* 工具图标 */}
         <div className="shrink-0 text-muted-foreground">
-          {config.icon}
+          {config?.icon}
         </div>
 
         {/* 标题和描述 */}
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium">{t(config.titleKey)}</div>
-          <div className="text-xs text-muted-foreground truncate">{t(config.descKey)}</div>
+          <div className="text-sm font-medium">{config ? t(config.titleKey) : item.id}</div>
+          <div className="text-xs text-muted-foreground truncate">{config ? t(config.descKey) : ''}</div>
         </div>
 
         {/* 开关 */}
@@ -159,8 +159,10 @@ export function ToolbarSettings() {
     }
   }
 
-  // 按排序展示工具
-  const sortedConfig = [...recordToolbarConfig].sort((a, b) => a.order - b.order)
+  // 按排序展示工具（过滤掉不在 TOOL_CONFIGS 中的项）
+  const sortedConfig = [...recordToolbarConfig]
+    .filter(item => item.id in TOOL_CONFIGS)
+    .sort((a, b) => a.order - b.order)
 
   return (
     <div className="space-y-4">

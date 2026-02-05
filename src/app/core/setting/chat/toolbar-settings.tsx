@@ -2,16 +2,12 @@
 
 import { useTranslations } from 'next-intl'
 import { Switch } from '@/components/ui/switch'
-import { useIsMobile } from '@/hooks/use-mobile'
 import {
   BotMessageSquare,
   Drama,
-  Link,
-  AtSign,
   ServerCrash,
   Database,
   Clipboard,
-  SquareCode,
   GripVertical
 } from 'lucide-react'
 import useSettingStore, { ChatToolbarItem } from '@/stores/setting'
@@ -43,16 +39,6 @@ const TOOL_CONFIGS = {
     titleKey: 'record.chat.input.promptSelect.tooltip',
     descKey: 'settings.chat.toolbar.chatToolbar.promptSelect.desc',
   },
-  chatLink: {
-    icon: <Link className="size-4" />,
-    titleKey: 'settings.chat.toolbar.chatToolbar.chatLink.title',
-    descKey: 'settings.chat.toolbar.chatToolbar.chatLink.desc',
-  },
-  fileLink: {
-    icon: <AtSign className="size-4" />,
-    titleKey: 'record.chat.input.fileLink.tooltip',
-    descKey: 'settings.chat.toolbar.chatToolbar.fileLink.desc',
-  },
   mcpButton: {
     icon: <ServerCrash className="size-4" />,
     titleKey: 'mcp.selectServers',
@@ -68,18 +54,6 @@ const TOOL_CONFIGS = {
     titleKey: 'settings.chat.toolbar.chatToolbar.clipboardMonitor.title',
     descKey: 'settings.chat.toolbar.chatToolbar.clipboardMonitor.desc',
   },
-  newChat: {
-    icon: <SquareCode className="size-4" />,
-    titleKey: 'record.chat.input.newChat',
-    descKey: 'settings.chat.toolbar.chatToolbar.newChat.desc',
-  },
-}
-
-// 工具栏分组定义
-const TOOLBAR_GROUPS = {
-  bottom: ['modelSelect', 'promptSelect'],
-  topLeft: ['chatLink', 'fileLink', 'mcpButton', 'ragSwitch', 'clipboardMonitor'],
-  topRight: ['newChat'],
 }
 
 // 可排序的工具栏项组件
@@ -116,13 +90,13 @@ function SortableItem({ item, config, onToggle, t }: SortableItemProps) {
 
         {/* 工具图标 */}
         <div className="shrink-0 text-muted-foreground">
-          {config.icon}
+          {config?.icon}
         </div>
 
         {/* 标题和描述 */}
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium">{t(config.titleKey)}</div>
-          <div className="text-xs text-muted-foreground truncate">{t(config.descKey)}</div>
+          <div className="text-sm font-medium">{config ? t(config.titleKey) : item.id}</div>
+          <div className="text-xs text-muted-foreground truncate">{config ? t(config.descKey) : ''}</div>
         </div>
 
         {/* 开关 */}
@@ -139,12 +113,11 @@ function SortableItem({ item, config, onToggle, t }: SortableItemProps) {
 
 export function ToolbarSettings() {
   const t = useTranslations()
-  const isMobile = useIsMobile()
   const { chatToolbarConfigPc, setChatToolbarConfigPc, chatToolbarConfigMobile, setChatToolbarConfigMobile } = useSettingStore()
 
   // 根据设备类型选择配置
-  const config = isMobile ? chatToolbarConfigMobile : chatToolbarConfigPc
-  const setConfig = isMobile ? setChatToolbarConfigMobile : setChatToolbarConfigPc
+  const config = chatToolbarConfigMobile.length > 0 ? chatToolbarConfigMobile : chatToolbarConfigPc
+  const setConfig = chatToolbarConfigMobile.length > 0 ? setChatToolbarConfigMobile : setChatToolbarConfigPc
 
   // 拖拽传感器配置
   const sensors = useSensors(
@@ -178,29 +151,28 @@ export function ToolbarSettings() {
     }
   }
 
-  // 按分组渲染
-  const renderGroup = (groupKey: 'bottom' | 'topLeft' | 'topRight', groupTitleKey: string) => {
-    const groupItems = config
-      .filter(item => TOOLBAR_GROUPS[groupKey].includes(item.id))
-      .sort((a, b) => a.order - b.order)
+  // 获取可排序的工具列表（排除 newChat 和不在 TOOL_CONFIGS 中的项）
+  const sortableItems = config
+    .filter(item => item.id !== 'newChat' && item.id in TOOL_CONFIGS)
+    .sort((a, b) => a.order - b.order)
 
-    if (groupItems.length === 0) return null
+  return (
+    <div className="space-y-4">
+      {/* 标题 */}
+      <h3 className="text-lg font-semibold">{t('settings.chat.toolbar.title')}</h3>
 
-    return (
-      <div key={groupKey} className="space-y-1">
-        <h3 className="text-sm font-medium text-muted-foreground text-left py-1">
-          {t(groupTitleKey)}
-        </h3>
+      {/* 工具列表 */}
+      <div className="space-y-1">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={groupItems.map(item => item.id)}
+            items={sortableItems.map(item => item.id)}
             strategy={verticalListSortingStrategy}
           >
-            {groupItems.map((item) => (
+            {sortableItems.map((item) => (
               <SortableItem
                 key={item.id}
                 item={item}
@@ -212,53 +184,6 @@ export function ToolbarSettings() {
           </SortableContext>
         </DndContext>
       </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* 标题 */}
-      <h3 className="text-lg font-semibold">{t('settings.chat.toolbar.title')}</h3>
-
-      {/* PC 端分组展示 */}
-      {!isMobile && (
-        <>
-          {renderGroup('topLeft', 'settings.general.tools.chatToolbar.groups.topLeft')}
-          {renderGroup('topRight', 'settings.general.tools.chatToolbar.groups.topRight')}
-          {renderGroup('bottom', 'settings.general.tools.chatToolbar.groups.bottom')}
-        </>
-      )}
-
-      {/* 移动端展示 */}
-      {isMobile && (
-        <div className="space-y-1">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={config
-                .filter(item => !['modelSelect', 'promptSelect'].includes(item.id))
-                .map(item => item.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {config
-                .filter(item => !['modelSelect', 'promptSelect'].includes(item.id))
-                .sort((a, b) => a.order - b.order)
-                .map((item) => (
-                  <SortableItem
-                    key={item.id}
-                    item={item}
-                    config={TOOL_CONFIGS[item.id as keyof typeof TOOL_CONFIGS]}
-                    onToggle={handleToggle}
-                    t={t}
-                  />
-                ))}
-            </SortableContext>
-          </DndContext>
-        </div>
-      )}
     </div>
   )
 }

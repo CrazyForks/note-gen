@@ -14,8 +14,10 @@ import { getWorkspacePath } from "@/lib/workspace"
 import { PromptSelect } from "./prompt-select"
 import { ChatSend } from "./chat-send"
 import { LinkedFileDisplay } from "./file-link"
-import { FileSelector } from "./file-selector"
 import { LinkedResource, MarkdownFile, LinkedFolder } from "@/lib/files"
+import { McpButton } from "./mcp-button"
+import { RagSwitch } from "./rag-switch"
+import { ClipboardMonitor } from "./clipboard-monitor"
 import emitter from "@/lib/emitter"
 import { ChatSettingsDrawer } from "@/app/mobile/chat/components/chat-settings-drawer"
 import { ChatToolsDrawer } from "@/app/mobile/chat/components/chat-tools-drawer"
@@ -51,7 +53,6 @@ export const ChatInput = React.memo(function ChatInput() {
   const [text, setText] = useState("")
   const { primaryModel, chatToolbarConfigPc, setChatToolbarConfigPc } = useSettingStore()
   const { chats, loading, setLinkedResource: setChatLinkedResource } = useChatStore()
-  const [showFileSelector, setShowFileSelector] = useState(false)
   const { marks, trashState } = useMarkStore()
   const { activeFilePath } = useArticleStore()
   const [isComposing, setIsComposing] = useState(false)
@@ -345,23 +346,22 @@ export const ChatInput = React.memo(function ChatInput() {
     }
   }
 
-  // 处理拖拽结束（仅 PC 端底部工具栏）
+  // 处理拖拽结束（底部工具栏）
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
 
     if (over && active.id !== over.id) {
-      const bottomTools = ['modelSelect', 'promptSelect']
-      const bottomItems = chatToolbarConfigPc.filter(item => bottomTools.includes(item.id))
-      const oldIndex = bottomItems.findIndex((item) => item.id === active.id)
-      const newIndex = bottomItems.findIndex((item) => item.id === over.id)
+      const enabledItems = chatToolbarConfigPc.filter(item => item.enabled)
+      const oldIndex = enabledItems.findIndex((item) => item.id === active.id)
+      const newIndex = enabledItems.findIndex((item) => item.id === over.id)
 
-      const reorderedItems = arrayMove(bottomItems, oldIndex, newIndex)
+      const reorderedItems = arrayMove(enabledItems, oldIndex, newIndex)
       const allItems = [...chatToolbarConfigPc]
 
       reorderedItems.forEach((item, index) => {
         const globalIndex = allItems.findIndex(i => i.id === item.id)
         if (globalIndex !== -1) {
-          allItems[globalIndex] = { ...item, order: bottomItems[0].order + index }
+          allItems[globalIndex] = { ...item, order: enabledItems[0].order + index }
         }
       })
 
@@ -369,10 +369,10 @@ export const ChatInput = React.memo(function ChatInput() {
     }
   }, [chatToolbarConfigPc, setChatToolbarConfigPc])
 
-  // 使用 useMemo 优化工具栏项过滤
+  // 使用 useMemo 优化工具栏项过滤 - 显示底部工具栏（排除 newChat）
   const bottomToolbarItems = useMemo(() => {
     return chatToolbarConfigPc
-      .filter(item => ['modelSelect', 'promptSelect'].includes(item.id) && item.enabled)
+      .filter(item => item.enabled && item.id !== 'newChat')
       .sort((a, b) => a.order - b.order)
   }, [chatToolbarConfigPc])
 
@@ -514,6 +514,59 @@ export const ChatInput = React.memo(function ChatInput() {
       debouncedGenPlaceholder()
     }
   }, [linkedResource, debouncedGenPlaceholder])
+
+  // 可排序的工具栏项组件
+  interface SortableToolbarItemProps {
+    id: string
+  }
+
+  const SortableToolbarItem = React.memo(function SortableToolbarItem({ id }: SortableToolbarItemProps) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id })
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    }
+
+    // 渲染对应的工具栏组件
+    const renderToolbarItem = useMemo(() => {
+      switch (id) {
+        case 'modelSelect':
+          return <ModelSelect />
+        case 'promptSelect':
+          return <PromptSelect />
+        case 'mcpButton':
+          return <McpButton />
+        case 'ragSwitch':
+          return <RagSwitch />
+        case 'clipboardMonitor':
+          return <ClipboardMonitor />
+        default:
+          return null
+      }
+    }, [id, primaryModel, loading])
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing"
+      >
+        {renderToolbarItem}
+      </div>
+    )
+  })
+  SortableToolbarItem.displayName = 'SortableToolbarItem'
 
   return (
     <footer className="flex flex-col w-full p-1 justify-between items-center">
@@ -657,68 +710,8 @@ export const ChatInput = React.memo(function ChatInput() {
           </div>
         </div>
 
-        {/* 文件选择器（移动端） */}
-        {showFileSelector && (
-          <FileSelector
-            isOpen={showFileSelector}
-            onClose={() => setShowFileSelector(false)}
-            onFileSelect={(file) => {
-              setLinkedResource(file)
-              setChatLinkedResource(file)
-              setShowFileSelector(false)
-            }}
-          />
-        )}
-
       </div>
     </footer>
   )
 })
 ChatInput.displayName = 'ChatInput'
-
-// 可排序的工具栏项组件
-interface SortableToolbarItemProps {
-  id: string
-}
-
-const SortableToolbarItem = React.memo(function SortableToolbarItem({ id }: SortableToolbarItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  // 渲染对应的工具栏组件
-  const renderToolbarItem = useMemo(() => {
-    switch (id) {
-      case 'modelSelect':
-        return <ModelSelect />
-      case 'promptSelect':
-        return <PromptSelect />
-      default:
-        return null
-    }
-  }, [id])
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="cursor-grab active:cursor-grabbing"
-    >
-      {renderToolbarItem}
-    </div>
-  )
-})
-SortableToolbarItem.displayName = 'SortableToolbarItem'

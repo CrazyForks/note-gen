@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl'
 import useChatStore from '@/stores/chat'
 import { useMemo, useState, useEffect } from 'react'
 import { Trash2, FileEdit, FileText, Lightbulb, ArrowRight, MessageCircle } from 'lucide-react'
-import { HistoryDropdown } from './history-dropdown'
 import { Button } from '@/components/ui/button'
 import emitter from '@/lib/emitter'
 import dayjs from 'dayjs'
@@ -34,7 +33,6 @@ export default function ChatEmpty() {
     deleteConversation
   } = useChatStore()
 
-  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false)
   const [aiPrompts, setAiPrompts] = useState<QuickPrompt[]>([])
 
   // 快速 prompt 模板 - 默认模板
@@ -85,17 +83,12 @@ export default function ChatEmpty() {
       .slice(0, 3)
   }, [conversations, currentConversationId])
 
-  // 是否有更多历史记录（排除空会话）
-  const hasMore = conversations.filter(c => c.id !== currentConversationId && c.messageCount > 0).length > 3
-
   const handleSwitchConversation = async (id: number) => {
     await switchConversation(id)
   }
 
   const handleDelete = async (id: number) => {
     await deleteConversation(id)
-    // 关闭下拉框
-    setShowHistoryDropdown(false)
   }
 
   return (
@@ -163,20 +156,7 @@ export default function ChatEmpty() {
         {/* Recent Conversations */}
         {recentConversations.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between w-full mb-2">
-              <p className="text-xs text-muted-foreground px-1 flex-1">{t('recentConversations')}</p>
-              {hasMore && (
-                <HistoryDropdown
-                  conversations={conversations}
-                  currentConversationId={currentConversationId}
-                  excludeConversationIds={recentConversations.map(c => c.id)}
-                  onSwitch={handleSwitchConversation}
-                  onDelete={handleDelete}
-                  open={showHistoryDropdown}
-                  onOpenChange={setShowHistoryDropdown}
-                />
-              )}
-            </div>
+            <p className="text-xs text-muted-foreground px-1">{t('recentConversations')}</p>
             {recentConversations.map(conv => (
               <div
                 key={conv.id}
