@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import useArticleStore, { findFolderInTree } from '@/stores/article'
-import { MdEditor } from './md-editor'
-import { ImageEditor } from './image-editor'
+import { MdEditor } from './markdown/md-editor'
+import { ImageEditor } from './image/image-editor'
 import { EmptyState } from './empty-state'
-import { FolderView } from './folder-view'
+import { FolderView } from './folder'
 
-export function EditorWrapper() {
+export function EditorLayout() {
   const { activeFilePath, fileTree } = useArticleStore()
   const [itemType, setItemType] = useState<'markdown' | 'image' | 'folder' | 'unknown'>('unknown')
 

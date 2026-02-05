@@ -19,11 +19,11 @@ import { reportAppStart } from "@/lib/event-report"
 import { MobileStatusBar } from "@/components/mobile-statusbar"
 import { TextSizeProvider } from "@/contexts/text-size-context"
 import { SyncConfirmDialog } from "@/components/sync-confirm-dialog"
-import { ControlText } from "@/app/core/record/mark/control-text"
-import { ControlRecording } from "@/app/core/record/mark/control-recording"
-import { ControlImage } from "@/app/core/record/mark/control-image"
-import { ControlLink } from "@/app/core/record/mark/control-link"
-import { ControlFile } from "@/app/core/record/mark/control-file"
+import { ControlText } from "@/app/core/main/mark/control-text"
+import { ControlRecording } from "@/app/core/main/mark/control-recording"
+import { ControlImage } from "@/app/core/main/mark/control-image"
+import { ControlLink } from "@/app/core/main/mark/control-link"
+import { ControlFile } from "@/app/core/main/mark/control-file"
 
 export default function RootLayout({
   children,

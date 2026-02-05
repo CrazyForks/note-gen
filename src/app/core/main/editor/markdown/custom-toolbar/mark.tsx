@@ -1,8 +1,8 @@
 import { fetchAi } from "@/lib/ai/chat";
 import useArticleStore from "@/stores/article";
 import { Highlighter, Plus, ChevronDown, Tag } from "lucide-react";
-import { MarkWrapper } from "../../record/mark/mark-item";
-import { MarkLoading } from "../../record/mark/mark-loading";
+import { MarkWrapper } from "../../../mark/mark-item";
+import { MarkLoading } from "../../../mark/mark-loading";
 import useMarkStore from "@/stores/mark";
 import { Button } from "@/components/ui/button";
 import { Mark, delMark } from "@/db/marks";
