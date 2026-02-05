@@ -1,22 +1,37 @@
 import { Tool, ToolResult } from '../types'
 import { getMarks, getAllMarks, insertMark, updateMark, delMark, restoreMark, Mark, insertMarks, updateMarks, deleteMarks, restoreMarks } from '@/db/marks'
+import useTagStore from '@/stores/tag'
+
+/**
+ * 获取当前选中的标签ID
+ * 如果用户没有明确指定标签，使用当前选中的标签
+ */
+function getCurrentTagId(tagId?: number): number {
+  // 如果明确传入了 tagId，使用传入的值
+  if (tagId !== undefined && tagId !== null) {
+    return tagId
+  }
+  // 否则使用当前选中的标签
+  return useTagStore.getState().currentTagId
+}
 
 export const readMarksTool: Tool = {
   name: 'read_marks',
-  description: '🏷️ **Records System (Marks)**: Read all content records (marks) under a specific tag. Marks are database records like bookmarks, captured text, OCR results, etc. Each mark belongs to a tag via tagId.',
+  description: '🏷️ **Records System (Marks)**: Read all content records (marks) under a specific tag. Marks are database records like bookmarks, captured text, OCR results, etc. Each mark belongs to a tag via tagId. **If tagId is not specified, uses the currently selected tag.**',
   category: 'mark',
   requiresConfirmation: false,
   parameters: [
     {
       name: 'tagId',
       type: 'number',
-      description: 'Tag ID (use list_tags first to get available tags)',
-      required: true,
+      description: 'Tag ID (optional, uses current selected tag if not specified)',
+      required: false,
     },
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
-      const marks = await getMarks(params.tagId)
+      const tagId = getCurrentTagId(params.tagId)
+      const marks = await getMarks(tagId)
       const activeMarks = marks.filter(m => m.deleted === 0)
       return {
         success: true,
@@ -217,7 +232,7 @@ export const restoreMarkTool: Tool = {
 
 export const searchMarksTool: Tool = {
   name: 'search_marks',
-  description: '🏷️ **Records System (Marks)**: Search content within marks (database records) for keywords. **NOT the same as search_markdown_files** which searches file system notes.',
+  description: '🏷️ **Records System (Marks)**: Search content within marks (database records) for keywords. **NOT the same as search_markdown_files** which searches file system notes. **If tagId is not specified, searches within the currently selected tag.**',
   category: 'search',
   requiresConfirmation: false,
   parameters: [
@@ -230,7 +245,7 @@ export const searchMarksTool: Tool = {
     {
       name: 'tagId',
       type: 'number',
-      description: 'Optional: limit search to a specific tag',
+      description: 'Tag ID (optional, uses current selected tag if not specified)',
       required: false,
     },
     {
@@ -242,7 +257,8 @@ export const searchMarksTool: Tool = {
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
-      const marks = await getMarks(params.tagId || 1)
+      const tagId = getCurrentTagId(params.tagId)
+      const marks = await getMarks(tagId)
       let results = marks.filter(mark =>
         mark.deleted === 0 &&
         (mark.content?.toLowerCase().includes(params.query.toLowerCase()) ||

@@ -1,6 +1,5 @@
 "use client"
 
-import { ChatLink } from "./chat-link"
 import { FileLink } from "./file-link"
 import { McpButton } from "./mcp-button"
 import { RagSwitch } from "./rag-switch"
@@ -15,7 +14,7 @@ import emitter from "@/lib/emitter"
 
 // 工具栏分组定义
 const TOOLBAR_GROUPS = {
-  topLeft: ['chatLink', 'fileLink', 'mcpButton', 'ragSwitch', 'clipboardMonitor'],
+  topLeft: ['fileLink', 'mcpButton', 'ragSwitch', 'clipboardMonitor'],
   topRight: ['newChat'],
 }
 
@@ -39,8 +38,6 @@ export function ChatHeader() {
   // 渲染工具栏项
   const renderToolbarItem = (id: string) => {
     switch (id) {
-      case 'chatLink':
-        return <ChatLink key={id} />
       case 'fileLink':
         return <FileLink key={id} onFileLinkClick={openFileSelector} disabled={!primaryModel || loading} />
       case 'mcpButton':

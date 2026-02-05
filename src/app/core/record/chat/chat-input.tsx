@@ -50,7 +50,7 @@ import { CSS } from '@dnd-kit/utilities'
 export const ChatInput = React.memo(function ChatInput() {
   const [text, setText] = useState("")
   const { primaryModel, chatToolbarConfigPc, setChatToolbarConfigPc } = useSettingStore()
-  const { chats, loading, isLinkMark, setLinkedResource: setChatLinkedResource } = useChatStore()
+  const { chats, loading, setLinkedResource: setChatLinkedResource } = useChatStore()
   const [showFileSelector, setShowFileSelector] = useState(false)
   const { marks, trashState } = useMarkStore()
   const { activeFilePath } = useArticleStore()
@@ -306,18 +306,9 @@ export const ChatInput = React.memo(function ChatInput() {
   async function genInputPlaceholder() {
     if (!primaryModel) return
     if (trashState) return
-    const scanMarks = isLinkMark ? marks.filter(item => item.type === 'scan') : []
-    const textMarks = isLinkMark ? marks.filter(item => item.type === 'text') : []
-    const imageMarks = isLinkMark ? marks.filter(item => item.type === 'image') : []
-    const fileMarks = isLinkMark ? marks.filter(item => item.type === 'file') : []
-    const linkMarks = isLinkMark ? marks.filter(item => item.type === 'link') : []
     const lastClearIndex = chats.findLastIndex(item => item.type === 'clear')
     const chatsAfterClear = chats.slice(lastClearIndex + 1)
     const request_content = `
-      ${[...scanMarks, ...textMarks, ...imageMarks, ...fileMarks, ...linkMarks]
-        .slice(0, 5)
-        .map(item => item.content?.slice(0, 60))
-        .join(';\n\n')}
       ${chatsAfterClear.slice(0, 5).map(item => item.content?.slice(0, 60)).join(';\n\n')}
     `.trim()
     // 使用 fetchAiQuickPrompts 获取4条提示词
@@ -343,7 +334,7 @@ export const ChatInput = React.memo(function ChatInput() {
     placeholderTimerRef.current = setTimeout(() => {
       genInputPlaceholder()
     }, 1500) // 1.5秒延迟
-  }, [primaryModel, marks, isLinkMark, chats, trashState, t])
+  }, [primaryModel, marks, chats, trashState, t])
 
 
   // 插入占位符
@@ -386,16 +377,13 @@ export const ChatInput = React.memo(function ChatInput() {
   }, [chatToolbarConfigPc])
 
   useEffect(() => {
-    if (!primaryModel) {
-      setPlaceholder(t('record.chat.input.placeholder.noPrimaryModel'))
-      return
-    }
-    if (marks.length === 0) {
+    // 如果有 marks，生成 AI 提示词作为 placeholder
+    if (marks.length > 0) {
+      genInputPlaceholder()
+    } else {
       setPlaceholder(t('record.chat.input.placeholder.default'))
-      return
     }
-    genInputPlaceholder()
-  }, [primaryModel, marks, isLinkMark, t])
+  }, [primaryModel, marks, t])
 
   useEffect(() => {
     emitter.on('revertChat', (event: unknown) => {

@@ -7,6 +7,35 @@ export interface QuickPrompt {
 }
 
 /**
+ * 获取灵感模型配置
+ * @returns 灵感模型配置，如果未配置则返回 null
+ */
+async function getInspirationModelConfig() {
+  const settingStore = useSettingStore.getState()
+  const inspirationModelId = settingStore.inspirationModel
+
+  // 从 AI 模型列表中查找配置的灵感模型
+  const aiModelList = settingStore.aiModelList
+  for (const config of aiModelList) {
+    if (config.models) {
+      const model = config.models.find(m => m.id === inspirationModelId || `${config.key}-${m.id}` === inspirationModelId)
+      if (model) {
+        return config
+      }
+    }
+  }
+
+  // 如果没找到配置的灵感模型，使用默认的 NoteGen 聊天模型作为 fallback
+  const { noteGenDefaultModels } = await import('@/app/model-config')
+  const noteGenChat = noteGenDefaultModels[0]?.models?.find(m => m.modelType === 'chat')
+  if (noteGenChat) {
+    return noteGenDefaultModels[0]
+  }
+
+  return null
+}
+
+/**
  * 生成输入框占位符建议
  * @param text 上下文内容
  * @returns 占位符文本，失败返回false
@@ -15,11 +44,11 @@ export async function fetchAiPlaceholder(text: string): Promise<string | false> 
   try {
     // 动态导入 model-config 以获取默认模型配置
     const { noteGenDefaultModels } = await import('@/app/model-config')
-    
+
     // 使用第一个默认模型配置（NoteGen Free）
     const defaultConfig = noteGenDefaultModels[0]
     const chatModel = defaultConfig.models?.find(m => m.modelType === 'chat')
-    
+
     if (!defaultConfig || !chatModel) {
       console.error('No default chat model found in noteGenDefaultModels')
       return false
@@ -46,7 +75,7 @@ export async function fetchAiPlaceholder(text: string): Promise<string | false> 
       apiKey: defaultConfig.apiKey,
       dangerouslyAllowBrowser: true,
     })
-      
+
     const completion = await openai.chat.completions.create({
       model: chatModel.model || '',
       messages: messages,
@@ -62,34 +91,6 @@ export async function fetchAiPlaceholder(text: string): Promise<string | false> 
     console.error('Error in fetchAiPlaceholder:', error)
     return false
   }
-}
-
-/**
- * 获取灵感模型配置
- * @returns 灵感模型配置，如果未配置则返回 null
- */
-async function getInspirationModelConfig() {
-  const settingStore = useSettingStore.getState()
-  const inspirationModelId = settingStore.inspirationModel
-
-  // 如果没有配置灵感模型，返回 null
-  if (!inspirationModelId) {
-    return null
-  }
-
-  // 从 AI 模型列表中查找配置的灵感模型
-  const aiModelList = settingStore.aiModelList
-  for (const config of aiModelList) {
-    if (config.models) {
-      const model = config.models.find(m => m.id === inspirationModelId || `${config.key}-${m.id}` === inspirationModelId)
-      if (model) {
-        return config
-      }
-    }
-  }
-
-  // 如果没找到，返回 null
-  return null
 }
 
 /**

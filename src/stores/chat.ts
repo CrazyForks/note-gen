@@ -32,10 +32,6 @@ interface ChatState {
   _condenseLock: boolean // 内部锁，防止并发压缩
   maybeCondense: () => void // 触发压缩检查（异步，不阻塞）
 
-  isLinkMark: boolean // 是否关联记录
-  setIsLinkMark: (isLinkMark: boolean) => void
-  initIsLinkMark: () => void // 初始化关联状态
-
   // 兼容旧代码：按标签加载（内部映射到默认会话）
   chats: Chat[]
   init: (tagId: number) => Promise<void> // 初始化 chats
@@ -158,25 +154,6 @@ const useChatStore = create<ChatState>((set, get) => ({
         set({ _condenseLock: false, isCondensing: false })
       }
     })()
-  },
-
-  isLinkMark: (typeof window !== 'undefined' ? localStorage.getItem('isLinkMark') === 'true' : true),
-  setIsLinkMark: (isLinkMark: boolean) => {
-    set({ isLinkMark })
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('isLinkMark', String(isLinkMark))
-    }
-  },
-  initIsLinkMark: () => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('isLinkMark')
-      if (stored === null) {
-        localStorage.setItem('isLinkMark', 'true')
-        set({ isLinkMark: true })
-      } else {
-        set({ isLinkMark: stored === 'true' })
-      }
-    }
   },
 
   agentState: {
