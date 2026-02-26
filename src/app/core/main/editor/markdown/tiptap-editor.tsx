@@ -22,6 +22,8 @@ import { common, createLowlight } from 'lowlight'
 import { Markdown } from '@tiptap/markdown'
 import { SearchAndReplace } from '@sereneinserenade/tiptap-search-and-replace'
 import UniqueId from '@tiptap/extension-unique-id'
+import { Extension } from '@tiptap/core'
+import { Plugin } from '@tiptap/pm/state'
 import 'katex/dist/katex.min.css'
 import { InlineMath, BlockMath } from './math-extension'
 import { MermaidDiagram } from './mermaid-extension'
@@ -45,6 +47,54 @@ import { QuoteMark } from './quote-mark'
 import './style.css'
 
 const lowlight = createLowlight(common)
+
+// 自定义扩展：处理粘贴 Markdown 文本
+const PasteMarkdown = Extension.create({
+  name: 'pasteMarkdown',
+
+  addProseMirrorPlugins() {
+    const { editor } = this
+    return [
+      new Plugin({
+        props: {
+          handlePaste(_view, event, _slice) {
+            void _view
+            void _slice
+            const text = (event as ClipboardEvent).clipboardData?.getData('text/plain')
+
+            if (!text) {
+              return false
+            }
+
+            // 检查文本是否看起来像 Markdown
+            if (looksLikeMarkdown(text)) {
+              // 使用 editor.commands.insertContent 插入 Markdown 内容
+              editor.commands.insertContent(text, { contentType: 'markdown' })
+              return true
+            }
+
+            return false
+          },
+        },
+      }),
+    ]
+  },
+})
+
+// 简单的启发式函数：检查文本是否看起来像 Markdown
+function looksLikeMarkdown(text: string): boolean {
+  return (
+    /^#{1,6}\s/.test(text) || // 标题
+    /\*\*[^*]+\*\*/.test(text) || // 粗体
+    /\*[^*]+\*/.test(text) || // 斜体
+    /\[.+\]\(.+\)/.test(text) || // 链接
+    /^[-*+]\s/.test(text) || // 无序列表
+    /^\d+\.\s/.test(text) || // 有序列表
+    /^>\s/.test(text) || // 引用
+    /^```[\s\S]*```$/.test(text) || // 代码块
+    /`[^`]+`/.test(text) // 行内代码
+  )
+}
 
 interface TipTapEditorProps {
   initialContent: string
@@ -167,6 +217,8 @@ export function TipTapEditor({
           class: 'max-w-full h-auto rounded-lg',
         },
       }),
+      // 自定义粘贴 Markdown 扩展
+      PasteMarkdown,
     ],
     content: initialContent,
     contentType: 'markdown',
@@ -893,7 +945,10 @@ export function TipTapEditor({
         // Insert content with markdown parsing
         // Wrap in setTimeout to avoid React lifecycle flushSync conflict
         setTimeout(() => {
-          editor.commands.insertContentAt(from, content)
+          editor.chain()
+            .focus()
+            .insertContent(content, { contentType: 'markdown' })
+            .run()
 
           // Calculate new cursor position
           const newPosition = from + content.length
@@ -1016,7 +1071,7 @@ export function TipTapEditor({
           editor.chain()
             .focus()
             .deleteRange({ from, to })
-            .insertContentAt(from, newContent)
+            .insertContent(newContent, { contentType: 'markdown' })
             .run()
 
           resolve({
