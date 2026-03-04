@@ -33,7 +33,7 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": "all",
+    "targets": ["deb", "rpm"],
     "resources": [
       "icons"
     ],
