@@ -30,7 +30,9 @@ import { InlineMath, BlockMath } from './math-extension'
 import { MermaidDiagram } from './mermaid-extension'
 import { MathEditorDialog } from './math-editor-dialog'
 import { useEffect, useRef, useCallback, useState } from 'react'
+import { Store } from '@tauri-apps/plugin-store'
 import { handleImageUpload } from '@/lib/image-handler'
+import { isMobileDevice } from '@/lib/check'
 import { useTranslations } from 'next-intl'
 import { BubbleMenu as BubbleMenuComponent } from './bubble-menu'
 import { ImageBubbleMenu } from './image-bubble-menu'
@@ -164,6 +166,9 @@ export function TipTapEditor({
   // 获取正文缩放设置
   const { contentTextScale } = useSettingStore()
 
+  // 居中内容设置
+  const [centeredContent, setCenteredContent] = useState(false)
+
   // 编辑器容器 ref，用于应用字体缩放
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
@@ -175,6 +180,21 @@ export function TipTapEditor({
   const initializedForPathRef = useRef<string | null>(null)
   const externalUpdateCounterRef = useRef(0)
   const pendingSyncUpdateRef = useRef<{ path: string; content: string } | null>(null)
+
+  // 读取居中内容设置（移动端强制关闭）
+  useEffect(() => {
+    async function loadCenteredContent() {
+      // 移动端强制关闭居中内容
+      if (isMobileDevice()) {
+        setCenteredContent(false)
+        return
+      }
+      const store = await Store.load('store.json');
+      const centered = await store.get<boolean>('centeredContent') || false
+      setCenteredContent(centered)
+    }
+    loadCenteredContent()
+  }, [])
   // Bug fix: Track when editor is ready (has caught up with content)
   const isReadyRef = useRef(false)
   // Bug fix: Track if this is the first onUpdate after initialization
@@ -1348,6 +1368,7 @@ export function TipTapEditor({
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleEditorDrop}
       >
+        <div className={centeredContent ? 'max-w-3xl mx-auto px-4' : ''}>
         <BubbleMenuComponent
           editor={editor}
           onAIPolish={handleAIPolish}
@@ -1363,6 +1384,7 @@ export function TipTapEditor({
         <FloatingTableMenu editor={editor} />
 
         <EditorContent editor={editor} className="h-full" />
+        </div>
       </div>
 
       {/* Bottom toolbar - always visible */}
