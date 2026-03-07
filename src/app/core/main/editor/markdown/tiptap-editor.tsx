@@ -1414,21 +1414,21 @@ export function TipTapEditor({
         onDrop={handleEditorDrop}
       >
         <div className={centeredContent ? 'max-w-3xl mx-auto px-4' : ''}>
-        <BubbleMenuComponent
-          editor={editor}
-          onAIPolish={handleAIPolish}
-          onAIConcise={handleAIConcise}
-          onAIExpand={handleAIExpand}
-          onQuoteToChat={onQuoteToChat}
-        />
+        <EditorContent editor={editor} className="h-full relative">
+          <ImageBubbleMenu editor={editor} />
 
-        <ImageBubbleMenu editor={editor} />
+          <AISuggestionFloating editor={editor} />
 
-        <AISuggestionFloating editor={editor} />
+          <FloatingTableMenu editor={editor} />
 
-        <FloatingTableMenu editor={editor} />
-
-        <EditorContent editor={editor} className="h-full" />
+          <BubbleMenuComponent
+            editor={editor}
+            onAIPolish={handleAIPolish}
+            onAIConcise={handleAIConcise}
+            onAIExpand={handleAIExpand}
+            onQuoteToChat={onQuoteToChat}
+          />
+        </EditorContent>
         </div>
       </div>
 
