@@ -9,6 +9,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { platform } from '@tauri-apps/plugin-os';
 import { Store } from '@tauri-apps/plugin-store';
 import { RepoNames } from "@/lib/sync/github.types";
+import { S3Config, WebDAVConfig } from "@/types/sync";
 import { cloneDeep } from "lodash-es";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { computedParentPath, getCurrentFolder } from "@/lib/path";
@@ -19,6 +20,9 @@ import { appDataDir, join } from '@tauri-apps/api/path';
 import { deleteFile } from "@/lib/sync/github";
 import { deleteFile as deleteGiteeFile } from "@/lib/sync/gitee";
 import { deleteFile as deleteGitlabFile } from "@/lib/sync/gitlab";
+import { deleteFile as deleteGiteaFile } from "@/lib/sync/gitea";
+import { s3Delete } from "@/lib/sync/s3";
+import { webdavDelete } from "@/lib/sync/webdav";
 import { generateUniqueFilename } from "@/lib/default-filename";
 import { MobileActionMenu, MobileMenuItem, MobileSeparator } from "./mobile-action-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -280,7 +284,7 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
       try {
         // 获取当前主要备份方式
         const store = await Store.load('store.json');
-        const backupMethod = await store.get<'github' | 'gitee' | 'gitlab' | 'gitea'>('primaryBackupMethod') || 'github';
+        const backupMethod = await store.get<'github' | 'gitee' | 'gitlab' | 'gitea' | 's3' | 'webdav'>('primaryBackupMethod') || 'github';
 
         let success = false
         switch (backupMethod) {
@@ -300,9 +304,24 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
             break;
           }
           case 'gitea': {
-            const { deleteFile: deleteGiteaFile } = await import('@/lib/sync/gitea')
             const result = await deleteGiteaFile({ path: currentPath, sha: item.sha as string, repo: RepoNames.sync });
             success = !!result
+            break;
+          }
+          case 's3': {
+            const s3Config = await store.get<S3Config>('s3SyncConfig')
+            if (s3Config) {
+              const result = await s3Delete(s3Config, currentPath)
+              success = result
+            }
+            break;
+          }
+          case 'webdav': {
+            const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+            if (webdavConfig) {
+              const result = await webdavDelete(webdavConfig, currentPath)
+              success = result
+            }
             break;
           }
         }
