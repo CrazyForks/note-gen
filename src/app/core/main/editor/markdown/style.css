@@ -182,12 +182,6 @@
    图片上传样式
    ======================== */
 
-/* 上传中的图片 */
-.tiptap-editor .ProseMirror img[data-upload-status="uploading"] {
-  opacity: 0.6;
-  filter: blur(2px);
-}
-
 /* 上传失败的图片 */
 .tiptap-editor .ProseMirror img[data-upload-status="error"] {
   border: 2px solid hsl(var(--destructive));

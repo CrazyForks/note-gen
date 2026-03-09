@@ -313,6 +313,7 @@ export function TipTapEditor({
               getAttrs: (element) => {
                 const src = element.getAttribute('src')
                 const relativeSrc = element.getAttribute('data-relative-src') || src
+                const uploading = element.getAttribute('data-uploading') === 'true'
                 // 如果是相对路径（非 http/https/asset://），转换为 asset://
                 if (src && !src.startsWith('http') && !src.startsWith('asset://') && !src.startsWith('tauri://')) {
                   // 这里不能直接调用 async 函数，需要在后续处理
@@ -320,12 +321,14 @@ export function TipTapEditor({
                     src, // 先保持原样，后续通过其他方式处理
                     relativeSrc: src,
                     alt: element.getAttribute('alt') || '',
+                    uploading,
                   }
                 }
                 return {
                   src,
                   relativeSrc,
                   alt: element.getAttribute('alt') || '',
+                  uploading,
                 }
               },
             },
@@ -453,9 +456,6 @@ export function TipTapEditor({
     activeFilePathRef.current = activeFilePath
   }, [activeFilePath])
 
-  // Track uploading images for loading state
-  const uploadingImagesRef = useRef<Map<string, boolean>>(new Map())
-
   // Handle image paste and drop
   useEffect(() => {
     // Check if editor is fully initialized
@@ -469,34 +469,59 @@ export function TipTapEditor({
       if (imageFiles.length === 0) return
 
       const imageFile = imageFiles[0]
-      const uploadId = `paste-${Date.now()}`
-
-      // Show loading state
-      uploadingImagesRef.current.set(uploadId, true)
 
       // Prevent default to avoid base64 image being inserted
       event.preventDefault()
 
+      // Insert "Uploading..." text as placeholder
+      const { from } = editor.state.selection
+
+      editor.chain()
+        .focus()
+        .insertContentAt(from, {
+          type: 'text',
+          text: 'Uploading... ',
+        })
+        .run()
+
+      // Get the position range of the placeholder
+      const placeholderStart = from
+      const placeholderEnd = from + 'Uploading... '.length
+
       handleImageUpload(imageFile, activeFilePathRef.current)
         .then(result => {
-          editor.commands.insertContent({
-            type: 'image',
-            attrs: {
-              src: result.src,
-              alt: imageFile.name,
-              relativeSrc: result.relativePath,
-            },
-          })
-          toast({
-            title: result.useImageHosting ? tImage('uploadSuccess') : tImage('saveSuccess'),
-          })
+          // Delete the placeholder text
+          editor.chain()
+            .focus()
+            .deleteRange({ from: placeholderStart, to: placeholderEnd })
+            .run()
+
+          // Insert the actual image
+          editor.chain()
+            .insertContentAt(placeholderStart, {
+              type: 'image',
+              attrs: {
+                src: result.src,
+                alt: imageFile.name,
+                relativeSrc: result.relativePath,
+              },
+            })
+            .run()
         })
         .catch(error => {
-          // 不插入任何内容，只显示错误提示
+          // Remove the placeholder on error
+          editor.chain()
+            .focus()
+            .deleteRange({ from: placeholderStart, to: placeholderEnd })
+            .run()
+
+          // Show error toast
           console.error('Image upload failed:', error)
-        })
-        .finally(() => {
-          uploadingImagesRef.current.delete(uploadId)
+          toast({
+            title: tImage('failed'),
+            description: error instanceof Error ? error.message : undefined,
+            variant: 'destructive',
+          })
         })
     }
 
@@ -508,36 +533,61 @@ export function TipTapEditor({
       if (imageFiles.length === 0) return
 
       const imageFile = imageFiles[0]
-      const uploadId = `drop-${Date.now()}`
-
-      // Show loading state
-      uploadingImagesRef.current.set(uploadId, true)
 
       // Prevent default to avoid base64 image being inserted
       event.preventDefault()
 
+      // Get drop position
+      const pos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })
+      const insertPos = pos?.pos || editor.state.selection.from
+
+      // Insert "Uploading..." text as placeholder
+      editor.chain()
+        .focus()
+        .insertContentAt(insertPos, {
+          type: 'text',
+          text: 'Uploading... ',
+        })
+        .run()
+
+      // Get the position range of the placeholder
+      const placeholderStart = insertPos
+      const placeholderEnd = insertPos + 'Uploading... '.length
+
       handleImageUpload(imageFile, activeFilePathRef.current)
         .then(result => {
-          // Get drop position
-          const pos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })
-          editor.commands.insertContentAt(pos?.pos || editor.state.selection.from, {
-            type: 'image',
-            attrs: {
-              src: result.src,
-              alt: imageFile.name,
-              relativeSrc: result.relativePath,
-            },
-          })
-          toast({
-            title: result.useImageHosting ? tImage('uploadSuccess') : tImage('saveSuccess'),
-          })
+          // Delete the placeholder text
+          editor.chain()
+            .focus()
+            .deleteRange({ from: placeholderStart, to: placeholderEnd })
+            .run()
+
+          // Insert the actual image
+          editor.chain()
+            .insertContentAt(placeholderStart, {
+              type: 'image',
+              attrs: {
+                src: result.src,
+                alt: imageFile.name,
+                relativeSrc: result.relativePath,
+              },
+            })
+            .run()
         })
         .catch(error => {
-          // 不插入任何内容，只显示错误提示
+          // Remove the placeholder on error
+          editor.chain()
+            .focus()
+            .deleteRange({ from: placeholderStart, to: placeholderEnd })
+            .run()
+
+          // Show error toast
           console.error('Image upload failed:', error)
-        })
-        .finally(() => {
-          uploadingImagesRef.current.delete(uploadId)
+          toast({
+            title: tImage('failed'),
+            description: error instanceof Error ? error.message : undefined,
+            variant: 'destructive',
+          })
         })
     }
 
