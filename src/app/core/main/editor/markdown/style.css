@@ -255,6 +255,15 @@
   text-align: left;
   vertical-align: top;
   min-width: 100px;
+  empty-cells: hide;
+}
+
+/* 表格空单元格使用空格替代 nbsp */
+/* TipTap 空单元格结构为 <td><p></p></td> */
+.tiptap-editor .ProseMirror table td:has(p:empty)::before,
+.tiptap-editor .ProseMirror table th:has(p:empty)::before {
+  content: " ";
+  visibility: hidden;
 }
 
 .tiptap-editor .ProseMirror table th {
