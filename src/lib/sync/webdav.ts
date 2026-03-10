@@ -6,9 +6,6 @@ import { WebDAVConfig } from '@/types/sync'
  * 支持群晖、QNAP、Nextcloud 等 WebDAV 协议存储
  */
 
-// 调试模式
-const DEBUG = false
-
 /**
  * 构建 Basic Auth 头
  */
@@ -41,10 +38,6 @@ export async function testWebDAVConnection(config: WebDAVConfig, proxy?: Proxy):
       proxy
     })
 
-    if (DEBUG) {
-      console.log('[WebDAV] Connection test response status:', response.status)
-    }
-
     return response.status === 207  // 207 Multi-Status 表示成功
   } catch (error) {
     console.error('WebDAV connection test failed:', error)
@@ -68,15 +61,12 @@ async function ensureParentDirsExist(
     const baseUrl = config.url.replace(/\/$/, '')
     const mkcolUrl = `${baseUrl}/${pathPrefix}`
 
-    const mkcolResponse = await fetch(mkcolUrl, {
+    await fetch(mkcolUrl, {
       method: 'MKCOL',
       headers: {
         'Authorization': buildAuthHeader(config.username, config.password)
       }
     })
-    if (DEBUG) {
-      console.log('[WebDAV] MKCOL pathPrefix result:', mkcolResponse.status)
-    }
   }
 
   const parts = key.split('/').filter(p => p)
@@ -104,10 +94,6 @@ export async function webdavUpload(
     const url = buildWebDAVUrl(config, key)
     const contentBytes = new TextEncoder().encode(content)
 
-    if (DEBUG) {
-      console.log('[WebDAV] Uploading to:', url, 'size:', contentBytes.byteLength)
-    }
-
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -121,9 +107,6 @@ export async function webdavUpload(
 
     if (response.status === 201 || response.status === 204) {
       const etag = response.headers.get('ETag') || ''
-      if (DEBUG) {
-        console.log('[WebDAV] Upload success, etag:', etag)
-      }
       return { etag }
     } else {
       const errorText = await response.text()
@@ -147,10 +130,6 @@ export async function webdavDownload(
   try {
     const url = buildWebDAVUrl(config, key)
 
-    if (DEBUG) {
-      console.log('[WebDAV] Downloading from:', url)
-    }
-
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -163,10 +142,6 @@ export async function webdavDownload(
       const content = await response.text()
       const etag = response.headers.get('ETag') || ''
       const lastModified = response.headers.get('Last-Modified') || ''
-
-      if (DEBUG) {
-        console.log('[WebDAV] Download success, etag:', etag, 'lastModified:', lastModified)
-      }
 
       return { content, etag, lastModified }
     } else if (response.status === 404) {
@@ -189,10 +164,6 @@ export async function webdavDelete(config: WebDAVConfig, key: string, proxy?: Pr
   try {
     const url = buildWebDAVUrl(config, key)
 
-    if (DEBUG) {
-      console.log('[WebDAV] Deleting:', url)
-    }
-
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -201,12 +172,7 @@ export async function webdavDelete(config: WebDAVConfig, key: string, proxy?: Pr
       proxy
     })
 
-    const success = response.status === 204 || response.status === 200
-    if (DEBUG) {
-      console.log('[WebDAV] Delete result:', success)
-    }
-
-    return success
+    return response.status === 204 || response.status === 200
   } catch (error) {
     console.error('WebDAV delete error:', error)
     return false
@@ -224,10 +190,6 @@ export async function webdavHeadObject(
   try {
     const url = buildWebDAVUrl(config, key)
 
-    if (DEBUG) {
-      console.log('[WebDAV] Head object:', url)
-    }
-
     const response = await fetch(url, {
       method: 'HEAD',
       headers: {
@@ -240,16 +202,9 @@ export async function webdavHeadObject(
       const etag = response.headers.get('ETag') || ''
       const lastModified = response.headers.get('Last-Modified') || ''
 
-      if (DEBUG) {
-        console.log('[WebDAV] Head object success, etag:', etag, 'lastModified:', lastModified)
-      }
-
       return { etag, lastModified }
     } else if (response.status === 404 || response.status === 409) {
       // 文件不存在，返回 null
-      if (DEBUG) {
-        console.log('[WebDAV] Head object: file not found:', response.status)
-      }
       return null
     } else {
       const errorText = await response.text()
@@ -276,11 +231,6 @@ export async function webdavListObjects(
     // 不要尾随斜杠
     const fullPrefix = pathPrefix ? (prefix ? `${pathPrefix}/${prefix}` : pathPrefix) : prefix
 
-    if (DEBUG) {
-      console.log('[WebDAV] Listing objects - pathPrefix:', pathPrefix, 'prefix:', prefix, 'fullPrefix:', fullPrefix)
-      console.log('[WebDAV] Listing objects from:', `${baseUrl}/${fullPrefix}`)
-    }
-
     const response = await fetch(`${baseUrl}/${fullPrefix}`, {
       method: 'PROPFIND',
       headers: {
@@ -295,9 +245,6 @@ export async function webdavListObjects(
       return parsePropfindResponse(text, fullPrefix)
     } else if (response.status === 404 || response.status === 409) {
       // 目录不存在是正常情况，不需要打印错误日志
-      if (DEBUG) {
-        console.log('[WebDAV] Path not found (may not exist on server):', response.status)
-      }
       return []
     } else {
       const errorText = await response.text()
@@ -380,10 +327,6 @@ function parsePropfindResponse(
     console.error('Error parsing PROPFIND response:', error)
   }
 
-  if (DEBUG) {
-    console.log('[WebDAV] Parsed files:', results)
-  }
-
   return results
 }
 
@@ -400,10 +343,6 @@ export async function webdavMkcol(
     const pathPrefix = config.pathPrefix ? config.pathPrefix.trim().replace(/\/+$/, '') : ''
     const fullPath = pathPrefix ? `${pathPrefix}/${path}` : path
 
-    if (DEBUG) {
-      console.log('[WebDAV] Creating directory:', `${baseUrl}/${fullPath}`)
-    }
-
     const response = await fetch(`${baseUrl}/${fullPath}`, {
       method: 'MKCOL',
       headers: {
@@ -413,13 +352,7 @@ export async function webdavMkcol(
     })
 
     // 201 表示创建成功，405 表示已存在
-    const success = response.status === 201 || response.status === 405
-
-    if (DEBUG) {
-      console.log('[WebDAV] MKCOL result:', success, 'status:', response.status)
-    }
-
-    return success
+    return response.status === 201 || response.status === 405
   } catch (error) {
     console.error('WebDAV mkcol error:', error)
     return false

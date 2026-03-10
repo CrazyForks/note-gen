@@ -25,18 +25,13 @@ export async function handleImageUpload(
   file: File,
   activeFilePath?: string
 ): Promise<ImageUploadResult> {
-  console.log('[ImageHandler] handleImageUpload called:', { fileName: file.name, activeFilePath })
-
   // 检查是否配置了图床
   const isConfigured = await isImageHostingConfigured()
-  console.log('[ImageHandler] isConfigured:', isConfigured)
 
   // 1. 如果配置了图床，尝试上传
   if (isConfigured) {
     try {
-      console.log('[ImageHandler] Attempting to upload to image hosting...')
       const imageHostingUrl = await uploadImage(file)
-      console.log('[ImageHandler] uploadImage result:', imageHostingUrl)
       if (imageHostingUrl) {
         return {
           src: imageHostingUrl,
@@ -53,8 +48,6 @@ export async function handleImageUpload(
       throw error
     }
   }
-
-  console.log('[ImageHandler] No image hosting configured, saving locally')
 
   // 2. 如果没有配置图床，保存到本地
   if (activeFilePath) {
@@ -169,12 +162,6 @@ export async function isImageHostingConfigured(): Promise<boolean> {
   const store = await Store.load('store.json')
   const useImageRepo = await store.get<boolean>('useImageRepo')
   const mainImageHosting = await store.get<string>('mainImageHosting')
-
-  console.log('[ImageHandler] isImageHostingConfigured:', {
-    useImageRepo,
-    mainImageHosting,
-    result: !!(useImageRepo && mainImageHosting && mainImageHosting !== 'none')
-  })
 
   return !!(useImageRepo && mainImageHosting && mainImageHosting !== 'none')
 }

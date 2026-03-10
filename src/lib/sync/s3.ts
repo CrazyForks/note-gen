@@ -6,8 +6,6 @@ import { S3Config } from '@/types/sync'
  * 支持阿里云 OSS、AWS S3、MinIO 等 S3 兼容服务
  */
 
-// 调试模式
-const DEBUG = false
 
 // 生成 AWS 签名 V4 (使用 Web Crypto API)
 async function generateSignature(
@@ -29,10 +27,6 @@ async function generateSignature(
   // 必须对路径进行 URI 编码，但要保留斜杠
   const urlObj = new URL(url)
   const canonicalUri = urlObj.pathname
-  if (DEBUG) {
-    console.log('[S3 Debug] Original pathname:', urlObj.pathname)
-    console.log('[S3 Debug] Encoded pathname:', canonicalUri.split('/').map(encodeURIComponent).join('/'))
-  }
 
   // AWS V4 签名要求查询字符串必须按字母顺序排列并正确编码
   const canonicalQuerystring = Array.from(urlObj.searchParams.entries())
@@ -40,19 +34,11 @@ async function generateSignature(
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join('&')
 
-  if (DEBUG) {
-    console.log('[S3 Debug] Canonical query string:', canonicalQuerystring)
-  }
-
   // AWS V4 签名要求 Headers 的 Key 必须全部转为小写
   const canonicalHeaders = Object.keys(headers)
     .sort()
     .map(key => `${key.toLowerCase()}:${headers[key].trim()}\n`)
     .join('')
-
-  if (DEBUG) {
-    console.log('[S3 Debug] Canonical headers:', canonicalHeaders)
-  }
 
   const signedHeaders = Object.keys(headers)
     .sort()
@@ -74,15 +60,8 @@ async function generateSignature(
     payloadHashHex
   ].join('\n')
 
-  if (DEBUG) {
-    console.log('[S3 Debug] Canonical request:', canonicalRequest)
-  }
-
   // 创建字符串以供签名
   const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`
-  if (DEBUG) {
-    console.log('[S3 Debug] Credential scope:', credentialScope)
-  }
 
   const stringToSign = [
     algorithm,
@@ -91,17 +70,9 @@ async function generateSignature(
     await sha256Hex(canonicalRequest)
   ].join('\n')
 
-  if (DEBUG) {
-    console.log('[S3 Debug] String to sign:', stringToSign)
-  }
-
   // 计算签名
   const signingKey = await getSignatureKey(config.secretAccessKey, dateStamp, config.region, 's3')
   const signature = await hmacSha256Hex(signingKey, stringToSign)
-
-  if (DEBUG) {
-    console.log('[S3 Debug] Final signature:', signature)
-  }
 
   return {
     authorization: `${algorithm} Credential=${config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
@@ -139,10 +110,6 @@ async function getSignatureKey(
 ): Promise<CryptoKey> {
   const encoder = new TextEncoder()
 
-  if (DEBUG) {
-    console.log('[S3 Debug] getSignatureKey - key:', key.substring(0, 4) + '***', 'dateStamp:', dateStamp, 'region:', regionName, 'service:', serviceName)
-  }
-
   // 导入初始密钥
   const kSecret = await crypto.subtle.importKey(
     'raw',
@@ -154,9 +121,6 @@ async function getSignatureKey(
 
   // kDate = HMAC("AWS4" + kSecret, Date)
   const kDate = await crypto.subtle.sign('HMAC', kSecret, encoder.encode(dateStamp))
-  if (DEBUG) {
-    console.log('[S3 Debug] kDate:', Array.from(new Uint8Array(kDate)).map(b => b.toString(16).padStart(2, '0')).join(''))
-  }
 
   const kDateKey = await crypto.subtle.importKey(
     'raw',
@@ -205,10 +169,6 @@ function buildS3Url(config: S3Config, key: string): string {
   const endpoint = (config.endpoint || `https://s3.${config.region}.amazonaws.com`).trim()
   const bucket = config.bucket.trim()
 
-  if (DEBUG) {
-    console.log('[S3 Debug] Build URL - endpoint:', endpoint, 'bucket:', bucket, 'key:', key)
-  }
-
   // 移除 endpoint 末尾的斜杠
   const cleanEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint
 
@@ -216,20 +176,12 @@ function buildS3Url(config: S3Config, key: string): string {
   const prefix = config.pathPrefix ? config.pathPrefix.trim().replace(/\/+$/, '') : ''
   const fullKey = prefix ? `${prefix}/${key}` : key
 
-  if (DEBUG) {
-    console.log('[S3 Debug] Build URL - prefix:', prefix, 'fullKey:', fullKey)
-  }
-
   let url = ''
 
   // 针对阿里云 OSS、AWS S3 等支持 Virtual Hosted Style 的服务
   const isAliyun = cleanEndpoint.includes('aliyuncs.com')
   const isAWS = cleanEndpoint.includes('amazonaws.com')
   const isCloudflareR2 = cleanEndpoint.includes('cloudflarestorage.com')
-
-  if (DEBUG) {
-    console.log('[S3 Debug] isAliyun:', isAliyun, 'isAWS:', isAWS, 'isCloudflareR2:', isCloudflareR2)
-  }
 
   // Cloudflare R2 需要使用 Path Style，不是 Virtual Hosted Style
   if (isCloudflareR2) {
@@ -250,10 +202,6 @@ function buildS3Url(config: S3Config, key: string): string {
   } else {
     // MinIO 等使用 Path Style
     url = `${cleanEndpoint}/${bucket}/${fullKey}`
-  }
-
-  if (DEBUG) {
-    console.log('[S3 Debug] Build URL - final url:', url)
   }
 
   return url
@@ -605,9 +553,7 @@ export async function s3ListObjects(
 
     if (response.status === 200) {
       const xmlText = await response.text()
-      console.log('[S3 FileList] ListObjects response:', xmlText.substring(0, 500))
       const result = parseListObjectsResponse(xmlText, configPrefix)
-      console.log('[S3 FileList] Parsed files:', result)
       return result
     } else {
       const errorText = await response.text()

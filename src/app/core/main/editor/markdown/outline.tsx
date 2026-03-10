@@ -133,7 +133,6 @@ export function Outline({ editor, isOpen }: OutlineProps) {
   useEffect(() => {
     // Check if editor is fully initialized
     if (!editor || !editor.view || !editor.view.dom) {
-      console.log('[Outline] useEffect extractHeadings: editor not ready')
       return
     }
 

@@ -5,6 +5,9 @@ import { getFilePathOptions, getWorkspacePath } from '@/lib/workspace'
 import { collectMarkdownFiles } from '@/lib/files'
 import { RepoNames } from './github.types'
 import { getGiteaApiBaseUrl } from './gitea'
+import { s3Upload } from './s3'
+import { webdavUpload } from './webdav'
+import { S3Config, WebDAVConfig } from '@/types/sync'
 
 export interface FolderSyncResult {
   success: boolean
@@ -33,8 +36,6 @@ export class FolderSync {
   async syncFolder(localFolderPath: string): Promise<FolderSyncResult> {
     // 每次同步前重新读取平台配置
     await this.init()
-
-    console.log('[FolderSync] 开始同步文件夹:', localFolderPath)
 
     try {
       // 1. 获取本地文件夹下所有 Markdown 文件
@@ -100,6 +101,12 @@ export class FolderSync {
           break
         case 'gitea':
           success = await this._giteaBatchCommit(RepoNames.sync, filesToUpload)
+          break
+        case 's3':
+          success = await this._s3BatchUpload(filesToUpload)
+          break
+        case 'webdav':
+          success = await this._webdavBatchUpload(filesToUpload)
           break
         default:
           return {
@@ -599,6 +606,68 @@ export class FolderSync {
         }
       }
     }
+
+    return successCount > 0
+  }
+
+  /**
+   * S3 批量上传
+   */
+  async _s3BatchUpload(
+    files: Array<{ path: string; content: string }>
+  ): Promise<boolean> {
+    const store = await Store.load('store.json')
+    const s3Config = await store.get<S3Config>('s3SyncConfig')
+    const proxyUrl = await store.get<string>('proxy')
+    const proxy: Proxy | undefined = proxyUrl ? { all: proxyUrl } : undefined
+
+    if (!s3Config || !s3Config.accessKeyId || !s3Config.secretAccessKey || !s3Config.region || !s3Config.bucket) {
+      console.error('[S3] 缺少配置')
+      return false
+    }
+
+    // 使用并发上传
+    const uploadPromises = files.map(async (file) => {
+      const result = await s3Upload(s3Config, file.path, file.content, proxy)
+      if (!result) {
+        console.error(`[S3] 上传文件 ${file.path} 失败`)
+      }
+      return !!result
+    })
+
+    const results = await Promise.all(uploadPromises)
+    const successCount = results.filter(r => r).length
+
+    return successCount > 0
+  }
+
+  /**
+   * WebDAV 批量上传
+   */
+  async _webdavBatchUpload(
+    files: Array<{ path: string; content: string }>
+  ): Promise<boolean> {
+    const store = await Store.load('store.json')
+    const webdavConfig = await store.get<WebDAVConfig>('webdavSyncConfig')
+    const proxyUrl = await store.get<string>('proxy')
+    const proxy: Proxy | undefined = proxyUrl ? { all: proxyUrl } : undefined
+
+    if (!webdavConfig || !webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
+      console.error('[WebDAV] 缺少配置')
+      return false
+    }
+
+    // 使用并发上传
+    const uploadPromises = files.map(async (file) => {
+      const result = await webdavUpload(webdavConfig, file.path, file.content, proxy)
+      if (!result) {
+        console.error(`[WebDAV] 上传文件 ${file.path} 失败`)
+      }
+      return !!result
+    })
+
+    const results = await Promise.all(uploadPromises)
+    const successCount = results.filter(r => r).length
 
     return successCount > 0
   }

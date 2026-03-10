@@ -14,7 +14,7 @@ export default function SyncFolder({ item }: { item: DirTree }) {
 
   // 同步文件夹下的所有 Markdown 文件
   async function handleSyncFolder() {
-    if (isSyncing) return;
+    if (isSyncing) return
 
     // 检查是否真的是目录（防止误将文件当作目录处理）
     if (!item.isDirectory) {
@@ -29,14 +29,10 @@ export default function SyncFolder({ item }: { item: DirTree }) {
     setIsSyncing(true);
     toast({ title: t('context.syncFolderProgress') });
 
-    console.log('[SyncFolder] 开始同步文件夹:', item)
-
     try {
       const result = await syncFolderByItem(item)
-      console.log('[SyncFolder] 同步结果:', result)
       showFolderSyncToast(result)
     } catch (error) {
-      console.error('[SyncFolder] 同步出错:', error)
       toast({
         title: t('context.syncFolderError'),
         description: String(error),

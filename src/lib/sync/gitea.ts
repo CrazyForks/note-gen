@@ -532,18 +532,11 @@ export async function getFileContent({ path, ref, repo }: { path: string; ref: s
     // Gitea API 使用 sha 参数而不是 ref 参数来获取特定 commit 的文件内容
     const url = `${baseUrl}/repos/${giteaUsername}/${repo}/contents/${encodedPath}?sha=${ref}`;
 
-    console.log('[Gitea getFileContent] URL:', url);
-
     const response = await encodeFetch(url, {
       method: 'GET',
       headers,
       proxy
     });
-
-    if (response.status === 404) {
-      const errorText = await response.text();
-      console.log('[Gitea getFileContent] 404 响应:', errorText);
-    }
 
     if (response.status >= 200 && response.status < 300) {
       const data = await response.json() as GiteaFileContent;

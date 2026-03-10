@@ -91,8 +91,6 @@ export async function uploadImageByGithub(file: File) {
   const accessToken = await store.get('githubImageAccessToken')
   const username = await store.get('githubImageUsername')
 
-  console.log('[GitHub Image] uploadImageByGithub:', { hasAccessToken: !!accessToken, username })
-
   if (!accessToken || !username) {
     console.error('[GitHub Image] Missing accessToken or username')
     throw new Error('GitHub image hosting not configured: missing accessToken or username')
