@@ -522,7 +522,7 @@ export function WritingHeader() {
   }
 
   return (
-    <div className="h-12 w-full flex items-center justify-between border-b px-4 text-sm">
+    <div className="mobile-page-header w-full flex items-center justify-between border-b px-4 text-sm">
       <div className="flex items-center gap-2 truncate max-w-[70%]">
         <FileText className="h-4 w-4" />
         <span className="font-medium truncate">{fileName}</span>

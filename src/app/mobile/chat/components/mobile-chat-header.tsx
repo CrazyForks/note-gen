@@ -66,7 +66,7 @@ export function MobileChatHeader() {
 
   return (
     <>
-      <header className="h-12 w-full border-b px-2 flex items-center gap-2 bg-background">
+      <header className="mobile-page-header w-full border-b px-2 flex items-center gap-2 bg-background">
         <button
           type="button"
           aria-label={tSearch("placeholder")}

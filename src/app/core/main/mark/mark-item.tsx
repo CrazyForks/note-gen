@@ -33,6 +33,7 @@ import { MarkMobileActions } from "./mark-mobile-actions";
 import { markToMarkdown } from "@/lib/mark-to-markdown";
 import useSettingStore from "@/stores/setting";
 import { TodoItemContent } from "./todo-item-content";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 dayjs.extend(relativeTime)
 
@@ -277,6 +278,7 @@ MarkWrapper.displayName = 'MarkWrapper'
 
 export const MarkItem = React.memo(({mark}: {mark: Mark}) => {
   const t = useTranslations();
+  const isMobile = useIsMobile()
   const {
     marks,
     fetchMarks,
@@ -416,36 +418,44 @@ export const MarkItem = React.memo(({mark}: {mark: Mark}) => {
     [tags, currentTagId]
   )
 
+  const markCard = (
+    <div
+      data-mark-item="true"
+      className={`border-t relative transition-colors ${isMobile ? 'cursor-default active:bg-accent/40' : 'cursor-move hover:bg-accent/50'}`}
+      draggable={!isMultiSelectMode && !isMobile}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <MarkWrapper mark={mark} />
+      <div className="absolute top-2 right-2">
+        <MarkMobileActions
+          mark={mark}
+          tags={tags}
+          currentTagId={currentTagId}
+          trashState={trashState}
+          isMultiSelectMode={isMultiSelectMode}
+          selectedMarkIds={selectedMarkIds}
+          onTransfer={handleTransfer}
+          onCopyLink={handleCopyLink}
+          onRegenerateDesc={regenerateDesc}
+          onShowInFolder={handelShowInFolder}
+          onShowInFile={handelShowInFile}
+          onRestore={handleRestore}
+          onDelete={handleDelMark}
+          onDeleteForever={handleDelForever}
+        />
+      </div>
+    </div>
+  )
+
+  if (isMobile) {
+    return markCard
+  }
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div
-          data-mark-item="true"
-          className="border-t relative cursor-move hover:bg-accent/50 transition-colors"
-          draggable={!isMultiSelectMode}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <MarkWrapper mark={mark} />
-          <div className="absolute top-2 right-2">
-            <MarkMobileActions
-              mark={mark}
-              tags={tags}
-              currentTagId={currentTagId}
-              trashState={trashState}
-              isMultiSelectMode={isMultiSelectMode}
-              selectedMarkIds={selectedMarkIds}
-              onTransfer={handleTransfer}
-              onCopyLink={handleCopyLink}
-              onRegenerateDesc={regenerateDesc}
-              onShowInFolder={handelShowInFolder}
-              onShowInFile={handelShowInFile}
-              onRestore={handleRestore}
-              onDelete={handleDelMark}
-              onDeleteForever={handleDelForever}
-            />
-          </div>
-        </div>
+        {markCard}
       </ContextMenuTrigger>
       <ContextMenuContent>
         {

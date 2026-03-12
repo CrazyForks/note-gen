@@ -34,6 +34,9 @@
     "import": "导入",
     "refresh": "刷新",
     "loading": "加载中...",
+    "all": "全部",
+    "today": "今天",
+    "yesterday": "昨天",
     "warning": "警告",
     "info": "信息",
     "restartToApply": "，请重启应用使配置生效",
@@ -1257,6 +1260,7 @@
       "confirm": "确定清空回收站吗？",
       "records": "共 {count} 条记录可还原",
       "empty": "清空",
+      "restoreAll": "全部还原",
       "close": "关闭回收站"
     },
     "queue": {
