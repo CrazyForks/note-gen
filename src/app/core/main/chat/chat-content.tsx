@@ -20,6 +20,7 @@ import { McpToolCallCard } from './mcp-tool-call'
 import { AgentExecutionStatus } from './agent-execution-status'
 import { AgentPanelWithRag } from './agent-panel-with-rag'
 import { ChatImages } from "./chat-images"
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const ChatContent = React.memo(function ChatContent() {
   const { chats, init, agentState, loading } = useChatStore()
@@ -127,10 +128,12 @@ ChatContent.displayName = 'ChatContent'
 const MessageWrapper = React.memo(function MessageWrapper({ chat, children }: { chat: Chat, children: React.ReactNode }) {
   const { deleteChat } = useChatStore()
   const [showDelete, setShowDelete] = useState(false)
+  const isMobile = useIsMobile()
 
   const handleDelete = useCallback(() => {
     deleteChat(chat.id)
   }, [chat.id, deleteChat])
+  const shouldShowDelete = showDelete
 
   // 用户消息：右对齐，带边框和背景
   if (chat.role === 'user') {
@@ -138,15 +141,25 @@ const MessageWrapper = React.memo(function MessageWrapper({ chat, children }: { 
       <div className="flex w-full justify-end">
         <div
           className="group relative max-w-[85%] rounded-lg border px-3 py-2"
-          onMouseEnter={() => setShowDelete(true)}
-          onMouseLeave={() => setShowDelete(false)}
+          onMouseEnter={() => {
+            if (!isMobile) setShowDelete(true)
+          }}
+          onMouseLeave={() => {
+            if (!isMobile) setShowDelete(false)
+          }}
+          onClick={() => {
+            if (isMobile) setShowDelete((prev) => !prev)
+          }}
         >
           <div className='text-sm leading-6 wrap-break-word text-primary-foreground'>
             {children}
           </div>
-          {showDelete && (
+          {shouldShowDelete && (
             <Button
-              onClick={handleDelete}
+              onClick={(event) => {
+                event.stopPropagation()
+                handleDelete()
+              }}
               size="icon"
               variant="ghost"
               className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border shadow-sm"
