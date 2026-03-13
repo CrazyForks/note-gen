@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { LocalImage } from '@/components/local-image'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { MoreVertical, Trash2, RotateCcw, MoveRight, CheckSquare, XSquare, Filter, Plus, ListChecks } from 'lucide-react'
+import { Trash2, MoveRight, CheckSquare, XSquare, Filter, Plus, ListChecks } from 'lucide-react'
 import useMarkStore from '@/stores/mark'
 import useTagStore from '@/stores/tag'
 import { delMark, delMarkForever, Mark, restoreMark, updateMark as updateMarkDb } from '@/db/marks'
@@ -20,6 +21,8 @@ import { insertTag } from '@/db/tags'
 const TYPE_OPTIONS: Mark['type'][] = ['text', 'recording', 'image', 'link', 'file', 'scan', 'todo']
 
 function getMarkPreview(mark: Mark): string {
+  if (mark.type === 'text') return mark.content?.trim() || mark.desc?.trim() || ''
+  if (mark.type === 'image' || mark.type === 'scan') return mark.desc?.trim() || mark.content?.trim() || ''
   if (mark.type === 'link') return mark.url || mark.desc || ''
   return mark.desc?.trim() || mark.content?.trim() || mark.url || ''
 }
@@ -44,10 +47,17 @@ export function MobileRecordStream() {
   const [typeFilterOpen, setTypeFilterOpen] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [activeMark, setActiveMark] = useState<Mark | null>(null)
+  const [moveTargetMark, setMoveTargetMark] = useState<Mark | null>(null)
   const [editDesc, setEditDesc] = useState('')
   const [editContent, setEditContent] = useState('')
   const [editUrl, setEditUrl] = useState('')
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const touchStartXRef = useRef(0)
+  const touchStartYRef = useRef(0)
+  const isSwipingRef = useRef(false)
+  const swipingMarkIdRef = useRef<number | null>(null)
+  const [swipedMarkId, setSwipedMarkId] = useState<number | null>(null)
+  const [swipeDeltaX, setSwipeDeltaX] = useState(0)
 
   useEffect(() => {
     fetchTags()
@@ -69,7 +79,7 @@ export function MobileRecordStream() {
 
   useEffect(() => {
     if (!activeMark) return
-    setEditDesc(activeMark.desc || '')
+    setEditDesc(activeMark.type === 'text' ? (activeMark.content || '') : (activeMark.desc || ''))
     setEditContent(activeMark.content || '')
     setEditUrl(activeMark.url || '')
   }, [activeMark])
@@ -90,7 +100,7 @@ export function MobileRecordStream() {
     autoSaveTimerRef.current = setTimeout(async () => {
       const updatedMark: Mark = {
         ...activeMark,
-        desc: editDesc,
+        desc: activeMark.type === 'text' ? editContent : editDesc,
         content: editContent,
         url: editUrl,
       }
@@ -178,6 +188,58 @@ export function MobileRecordStream() {
   async function handleMove(mark: Mark, targetTagId: number) {
     await updateMarkDb({ ...mark, tagId: targetTagId })
     await refreshRecords()
+  }
+
+  function getActionWidth() {
+    return trashState ? 176 : 176
+  }
+
+  function handleItemTouchStart(e: React.TouchEvent, markId: number) {
+    if (multiMode) return
+    const touch = e.touches[0]
+    touchStartXRef.current = touch.clientX
+    touchStartYRef.current = touch.clientY
+    isSwipingRef.current = false
+    swipingMarkIdRef.current = markId
+    if (swipedMarkId !== markId) {
+      setSwipedMarkId(null)
+    }
+  }
+
+  function handleItemTouchMove(e: React.TouchEvent) {
+    if (multiMode || swipingMarkIdRef.current === null) return
+    const touch = e.touches[0]
+    const deltaX = touch.clientX - touchStartXRef.current
+    const deltaY = touch.clientY - touchStartYRef.current
+
+    if (!isSwipingRef.current) {
+      if (Math.abs(deltaX) < 8) return
+      if (Math.abs(deltaX) <= Math.abs(deltaY)) return
+      isSwipingRef.current = true
+    }
+
+    e.preventDefault()
+    const maxLeft = -getActionWidth()
+    const next = Math.max(maxLeft, Math.min(0, deltaX))
+    setSwipeDeltaX(next)
+  }
+
+  function handleItemTouchEnd() {
+    if (multiMode || swipingMarkIdRef.current === null) return
+    const id = swipingMarkIdRef.current
+    const maxLeft = -getActionWidth()
+    const shouldOpen = swipeDeltaX < maxLeft / 2
+    setSwipedMarkId(shouldOpen ? id : null)
+    setSwipeDeltaX(0)
+    isSwipingRef.current = false
+    swipingMarkIdRef.current = null
+  }
+
+  async function handleMoveTargetTag(targetTagId: number) {
+    if (!moveTargetMark) return
+    await handleMove(moveTargetMark, targetTagId)
+    setMoveTargetMark(null)
+    setSwipedMarkId(null)
   }
 
   async function handleDeleteSelected() {
@@ -335,8 +397,73 @@ export function MobileRecordStream() {
             <div key={group.day} className="mb-4">
               <div className="mb-2 text-xs font-medium text-muted-foreground">{getDayLabel(group.day)}</div>
               <div className="space-y-2">
-                {group.list.map((mark) => (
-                  <div key={mark.id} className="rounded-xl border bg-card px-3 py-3">
+                {group.list.map((mark) => {
+                  const actionWidth = getActionWidth()
+                  const isCurrentSwiping = swipingMarkIdRef.current === mark.id
+                  const translateX = isCurrentSwiping
+                    ? swipeDeltaX
+                    : swipedMarkId === mark.id
+                      ? -actionWidth
+                      : 0
+
+                  return (
+                  <div key={mark.id} className="relative overflow-hidden rounded-xl border bg-background">
+                    {!multiMode && (
+                      <div className="absolute inset-y-0 right-0 flex items-center gap-2 px-2">
+                        {trashState ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              className="h-10 rounded-xl px-3"
+                              onClick={() => {
+                                handleRestore(mark)
+                                setSwipedMarkId(null)
+                              }}
+                            >
+                              {t('record.mark.toolbar.restore')}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              className="h-10 rounded-xl px-3"
+                              onClick={() => {
+                                handleDelete(mark)
+                                setSwipedMarkId(null)
+                              }}
+                            >
+                              {t('record.mark.toolbar.deleteForever')}
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              className="h-10 rounded-xl px-3"
+                              onClick={() => setMoveTargetMark(mark)}
+                            >
+                              {t('record.mark.toolbar.moveTag')}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              className="h-10 rounded-xl px-3"
+                              onClick={() => {
+                                handleDelete(mark)
+                                setSwipedMarkId(null)
+                              }}
+                            >
+                              {t('record.mark.toolbar.delete')}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <div
+                      className="bg-card px-3 py-3 transition-transform duration-200 ease-out"
+                      style={{ transform: `translateX(${translateX}px)` }}
+                      onTouchStart={(e) => handleItemTouchStart(e, mark.id)}
+                      onTouchMove={handleItemTouchMove}
+                      onTouchEnd={handleItemTouchEnd}
+                    >
                     <div className="flex items-start gap-2">
                       {multiMode ? (
                         <div className="pt-1">
@@ -344,7 +471,17 @@ export function MobileRecordStream() {
                         </div>
                       ) : null}
 
-                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setActiveMark(mark)}>
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left"
+                        onClick={() => {
+                          if (swipedMarkId === mark.id) {
+                            setSwipedMarkId(null)
+                            return
+                          }
+                          setActiveMark(mark)
+                        }}
+                      >
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="text-[10px]">
                             {t(`record.mark.type.${mark.type}`)}
@@ -354,56 +491,23 @@ export function MobileRecordStream() {
                             <span className="ml-auto text-xs text-muted-foreground">{tagMap.get(mark.tagId) || '-'}</span>
                           )}
                         </div>
-                        <p className="mt-2 line-clamp-2 text-sm">{getMarkPreview(mark) || '-'}</p>
+                        {(mark.type === 'image' || mark.type === 'scan') && mark.url ? (
+                          <div className="mt-2 flex items-center gap-2">
+                            <LocalImage
+                              src={mark.url.includes('http') ? mark.url : `/${mark.type === 'scan' ? 'screenshot' : 'image'}/${mark.url}`}
+                              alt=""
+                              className="h-12 w-12 rounded-md object-cover"
+                            />
+                            <p className="line-clamp-2 text-sm text-muted-foreground">{getMarkPreview(mark) || '-'}</p>
+                          </div>
+                        ) : (
+                          <p className="mt-2 line-clamp-2 text-sm">{getMarkPreview(mark) || '-'}</p>
+                        )}
                       </button>
-
-                      {!multiMode && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
-                              <MoreVertical className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {!trashState && (
-                              <DropdownMenuSub>
-                                <DropdownMenuSubTrigger>
-                                  <MoveRight className="mr-2 size-4" />
-                                  {t('record.mark.toolbar.moveTag')}
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent>
-                                  {tags.filter((tag) => tag.id !== mark.tagId).map((tag) => (
-                                    <DropdownMenuItem key={tag.id} onClick={() => handleMove(mark, tag.id)}>
-                                      {tag.name}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuSub>
-                            )}
-
-                            {trashState ? (
-                              <>
-                                <DropdownMenuItem onClick={() => handleRestore(mark)}>
-                                  <RotateCcw className="mr-2 size-4" />
-                                  {t('record.mark.toolbar.restore')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(mark)}>
-                                  <Trash2 className="mr-2 size-4 text-red-500" />
-                                  <span className="text-red-500">{t('record.mark.toolbar.deleteForever')}</span>
-                                </DropdownMenuItem>
-                              </>
-                            ) : (
-                              <DropdownMenuItem onClick={() => handleDelete(mark)}>
-                                <Trash2 className="mr-2 size-4 text-red-500" />
-                                <span className="text-red-500">{t('record.mark.toolbar.delete')}</span>
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                    </div>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           ))
@@ -419,28 +523,47 @@ export function MobileRecordStream() {
               </SheetHeader>
               <div className="mt-3 space-y-3 text-sm">
                 <div className="text-xs text-muted-foreground">{dayjs(activeMark.createdAt).format('YYYY-MM-DD HH:mm:ss')}</div>
-                <div>
-                  <div className="mb-1 text-xs text-muted-foreground">{t('record.mark.desc')}</div>
-                  <Textarea
-                    value={editDesc}
-                    onChange={(e) => setEditDesc(e.target.value)}
-                    rows={3}
-                    className="min-h-20"
-                  />
-                </div>
+                {(activeMark.type === 'image' || activeMark.type === 'scan') && activeMark.url && (
+                  <div className="overflow-hidden rounded-lg border bg-muted/20 p-2">
+                    <LocalImage
+                      src={activeMark.url.includes('http') ? activeMark.url : `/${activeMark.type === 'scan' ? 'screenshot' : 'image'}/${activeMark.url}`}
+                      alt=""
+                      className="h-48 w-full rounded-md object-contain"
+                    />
+                  </div>
+                )}
+                {activeMark.type !== 'text' && (
+                  <div>
+                    <div className="mb-1 text-xs text-muted-foreground">{t('record.mark.desc')}</div>
+                    <Textarea
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      rows={3}
+                      className="min-h-20"
+                    />
+                  </div>
+                )}
                 <div>
                   <div className="mb-1 text-xs text-muted-foreground">{t('record.mark.content')}</div>
                   <Textarea
                     value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
+                    onChange={(e) => {
+                      const next = e.target.value
+                      setEditContent(next)
+                      if (activeMark.type === 'text') {
+                        setEditDesc(next)
+                      }
+                    }}
                     rows={8}
                     className="min-h-28"
                   />
                 </div>
-                <div>
-                  <div className="mb-1 text-xs text-muted-foreground">URL</div>
-                  <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
-                </div>
+                {activeMark.type === 'link' && (
+                  <div>
+                    <div className="mb-1 text-xs text-muted-foreground">URL</div>
+                    <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -487,6 +610,21 @@ export function MobileRecordStream() {
             <Button className="h-10 w-full" onClick={() => setTypeFilterOpen(false)}>
               {t('common.confirm')}
             </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={Boolean(moveTargetMark)} onOpenChange={(open) => !open && setMoveTargetMark(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>{t('record.mark.toolbar.moveTag')}</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-2">
+            {tags.filter((tag) => tag.id !== moveTargetMark?.tagId).map((tag) => (
+              <Button key={tag.id} variant="outline" className="h-10 w-full justify-start" onClick={() => handleMoveTargetTag(tag.id)}>
+                {tag.name}
+              </Button>
+            ))}
           </div>
         </SheetContent>
       </Sheet>
