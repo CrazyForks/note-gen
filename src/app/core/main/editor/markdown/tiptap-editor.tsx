@@ -51,6 +51,7 @@ import { AISuggestion } from './ai-suggestion'
 import { AISuggestionFloating } from './ai-suggestion-floating'
 import emitter from '@/lib/emitter'
 import { QuoteMark } from './quote-mark'
+import { MarkdownParagraph } from './markdown-paragraph'
 import useSettingStore from '@/stores/setting'
 import { Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -245,8 +246,10 @@ export function TipTapEditor({
         },
         codeBlock: false,
         link: false,
+        paragraph: false,
         underline: false,
       }),
+      MarkdownParagraph,
       Placeholder.configure({
         placeholder: placeholderText,
         showOnlyCurrent: true,
