@@ -25,7 +25,6 @@ import { MobileActionMenu, MobileMenuItem, MobileSeparator } from "../mobile-act
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useTranslations } from "next-intl"
 import { FolderVectorMenu } from './folder-vector-menu'
-import { getPasteTargetDirectory } from './paste-target'
 import { pasteIntoFolder } from './paste-into-folder'
 import emitter from '@/lib/emitter'
 import { LinkedFolder } from '@/lib/files'

@@ -51,10 +51,10 @@ export function buildMobileEditorContextBarViewModel(actions: string[] = []) {
     buttonVariant: 'ghost' as const,
     buttonSize: 'icon' as const,
     items: actions
+      .filter((action): action is keyof typeof ACTION_META => action in ACTION_META)
       .map((action) => ({
         action,
-        ...ACTION_META[action as keyof typeof ACTION_META],
-      }))
-      .filter((item) => item.icon && item.label),
+        ...ACTION_META[action],
+      })),
   }
 }

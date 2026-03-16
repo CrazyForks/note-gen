@@ -19,7 +19,7 @@ import {
   PieChart,
   Database,
   Map,
-  Image,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { SuggestionProps } from '@tiptap/suggestion'
 import { type Editor, type Range } from '@tiptap/core'
@@ -286,7 +286,11 @@ export const suggestionItems = (t?: SlashCommandTranslations): SlashCommandItem[
     {
       title: tr.items.image,
       description: tr.items.imageDesc,
-      icon: <Image className="w-4 h-4" aria-hidden="true" />,
+      icon: (
+        <span aria-hidden="true">
+          <ImageIcon className="w-4 h-4" />
+        </span>
+      ),
       group: tr.groups.block,
       searchTerms: ['image', 'picture', 'photo', 'img'],
       command: async ({ editor, range }: { editor: Editor; range: Range }) => {
