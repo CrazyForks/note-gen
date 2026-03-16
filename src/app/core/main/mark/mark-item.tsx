@@ -34,7 +34,6 @@ import { markToMarkdown } from "@/lib/mark-to-markdown";
 import useSettingStore from "@/stores/setting";
 import { TodoItemContent } from "./todo-item-content";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
 import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs";
 import { useRouter } from "next/navigation";
 import { NO_TRANSCRIPTION_MESSAGE, transcribeRecording } from "@/lib/audio";
