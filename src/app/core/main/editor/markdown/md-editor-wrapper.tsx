@@ -7,6 +7,8 @@ import { Outline } from './outline'
 import { Loader2, Download } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import emitter from '@/lib/emitter'
+import { DEFAULT_OUTLINE_POSITION, isOutlineOnLeft, normalizeOutlinePosition, type OutlinePosition } from '@/lib/outline-preferences'
+import { Store } from '@tauri-apps/plugin-store'
 
 interface MdEditorProps {
   tabContentsRef: RefObject<Record<string, string>>
@@ -40,6 +42,7 @@ export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
   const expectedContentRef = useRef<string | null>(null)
   // Outline panel state
   const [outlineOpen, setOutlineOpen] = useState(false)
+  const [outlinePosition, setOutlinePosition] = useState<OutlinePosition>(DEFAULT_OUTLINE_POSITION)
   // State for editor instance (to trigger re-render when ready)
   const [editorInstance, setEditorInstance] = useState<any>(null)
   // Track if editor has called onEditorReady (meaning it's fully initialized)
@@ -109,6 +112,16 @@ export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
       }
     }
   }, [filePath])
+
+  useEffect(() => {
+    async function loadOutlinePreferences() {
+      const store = await Store.load('store.json')
+      setOutlineOpen(await store.get<boolean>('enableOutline') || false)
+      setOutlinePosition(normalizeOutlinePosition(await store.get('outlinePosition')))
+    }
+
+    loadOutlinePreferences()
+  }, [])
 
   // Load content from cache or disk - only on first mount per file
   useEffect(() => {
@@ -365,6 +378,14 @@ export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
         </div>
       )}
 
+      {outlineOpen && !isPulling && editorReady && editorInstance && isOutlineOnLeft(outlinePosition) && (
+        <Outline
+          editor={editorInstance}
+          isOpen={outlineOpen}
+          position={outlinePosition}
+        />
+      )}
+
       {/* Editor - initialContent only set once on mount */}
       <TipTapEditor
         initialContent={initialContent || ''}
@@ -388,11 +409,11 @@ export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
         }
       />
 
-      {/* Outline Panel - right sidebar - 只有在打开时才渲染 */}
-      {outlineOpen && !isPulling && editorReady && editorInstance && (
+      {outlineOpen && !isPulling && editorReady && editorInstance && !isOutlineOnLeft(outlinePosition) && (
         <Outline
           editor={editorInstance}
           isOpen={outlineOpen}
+          position={outlinePosition}
         />
       )}
     </div>

@@ -4,6 +4,7 @@ import { SettingType } from "../components/setting-base";
 import { useTranslations } from 'next-intl';
 import ShowUndoRedo from './show-undo-redo';
 import CenteredContent from './centered-content';
+import Outline from './outline';
 import { DefaultModelsSettings } from '../components/default-models-settings';
 
 export default function EditorSettingPage() {
@@ -13,6 +14,7 @@ export default function EditorSettingPage() {
       <DefaultModelsSettings type="editor" />
       <h3 className="text-lg font-semibold">{t('interfaceSettings')}</h3>
       <CenteredContent />
+      <Outline />
       <ShowUndoRedo />
     </div>
   </SettingType>

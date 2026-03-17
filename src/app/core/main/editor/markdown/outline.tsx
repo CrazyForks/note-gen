@@ -4,6 +4,7 @@ import { Editor } from '@tiptap/react'
 import { Heading1, Heading2, Heading3 } from 'lucide-react'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { cn } from '@/lib/utils'
+import { getOutlineHeadingTextClass, getOutlinePanelClass } from '@/lib/outline-styles'
 
 
 interface HeadingItem {
@@ -17,9 +18,10 @@ interface HeadingItem {
 interface OutlineProps {
   editor: Editor
   isOpen: boolean
+  position?: 'left' | 'right'
 }
 
-export function Outline({ editor, isOpen }: OutlineProps) {
+export function Outline({ editor, isOpen, position = 'right' }: OutlineProps) {
   const [headings, setHeadings] = useState<HeadingItem[]>([])
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
   // Use ref to always get latest headings in event handlers
@@ -258,7 +260,7 @@ export function Outline({ editor, isOpen }: OutlineProps) {
   if (!isOpen || !isReady) return null
 
   return (
-    <div className="outline-panel w-64 border-l border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-y-auto">
+    <div className={getOutlinePanelClass(position)}>
       {headings.length === 0 ? (
         <div className="p-4 text-sm text-[hsl(var(--muted-foreground))] text-center">
           暂无标题
@@ -271,7 +273,7 @@ export function Outline({ editor, isOpen }: OutlineProps) {
                 id={`outline-${heading.id}`}
                 onClick={() => scrollToHeading(heading.id)}
                 className={cn(
-                  'w-full text-left px-2 py-1.5 rounded text-sm hover:bg-[hsl(var(--muted))] flex items-center gap-2 truncate transition-colors',
+                  'w-full min-w-0 text-left px-2 py-1.5 rounded text-sm hover:bg-[hsl(var(--muted))] flex items-start gap-2 transition-colors',
                   heading.level === 1 ? 'font-semibold' : '',
                   activeHeadingId === heading.id
                     ? 'bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]'
@@ -279,10 +281,10 @@ export function Outline({ editor, isOpen }: OutlineProps) {
                 )}
                 style={{ paddingLeft: `${(heading.level - 1) * 12 + 8}px` }}
               >
-                {heading.level === 1 && <Heading1 size={14} />}
-                {heading.level === 2 && <Heading2 size={14} />}
-                {heading.level === 3 && <Heading3 size={14} />}
-                <span className="truncate">{heading.text}</span>
+                {heading.level === 1 && <Heading1 size={14} className="shrink-0 mt-0.5" />}
+                {heading.level === 2 && <Heading2 size={14} className="shrink-0 mt-0.5" />}
+                {heading.level === 3 && <Heading3 size={14} className="shrink-0 mt-0.5" />}
+                <span className={getOutlineHeadingTextClass()}>{heading.text}</span>
               </button>
             </li>
           ))}
