@@ -491,7 +491,8 @@ export const MarkItem = React.memo(({mark, variant = 'list'}: {mark: Mark, varia
     fetchAllTrashMarks,
     isMultiSelectMode,
     selectedMarkIds,
-    clearSelection
+    clearSelection,
+    highlightedMarkId,
   } = useMarkStore()
   const { tags, currentTagId, fetchTags, getCurrentTag } = useTagStore()
 
@@ -626,13 +627,14 @@ export const MarkItem = React.memo(({mark, variant = 'list'}: {mark: Mark, varia
   const markCard = (
     <div
       data-mark-item="true"
+      data-mark-id={mark.id}
       className={`relative transition-colors ${
         variant === 'cards'
           ? 'rounded-md border border-border/70 bg-background p-2.5'
           : variant === 'compact'
             ? 'rounded-md border border-border/60 bg-background px-3 py-2'
             : 'rounded-lg border border-border/60 bg-background'
-      } ${isMobile ? 'cursor-default active:bg-accent/40' : 'cursor-move hover:bg-accent/50'}`}
+      } ${highlightedMarkId === mark.id ? 'record-search-highlight border-amber-400/80 bg-amber-50/80 dark:border-amber-400/70 dark:bg-amber-500/10' : ''} ${isMobile ? 'cursor-default active:bg-accent/40' : 'cursor-move hover:bg-accent/50'}`}
       draggable={!isMultiSelectMode && !isMobile}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}

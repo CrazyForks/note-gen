@@ -181,6 +181,10 @@ export function TagManage() {
     recordViewMode,
     hasActiveRecordFilters,
     setVisibleMarkIds,
+    pendingScrollMarkId,
+    setPendingScrollMarkId,
+    highlightedMarkId,
+    setHighlightedMarkId,
   } = useMarkStore()
 
   async function handleAddTag() {
@@ -313,6 +317,60 @@ export function TagManage() {
       emitter.off(EmitterRecordEvents.refreshMarks, handleRefresh)
     }
   }, [currentTagId, fetchMarks])
+
+  React.useEffect(() => {
+    if (!pendingScrollMarkId || expandedTagId !== currentTagId.toString()) {
+      return
+    }
+
+    if (!marks.some((mark) => mark.id === pendingScrollMarkId && mark.tagId === currentTagId)) {
+      return
+    }
+
+    let cancelled = false
+    let attempts = 0
+    const maxAttempts = 20
+
+    const scrollToTarget = () => {
+      if (cancelled) return
+
+      const target = document.querySelector<HTMLElement>(`[data-mark-id="${pendingScrollMarkId}"]`)
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setHighlightedMarkId(pendingScrollMarkId)
+        setPendingScrollMarkId(null)
+        return
+      }
+
+      if (attempts >= maxAttempts) {
+        setPendingScrollMarkId(null)
+        return
+      }
+
+      attempts += 1
+      window.setTimeout(scrollToTarget, 50)
+    }
+
+    scrollToTarget()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentTagId, expandedTagId, marks, pendingScrollMarkId, setHighlightedMarkId, setPendingScrollMarkId])
+
+  React.useEffect(() => {
+    if (!highlightedMarkId) {
+      return
+    }
+
+    const clearHighlightTimer = window.setTimeout(() => {
+      setHighlightedMarkId(null)
+    }, 3000)
+
+    return () => {
+      clearTimeout(clearHighlightTimer)
+    }
+  }, [highlightedMarkId, setHighlightedMarkId])
 
   React.useEffect(() => {
     setVisibleMarkIds(visibleMarkIds)

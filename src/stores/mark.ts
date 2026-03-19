@@ -77,6 +77,10 @@ interface MarkState {
   setMultiSelectMode: (mode: boolean) => void
   visibleMarkIds: number[]
   setVisibleMarkIds: (ids: number[]) => void
+  pendingScrollMarkId: number | null
+  setPendingScrollMarkId: (id: number | null) => void
+  highlightedMarkId: number | null
+  setHighlightedMarkId: (id: number | null) => void
 
   recordFilters: RecordFilters
   setRecordSearch: (search: string) => void
@@ -230,6 +234,14 @@ const useMarkStore = create<MarkState>((set, get) => ({
   visibleMarkIds: [],
   setVisibleMarkIds: (ids) => {
     set({ visibleMarkIds: ids })
+  },
+  pendingScrollMarkId: null,
+  setPendingScrollMarkId: (id) => {
+    set({ pendingScrollMarkId: id })
+  },
+  highlightedMarkId: null,
+  setHighlightedMarkId: (id) => {
+    set({ highlightedMarkId: id })
   },
 
   recordFilters: DEFAULT_RECORD_FILTERS,

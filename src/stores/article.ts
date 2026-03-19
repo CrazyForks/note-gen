@@ -204,6 +204,8 @@ interface NoteState {
 
   matchPosition: number | null
   setMatchPosition: (position: number | null) => void
+  pendingSearchKeyword: string
+  setPendingSearchKeyword: (keyword: string) => void
 
   html2md: boolean
   initHtml2md: () => Promise<void>
@@ -556,6 +558,10 @@ const useArticleStore = create<NoteState>((set, get) => ({
   matchPosition: null,
   setMatchPosition: (position: number | null) => {
     set({ matchPosition: position })
+  },
+  pendingSearchKeyword: '',
+  setPendingSearchKeyword: (keyword: string) => {
+    set({ pendingSearchKeyword: keyword })
   },
 
   html2md: false,

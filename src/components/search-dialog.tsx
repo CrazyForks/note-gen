@@ -36,6 +36,7 @@ interface SearchDialogProps {
 
 interface EnhancedSearchResult {
   id: string
+  markId?: number
   path?: string
   article?: string
   content?: string
@@ -57,8 +58,8 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const pathname = usePathname()
   const [searchValue, setSearchValue] = useState('')
   const [searchResult, setSearchResult] = useState<EnhancedSearchResult[]>([])
-  const { allArticle, loadAllArticle, setActiveFilePath, setMatchPosition, setCollapsibleList } = useArticleStore()
-  const { allMarks, fetchAllMarks } = useMarkStore()
+  const { allArticle, loadAllArticle, setActiveFilePath, setMatchPosition, setPendingSearchKeyword, setCollapsibleList } = useArticleStore()
+  const { allMarks, fetchAllMarks, setPendingScrollMarkId } = useMarkStore()
   const { tags, fetchTags, setCurrentTagId } = useTagStore()
   const { setLeftSidebarTab } = useSidebarStore()
   const isMobileRoute = pathname.startsWith('/mobile')
@@ -133,6 +134,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         title: item.desc || item.content?.slice(0, 50) || '',
         content: `${item.content || ''} ${item.desc || ''} ${tag?.name || ''}`,
         metadata: {
+          markId: item.id,
           content: item.content,
           desc: item.desc,
           tagName: tag?.name,
@@ -168,6 +170,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         path: metadata.path,
         article: metadata.article,
         // 记录特定字段
+        markId: metadata.markId,
         content: metadata.content,
         desc: metadata.desc,
         tagName: metadata.tagName,
@@ -190,6 +193,9 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     // 如果是记录类型，跳转到记录页面并设置对应的 tag
     if (item.searchType === 'record') {
       onOpenChange(false)
+      setPendingSearchKeyword('')
+      setMatchPosition(null)
+      setPendingScrollMarkId(item.markId ?? null)
 
       if (item.tagId) {
         await setCurrentTagId(item.tagId)
@@ -209,6 +215,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     }
     
     onOpenChange(false)
+    setPendingScrollMarkId(null)
 
     // PC 端切换到笔记标签页；移动端直接跳转写作页
     if (!isMobileRoute) {
@@ -219,6 +226,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     if (item.firstMatchIndex !== undefined) {
       setMatchPosition(item.firstMatchIndex)
     }
+    setPendingSearchKeyword(searchValue.trim())
     
     const filePath = item.path as string
     

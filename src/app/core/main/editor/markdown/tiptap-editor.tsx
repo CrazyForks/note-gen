@@ -23,7 +23,7 @@ import { Markdown } from '@tiptap/markdown'
 import { SearchAndReplace } from '@sereneinserenade/tiptap-search-and-replace'
 import UniqueId from '@tiptap/extension-unique-id'
 import { Extension, nodeInputRule } from '@tiptap/core'
-import { Plugin } from '@tiptap/pm/state'
+import { Plugin, TextSelection } from '@tiptap/pm/state'
 import { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import 'katex/dist/katex.min.css'
 import { InlineMath, BlockMath } from './math-extension'
@@ -61,6 +61,7 @@ import { MobileEditorContextBar } from './mobile-editor-context-bar'
 import { MobileEditorMoreSheet } from './mobile-editor-more-sheet'
 import { shouldRestorePendingQuote } from './quote-session'
 import { getEditorContentContainerClass } from '@/lib/editor-layout-styles'
+import { getResultIndexToFocus } from './search-navigation'
 import './style.css'
 
 const lowlight = createLowlight(common)
@@ -207,6 +208,8 @@ export function TipTapEditor({
   const tMermaid = useTranslations('editor.mermaid.templates')
   const tImage = useTranslations('editor.image')
   const pendingQuote = useChatStore((state) => state.pendingQuote)
+  const pendingSearchKeyword = useArticleStore((state) => state.pendingSearchKeyword)
+  const setPendingSearchKeyword = useArticleStore((state) => state.setPendingSearchKeyword)
 
   const placeholderText = placeholder || t('placeholder')
   const isMobile = isMobileDevice()
@@ -1481,6 +1484,83 @@ export function TipTapEditor({
       emitter.off('editor-search-trigger' as any, handleSearchTrigger)
     }
   }, [])
+
+  useEffect(() => {
+    if (!editor || !activeFilePath || !pendingSearchKeyword.trim()) {
+      return
+    }
+
+    let cancelled = false
+    let readyRetryTimer: ReturnType<typeof setTimeout> | null = null
+    let focusTimer: ReturnType<typeof setTimeout> | null = null
+    let readyAttempts = 0
+    const maxReadyAttempts = 20
+
+    const applyPendingSearch = () => {
+      if (cancelled) return
+
+      if (!isInitializedRef.current || !isReadyRef.current) {
+        if (readyAttempts >= maxReadyAttempts) {
+          setPendingSearchKeyword('')
+          return
+        }
+        readyAttempts += 1
+        readyRetryTimer = setTimeout(applyPendingSearch, 50)
+        return
+      }
+
+      const storage = (editor.storage as any).searchAndReplace
+      if (!storage) {
+        setPendingSearchKeyword('')
+        return
+      }
+
+      storage.searchTerm = pendingSearchKeyword
+      editor.view.dispatch(editor.state.tr)
+
+      focusTimer = setTimeout(() => {
+        if (cancelled) return
+
+        const results = storage.results || []
+        const resultIndex = getResultIndexToFocus(results, 0)
+
+        if (resultIndex === -1) {
+          setPendingSearchKeyword('')
+          return
+        }
+
+        storage.resultIndex = resultIndex
+        const result = results[resultIndex]
+        if (!result) {
+          setPendingSearchKeyword('')
+          return
+        }
+
+        const selection = TextSelection.near(editor.state.doc.resolve(result.from))
+        editor.view.dispatch(editor.state.tr.setSelection(selection))
+        editor.commands.scrollIntoView()
+
+        setTimeout(() => {
+          const domPos = editor.view.domAtPos(result.from)
+          if (domPos.node instanceof Element) {
+            domPos.node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          } else if (domPos.node.parentElement) {
+            domPos.node.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 0)
+
+        setPendingSearchKeyword('')
+      }, 0)
+    }
+
+    applyPendingSearch()
+
+    return () => {
+      cancelled = true
+      if (readyRetryTimer) clearTimeout(readyRetryTimer)
+      if (focusTimer) clearTimeout(focusTimer)
+    }
+  }, [editor, activeFilePath, pendingSearchKeyword, setPendingSearchKeyword, initialContent])
 
   // Handle remote file pull updates via event (instead of initialContent change)
   // This fixes cursor jump issue caused by unnecessary setContent during local saves
