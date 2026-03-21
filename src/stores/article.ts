@@ -23,6 +23,7 @@ import { getFilePathOptions, getWorkspacePath, toWorkspaceRelativePath } from '@
 import emitter from '@/lib/emitter'
 import { isSkillsFolder } from '@/lib/skills/utils'
 import { buildVectorIndexedMap, getVectorDocumentKey } from '@/lib/vector-document-key'
+import { buildRemotePathsToLoad } from './article-remote-sync'
 
 // 缓存 Store 实例，避免每次都重新加载
 let storeInstance: Store | null = null
@@ -917,39 +918,10 @@ const useArticleStore = create<NoteState>((set, get) => ({
         }
       }
 
-    // 只为根目录和本地存在的已展开文件夹加载远程文件
-    // 云端文件夹默认折叠，不加载其子内容
-    const workspace = await getWorkspacePath()
+    // 为根目录和已展开的目录加载远程文件。
+    // 这样即使目录只存在于云端，只要用户已展开过，也能继续加载其远程内容。
     const collapsibleList = get().collapsibleList
-    const pathsToLoad: string[] = [''] // 总是加载根目录
-    
-    // 检查 collapsibleList 中的路径是否在本地存在，或者尝试加载远程文件夹
-    for (const path of collapsibleList) {
-      const fullPath = await join(workspace.path, path)
-      let dirExists = false
-
-      try {
-        if (workspace.isCustom) {
-          dirExists = await exists(fullPath)
-        } else {
-          const dirRelative = await toWorkspaceRelativePath(fullPath)
-          const pathOptions = await getFilePathOptions(dirRelative)
-          dirExists = await exists(pathOptions.path, { baseDir: pathOptions.baseDir })
-        }
-      } catch {
-        dirExists = false
-      }
-
-      // 本地存在的文件夹，或者对于云同步（GitHub/Gitee/GitLab/Gitea/S3/WebDAV），即使本地不存在也尝试加载远程
-      // 这样可以显示仅存在于云端的文件夹
-      if (dirExists || primaryBackupMethod !== 'github') {
-        // 对于非 Git 平台，总是尝试加载
-        pathsToLoad.push(path)
-      } else if (dirExists) {
-        // 对于 Git 平台，只加载本地存在的
-        pathsToLoad.push(path)
-      }
-    }
+    const pathsToLoad = buildRemotePathsToLoad(collapsibleList)
     
     // 使用 Promise.all 并发请求所有路径的远程文件
     const loadPromises = pathsToLoad.map(async path => {
