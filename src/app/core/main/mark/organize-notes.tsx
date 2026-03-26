@@ -33,6 +33,10 @@ import { toast } from "@/hooks/use-toast"
 import emitter from "@/lib/emitter"
 import { shouldEmitOrganizeOnboardingComplete } from "./organize-onboarding"
 
+function shouldAutoSyncOnInitialRead(options?: { isNewFile?: boolean }) {
+  return options?.isNewFile !== true
+}
+
 interface OrganizeNotesProps {
   inputValue?: string;
 }
@@ -349,7 +353,7 @@ export const OrganizeNotes = forwardRef<{ openOrganize: () => void }, OrganizeNo
         // Update file tree and active file
         await loadFileTree()
         setActiveFilePath(newFilePath)
-        await readArticle(newFilePath, '', true)
+        await readArticle(newFilePath, '', shouldAutoSyncOnInitialRead({ isNewFile: true }))
         if (shouldEmitOrganizeOnboardingComplete({ streamFinished, aborted: signal.aborted })) {
           emitter.emit('onboarding-step-complete', { step: 'organize-note', filePath: newFilePath })
         }
@@ -364,7 +368,7 @@ export const OrganizeNotes = forwardRef<{ openOrganize: () => void }, OrganizeNo
         } else {
           await writeTextFile(pathOptions.path, cleanedContent, { baseDir: pathOptions.baseDir })
         }
-        await readArticle(filePath, '', true)
+        await readArticle(filePath, '', shouldAutoSyncOnInitialRead())
         if (shouldEmitOrganizeOnboardingComplete({ streamFinished, aborted: signal.aborted })) {
           emitter.emit('onboarding-step-complete', { step: 'organize-note', filePath })
         }

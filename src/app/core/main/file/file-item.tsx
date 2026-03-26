@@ -32,6 +32,32 @@ import { isSkillsFolder } from "@/lib/skills/utils";
 
 type Platform = 'macos' | 'windows' | 'linux' | 'unknown'
 
+function shouldAutoSyncOnInitialRead(options?: { isNewFile?: boolean }) {
+  return options?.isNewFile !== true
+}
+
+function buildFileRenamePlan({
+  originalName,
+  currentPath,
+  enteredName,
+}: {
+  originalName: string
+  currentPath: string
+  enteredName: string
+}) {
+  const sanitizedName = enteredName.replace(/\s+/g, '_')
+  const needsMarkdownSuffix = originalName === '' && !sanitizedName.endsWith('.md')
+  const displayName = needsMarkdownSuffix ? `${sanitizedName}.md` : sanitizedName
+  const parentPath = currentPath.split('/').slice(0, -1).join('/')
+  const targetRelativePath = parentPath ? `${parentPath}/${displayName}` : displayName
+
+  return {
+    operation: originalName === '' ? 'create' : 'rename',
+    displayName,
+    targetRelativePath,
+  } as const
+}
+
 export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?: () => void }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
   const [name, setName] = useState(item.name)
@@ -435,6 +461,9 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
     // 获取工作区路径信息
     const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
     const workspace = await getWorkspacePath()
+    const originalName = item.name
+    const nextTree = cloneDeep(fileTree)
+    const nextFolder = getCurrentFolder(folderPath, nextTree)
     
     let finalName = name
     
@@ -449,38 +478,36 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
       setName(finalName)
     }
   
-    if (finalName && finalName.trim() !== '' && finalName !== item.name) {
-      // 确保新文件名如果需要.md后缀则添加后缀
-      let displayName = finalName;
-      if (item.name === '' && !displayName.endsWith('.md')) {
-        displayName += '.md';
-      }
+    if (finalName && finalName.trim() !== '' && finalName !== originalName) {
+      const renamePlan = buildFileRenamePlan({
+        originalName,
+        currentPath: path,
+        enteredName: finalName,
+      })
+      const { displayName, operation, targetRelativePath } = renamePlan
       
       // 更新缓存树中的名称
-      if (currentFolder && currentFolder.children) {
-        const fileIndex = currentFolder?.children?.findIndex(file => file.name === item.name)
+      if (nextFolder && nextFolder.children) {
+        const fileIndex = nextFolder?.children?.findIndex(file => file.name === originalName)
         if (fileIndex !== undefined && fileIndex !== -1) {
-          currentFolder.children[fileIndex].name = displayName
-          currentFolder.children[fileIndex].isEditing = false
+          nextFolder.children[fileIndex].name = displayName
+          nextFolder.children[fileIndex].isEditing = false
         }
       } else {
-        // 根目录文件：需要克隆 fileTree 来更新
-        const cacheTree = cloneDeep(fileTree)
-        const fileIndex = cacheTree.findIndex(file => file.name === item.name)
+        const fileIndex = nextTree.findIndex(file => file.name === originalName)
         if (fileIndex !== -1 && fileIndex !== undefined) {
-          cacheTree[fileIndex].name = displayName
-          cacheTree[fileIndex].isEditing = false
+          nextTree[fileIndex].name = displayName
+          nextTree[fileIndex].isEditing = false
         }
-        setFileTree(cacheTree)
       }
+      setFileTree(nextTree)
       
       // 确定是重命名现有文件还是创建新文件
-      if (item.name !== '') {
+      if (operation === 'rename') {
         // 重命名现有文件
         // 获取源路径和目标路径
         const oldPathOptions = await getFilePathOptions(path)
-        const newPathRelative = path.split('/').slice(0, -1).join('/') + '/' + displayName
-        const newPathOptions = await getFilePathOptions(newPathRelative)
+        const newPathOptions = await getFilePathOptions(targetRelativePath)
         
         // 根据工作区类型执行重命名操作
         if (workspace.isCustom) {
@@ -493,15 +520,7 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
         }
       } else {
         // 创建新文件
-        let newFilePath = finalName
-        if (!newFilePath.endsWith('.md')) {
-          newFilePath += '.md'
-        }
-        
-        // 获取新文件的完整路径
-        const parentPath = path.split('/').slice(0, -1).join('/')
-        const fullRelativePath = parentPath ? `${parentPath}/${newFilePath}` : newFilePath
-        const pathOptions = await getFilePathOptions(fullRelativePath)
+        const pathOptions = await getFilePathOptions(targetRelativePath)
         
         // 检查文件是否已存在
         let isExists = false
@@ -526,17 +545,17 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
       }
       
       // 构建新文件的完整路径用于激活文件
-      let newPath = path.split('/').slice(0, -1).join('/') + '/' + displayName
+      let newPath = targetRelativePath
       // 判断 newPath 是否以 / 开头
       if (newPath.startsWith('/')) {
         newPath = newPath.slice(1)
       }
       setActiveFilePath(newPath)
       // 新建文件后自动选择该文件并读取内容
-      readArticle(newPath, '', true)
+      readArticle(newPath, '', shouldAutoSyncOnInitialRead({ isNewFile: true }))
     } else {
       // 处理取消创建或无变更的情况
-      if (item.name === '') {
+      if (originalName === '') {
         // 只有当原文件名为空（新建文件）时才删除列表项
         if (currentFolder && currentFolder.children) {
           const index = currentFolder?.children?.findIndex(item => item.name === '')
@@ -781,7 +800,7 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
   useEffect(() => {
     if (item.isEditing) {
       setIsEditing(true)
-      setName(name)
+      setName(item.name)
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [item])

@@ -31,6 +31,10 @@ import { RepoNames } from '@/lib/sync/github.types'
 import { Store } from '@tauri-apps/plugin-store'
 import { S3Config, WebDAVConfig } from '@/types/sync'
 
+function shouldLoadRemoteOnTreeRefresh(options?: { isCreateFlow?: boolean }) {
+  return options?.isCreateFlow !== true
+}
+
 export function WritingHeader() {
   const t = useTranslations('record.chat.input.fileLink')
   const tCommon = useTranslations('common')
@@ -226,7 +230,11 @@ export function WritingHeader() {
 
   const isBrowserLoading = fileTreeLoading || folderLoading || isRefreshing || !!currentFolderNode?.loading
 
-  const refreshTree = useCallback(async (dir: string) => {
+  const refreshTree = useCallback(async (
+    dir: string,
+    options: { includeRemote?: boolean } = {}
+  ) => {
+    const { includeRemote = true } = options
     setIsRefreshing(true)
     try {
       const parts = dir.split('/').filter(Boolean)
@@ -237,7 +245,9 @@ export function WritingHeader() {
       }
 
       await loadFileTree({ skipRemoteSync: true })
-      await loadRemoteSyncFiles()
+      if (includeRemote) {
+        await loadRemoteSyncFiles()
+      }
 
       if (!dir) {
         return
@@ -245,7 +255,9 @@ export function WritingHeader() {
 
       for (const path of pathsToExpand) {
         await loadCollapsibleFiles(path)
-        await loadFolderRemoteFiles(path)
+        if (includeRemote) {
+          await loadFolderRemoteFiles(path)
+        }
       }
     } finally {
       setIsRefreshing(false)
@@ -346,7 +358,9 @@ export function WritingHeader() {
           } else {
             await writeTextFile(pathOptions.path, '')
           }
-          await refreshTree(currentDir)
+          await refreshTree(currentDir, {
+            includeRemote: shouldLoadRemoteOnTreeRefresh({ isCreateFlow: true })
+          })
           await setActiveFilePath(relativePath)
           setDrawerOpen(false)
         }
@@ -363,7 +377,9 @@ export function WritingHeader() {
           } else {
             await mkdir(pathOptions.path, { recursive: true })
           }
-          await refreshTree(currentDir)
+          await refreshTree(currentDir, {
+            includeRemote: shouldLoadRemoteOnTreeRefresh({ isCreateFlow: true })
+          })
         }
       }
 
