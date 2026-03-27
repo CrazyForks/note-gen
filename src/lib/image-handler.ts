@@ -7,6 +7,8 @@ import { getFilePathOptions, toWorkspaceRelativePath, getWorkspacePath } from '.
 import { convertImageByWorkspace } from './utils'
 import { toMarkdownImagePath } from './markdown-image-path'
 import { getNormalizedImageHosting } from './image-hosting-config'
+import { getWritingAssetsDirName } from './writing-assets-path'
+import useArticleStore from '@/stores/article'
 
 export interface ImageUploadResult {
   /** Webview 可访问的 URL（用于编辑器显示） */
@@ -87,6 +89,8 @@ async function saveImageLocally(file: File, markdownPath: string): Promise<{
 
   // 获取工作区路径信息
   const workspace = await getWorkspacePath()
+  const store = await Store.load('store.json')
+  const assetsDirName = getWritingAssetsDirName(await store.get<string>('assetsPath'))
 
   // 检查 markdownPath 是否只包含文件名（不包含路径分隔符）
   let markdownDir: string = ''
@@ -116,7 +120,7 @@ async function saveImageLocally(file: File, markdownPath: string): Promise<{
   // 构建图片的相对路径
   // 如果 markdownDir 是空字符串（根目录），图片直接保存在 images 目录
   // 否则保存在 markdownDir/images 目录
-  const imageDir = markdownDir ? `${markdownDir}/images` : 'images'
+  const imageDir = markdownDir ? `${markdownDir}/${assetsDirName}` : assetsDirName
   const imageRelativePath = `${imageDir}/${filename}`
 
   // 确保目录存在
@@ -134,10 +138,32 @@ async function saveImageLocally(file: File, markdownPath: string): Promise<{
 
   // 返回相对于工作区的路径
   const workspaceRelativeImagePath = await toWorkspaceRelativePath(imageRelativePath)
+  await syncImageIntoFileTree(imageDir, workspaceRelativeImagePath)
 
   return {
     imageRelativePath: workspaceRelativeImagePath,
     markdownRelativePath: toMarkdownImagePath(markdownPath, workspaceRelativeImagePath),
+  }
+}
+
+async function syncImageIntoFileTree(imageDir: string, imagePath: string): Promise<void> {
+  const articleStore = useArticleStore.getState()
+  const parentDir = imageDir.includes('/') ? imageDir.slice(0, imageDir.lastIndexOf('/')) : ''
+  const expandedPaths = new Set(articleStore.collapsibleList)
+  const parentWasExpanded = parentDir ? expandedPaths.has(parentDir) : false
+  const assetDirWasExpanded = expandedPaths.has(imageDir)
+
+  const insertedDir = articleStore.insertLocalEntry(imageDir, true)
+  const insertedFile = articleStore.insertLocalEntry(imagePath, false)
+
+  if (parentWasExpanded) {
+    await articleStore.loadCollapsibleFiles(parentDir, { force: true })
+  }
+
+  if (assetDirWasExpanded) {
+    await articleStore.loadCollapsibleFiles(imageDir, { force: true })
+  } else if (!insertedDir || !insertedFile) {
+    await articleStore.loadCollapsibleFiles(imageDir, { force: true })
   }
 }
 

@@ -251,7 +251,7 @@ interface NoteState {
   syncOpenTabsForPathChange: (oldPath: string, newPath: string) => Promise<void>
   loadFileTree: (options?: { skipRemoteSync?: boolean }) => Promise<void>
   loadRemoteSyncFiles: () => Promise<void>
-  loadCollapsibleFiles: (folderName: string) => Promise<void>
+  loadCollapsibleFiles: (folderName: string, options?: { force?: boolean }) => Promise<void>
   loadFolderRemoteFiles: (folderName: string) => Promise<void>
   newFolder: () => void
   newFile: () => void
@@ -1200,7 +1200,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
   }
 },
   // 加载文件夹内部的本地和远程文件（按需加载）
-  loadCollapsibleFiles: async (fullpath: string) => {
+  loadCollapsibleFiles: async (fullpath: string, options?: { force?: boolean }) => {
     const cacheTree: DirTree[] = get().fileTree
     const currentFolder = getCurrentFolder(fullpath, cacheTree)
 
@@ -1214,7 +1214,7 @@ const useArticleStore = create<NoteState>((set, get) => ({
     }
 
     // 如果已经加载过子内容，则跳过
-    if (currentFolder.children && currentFolder.children.length > 0) {
+    if (!options?.force && currentFolder.children && currentFolder.children.length > 0) {
       // 仅异步更新远程同步状态
       get().loadFolderRemoteFiles(fullpath)
       return
@@ -1308,8 +1308,8 @@ const useArticleStore = create<NoteState>((set, get) => ({
       }
     }
 
-    // 设置子节点（可能为空）
-    currentFolder.children = children
+    // 设置子节点（可能为空），并按当前文件树规则排序
+    currentFolder.children = get().sortFileTree(children)
     set({ fileTree: [...cacheTree] })
     
     // 异步加载远程同步文件状态（不阻塞界面）

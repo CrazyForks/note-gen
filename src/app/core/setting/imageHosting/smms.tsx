@@ -8,10 +8,12 @@ import useImageStore from "@/stores/imageHosting";
 import { getUserInfo } from "@/lib/imageHosting/smms";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { OpenBroswer } from "@/components/open-broswer";
+import { useTranslations } from "next-intl";
 
 const CREATE_TOKEN_URL = 'https://s.ee/user/developers'
 
 export default function SMMSImageHosting() {
+  const t = useTranslations('settings.imageHosting.smms')
   useImageStore()
 
   const [loading, setLoading] = useState(false)
@@ -67,15 +69,15 @@ export default function SMMSImageHosting() {
 
   const getStatusText = () => {
     if (loading) {
-      return '检测中';
+      return t('connecting');
     }
     if (token && isConnected) {
-      return '已连接';
+      return t('connected');
     }
     if (token && !isConnected) {
-      return '连接失败';
+      return t('disconnected');
     }
-    return '未配置';
+    return t('disconnected');
   };
 
   return (
@@ -83,9 +85,9 @@ export default function SMMSImageHosting() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>S.EE 图床</CardTitle>
+            <CardTitle>{t('title')}</CardTitle>
             <CardDescription>
-              使用 S.EE 上传和管理图片
+              {t('description')}
             </CardDescription>
           </div>
         </div>
@@ -93,7 +95,7 @@ export default function SMMSImageHosting() {
       <CardContent className="space-y-4">
         {/* 状态显示 */}
         <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-          <span className="text-sm font-medium">连接状态</span>
+          <span className="text-sm font-medium">{t('status')}</span>
           <div className="flex items-center gap-2">
             {getStatusIcon()}
             <span className="text-sm">{getStatusText()}</span>
@@ -103,20 +105,20 @@ export default function SMMSImageHosting() {
         {/* Token 配置 */}
         <div className="space-y-2">
           <label className="text-sm font-medium">API Token</label>
-          <p className="text-xs text-muted-foreground">请输入 S.EE API Token，现有配置可继续复用。</p>
+          <p className="text-xs text-muted-foreground">{t('token.helper')}</p>
           <div className="flex items-center gap-2">
             <Input
               className="flex-1"
               type={tokenVisible ? 'text' : 'password'}
               value={token}
               onChange={(e) => handleSetToken(e.target.value)}
-              placeholder="输入 S.EE API Token"
+              placeholder={t('token.placeholder')}
             />
             <Button variant="outline" size="icon" onClick={() => setTokenVisible(!tokenVisible)}>
               {tokenVisible ? <Eye /> : <EyeOff />}
             </Button>
           </div>
-          <OpenBroswer url={CREATE_TOKEN_URL} title="打开 S.EE 开发者页面" className="text-sm text-blue-500 hover:underline" />
+          <OpenBroswer url={CREATE_TOKEN_URL} title={t('token.createToken')} className="text-sm text-blue-500 hover:underline" />
         </div>
       </CardContent>
     </Card>
