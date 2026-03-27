@@ -43,6 +43,7 @@ import { ImageBubbleMenu } from './image-bubble-menu'
 import { toast } from '@/hooks/use-toast'
 import { FloatingTableMenu } from './floating-table-menu'
 import { FooterBar } from './footer-bar/index'
+import { Outline } from './outline'
 import { SlashCommand, suggestionOptions } from './slash-command'
 import { SlashCommandPortal } from './slash-command/slash-command-portal'
 import { fetchCompletionStream } from '@/lib/ai/completion'
@@ -248,6 +249,7 @@ export function TipTapEditor({
   const [searchReplaceOpen, setSearchReplaceOpen] = useState(false)
   const [mobileContext, setMobileContext] = useState<MobileSelectionContext>(null)
   const [mobileSheetMode, setMobileSheetMode] = useState<MobileSheetMode>(null)
+  const [mobileOutlineOpen, setMobileOutlineOpen] = useState(false)
   const [imageSrcDraft, setImageSrcDraft] = useState('')
   const [imageAltDraft, setImageAltDraft] = useState('')
   const aiActionHandlersRef = useRef({
@@ -2405,6 +2407,15 @@ export function TipTapEditor({
     return null
   }
 
+  const effectiveOutlineOpen = isMobile ? mobileOutlineOpen : outlineOpen
+  const handleOutlineToggle = () => {
+    if (isMobile) {
+      setMobileOutlineOpen((prev) => !prev)
+      return
+    }
+    onToggleOutline?.()
+  }
+
   return (
     <div ref={editorContainerRef} id="aritcle-md-editor" className="tiptap-editor relative flex flex-col h-full">
       {isMobile && mobileContext && (
@@ -2484,6 +2495,15 @@ export function TipTapEditor({
         />
       )}
 
+      {isMobile && (
+        <Outline
+          editor={editor}
+          isOpen={mobileOutlineOpen}
+          variant="drawer"
+          onHeadingSelect={() => setMobileOutlineOpen(false)}
+        />
+      )}
+
       {/* AI Generation Overlay */}
       {showOverlay && (
         <div className="absolute inset-0 z-50 flex items-start justify-end p-4 bg-background/20 pointer-events-none">
@@ -2507,8 +2527,8 @@ export function TipTapEditor({
       {/* Bottom toolbar - always visible */}
       <FooterBar
         editor={editor}
-        outlineOpen={outlineOpen}
-        onToggleOutline={onToggleOutline}
+        outlineOpen={effectiveOutlineOpen}
+        onToggleOutline={handleOutlineToggle}
       />
 
       <SlashCommandPortal />
