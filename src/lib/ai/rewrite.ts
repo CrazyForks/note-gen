@@ -9,7 +9,7 @@ export async function fetchAiPolish(text: string): Promise<string> {
   try {
     const aiConfig = await getAISettings('primaryModel')
 
-    if (!aiConfig || validateAIService(aiConfig.baseURL) === null) {
+    if (!aiConfig || await validateAIService(aiConfig.baseURL) === null) {
       throw new Error('AI service not configured')
     }
 
@@ -45,7 +45,7 @@ export async function fetchAiConcise(text: string): Promise<string> {
   try {
     const aiConfig = await getAISettings('primaryModel')
 
-    if (!aiConfig || validateAIService(aiConfig.baseURL) === null) {
+    if (!aiConfig || await validateAIService(aiConfig.baseURL) === null) {
       throw new Error('AI service not configured')
     }
 
@@ -81,7 +81,7 @@ export async function fetchAiExpand(text: string): Promise<string> {
   try {
     const aiConfig = await getAISettings('primaryModel')
 
-    if (!aiConfig || validateAIService(aiConfig.baseURL) === null) {
+    if (!aiConfig || await validateAIService(aiConfig.baseURL) === null) {
       throw new Error('AI service not configured')
     }
 
@@ -122,7 +122,7 @@ export async function fetchAiPolishStream(
   try {
     const aiConfig = await getAISettings('primaryModel')
 
-    if (!aiConfig || validateAIService(aiConfig.baseURL) === null) {
+    if (!aiConfig || await validateAIService(aiConfig.baseURL) === null) {
       throw new Error('AI service not configured')
     }
 
@@ -176,7 +176,7 @@ export async function fetchAiConciseStream(
   try {
     const aiConfig = await getAISettings('primaryModel')
 
-    if (!aiConfig || validateAIService(aiConfig.baseURL) === null) {
+    if (!aiConfig || await validateAIService(aiConfig.baseURL) === null) {
       throw new Error('AI service not configured')
     }
 
@@ -230,7 +230,7 @@ export async function fetchAiExpandStream(
   try {
     const aiConfig = await getAISettings('primaryModel')
 
-    if (!aiConfig || validateAIService(aiConfig.baseURL) === null) {
+    if (!aiConfig || await validateAIService(aiConfig.baseURL) === null) {
       throw new Error('AI service not configured')
     }
 
