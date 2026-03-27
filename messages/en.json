@@ -1639,6 +1639,7 @@
         "processingVectors": "Processing Vector Data",
         "calculateVectors": "Calculate Document Vectors",
         "multiSelect": "Multi Select",
+        "multiSelectMode": "Multi Select Mode",
         "exitMultiSelect": "Exit Multi Select",
         "organizeNotes": "Organize Notes",
         "organizeSuccess": "Notes organized successfully: {title}",

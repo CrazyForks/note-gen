@@ -1321,7 +1321,7 @@
   },
   "record": {
     "trash": {
-      "title": "清空回收站",
+      "title": "回收站",
       "confirm": "确定清空回收站吗？",
       "records": "共 {count} 条记录可还原",
       "empty": "清空",
@@ -1614,6 +1614,7 @@
         "viewFile": "查看原文件",
         "deleteForever": "彻底删除",
         "multiSelect": "多选",
+        "multiSelectMode": "多选模式",
         "exitMultiSelect": "退出多选",
         "selectAll": "全选",
         "deselectAll": "取消全选",

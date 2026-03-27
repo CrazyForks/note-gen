@@ -1654,6 +1654,7 @@
         "processingVectors": "Processando Dados Vetoriais",
         "calculateVectors": "Calcular Vetores de Documento",
         "multiSelect": "Seleção Múltipla",
+        "multiSelectMode": "Modo de Seleção Múltipla",
         "exitMultiSelect": "Sair da Seleção Múltipla",
         "selectAll": "Selecionar Tudo",
         "deselectAll": "Desmarcar Tudo",

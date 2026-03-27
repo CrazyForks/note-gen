@@ -1623,6 +1623,7 @@
         "viewFile": "查看原文件",
         "deleteForever": "徹底刪除",
         "multiSelect": "多選",
+        "multiSelectMode": "多選模式",
         "exitMultiSelect": "退出多選",
         "selectAll": "全選",
         "deselectAll": "取消全選",
