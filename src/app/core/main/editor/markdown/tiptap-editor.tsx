@@ -64,6 +64,8 @@ import { MobileEditorMoreSheet } from './mobile-editor-more-sheet'
 import { shouldRestorePendingQuote } from './quote-session'
 import { getEditorContentContainerClass } from '@/lib/editor-layout-styles'
 import { getResultIndexToFocus } from './search-navigation'
+import { isOutlineOnLeft, type OutlinePosition } from '@/lib/outline-preferences'
+import { OUTLINE_PANEL_PADDING_CLASS } from '@/lib/outline-styles'
 import './style.css'
 
 const lowlight = createLowlight(common)
@@ -161,6 +163,7 @@ interface TipTapEditorProps {
   onReady?: () => void
   onEditorReady?: (editor: any) => void
   outlineOpen?: boolean
+  outlinePosition?: OutlinePosition
   onToggleOutline?: () => void
   autoScroll?: boolean
   showOverlay?: boolean
@@ -205,6 +208,7 @@ export function TipTapEditor({
   onReady,
   onEditorReady,
   outlineOpen,
+  outlinePosition = 'right',
   onToggleOutline,
   autoScroll = false,
   showOverlay = false,
@@ -250,7 +254,9 @@ export function TipTapEditor({
     polish: async () => {},
     concise: async () => {},
     expand: async () => {},
-    translate: async (_targetLanguage: string) => {},
+    translate: async (targetLanguage: string) => {
+      void targetLanguage
+    },
   })
 
   const isInitializedRef = useRef(false)
@@ -2417,7 +2423,21 @@ export function TipTapEditor({
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleEditorDrop}
       >
-        <div className={getEditorContentContainerClass({ centeredContent, isMobile })}>
+        <div
+          className={getEditorContentContainerClass({
+            centeredContent,
+            isMobile,
+            outlineOpen: !!outlineOpen,
+            outlinePosition,
+          })}
+          style={
+            !isMobile && outlineOpen
+              ? {
+                [isOutlineOnLeft(outlinePosition) ? 'paddingLeft' : 'paddingRight']: OUTLINE_PANEL_PADDING_CLASS,
+              }
+              : undefined
+          }
+        >
         <EditorContent editor={editor} className="h-full relative">
           {!isMobile && <ImageBubbleMenu editor={editor} />}
 

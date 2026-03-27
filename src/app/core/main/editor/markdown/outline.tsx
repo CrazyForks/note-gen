@@ -19,9 +19,10 @@ interface OutlineProps {
   editor: Editor
   isOpen: boolean
   position?: 'left' | 'right'
+  floating?: boolean
 }
 
-export function Outline({ editor, isOpen, position = 'right' }: OutlineProps) {
+export function Outline({ editor, isOpen, position = 'right', floating = false }: OutlineProps) {
   const [headings, setHeadings] = useState<HeadingItem[]>([])
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
   // Use ref to always get latest headings in event handlers
@@ -260,7 +261,7 @@ export function Outline({ editor, isOpen, position = 'right' }: OutlineProps) {
   if (!isOpen || !isReady) return null
 
   return (
-    <div className={getOutlinePanelClass(position)}>
+    <div className={getOutlinePanelClass(position, floating)}>
       {headings.length === 0 ? (
         <div className="p-4 text-sm text-[hsl(var(--muted-foreground))] text-center">
           暂无标题
