@@ -1673,20 +1673,39 @@ export function TipTapEditor({
     }
   }, [editor])
 
-  // Listen to editor updates and notify TabBar about undo/redo state
+  // Listen to editor transactions and notify header/tab bar about undo/redo state
   useEffect(() => {
     if (!editor) return
 
-    const handleUpdate = () => {
+    let frameId: number | null = null
+
+    const emitUndoRedoState = () => {
       emitter.emit('editor-undo-redo-changed', {
         undo: editor.can().undo(),
         redo: editor.can().redo()
       })
     }
 
-    editor.on('update', handleUpdate)
+    emitUndoRedoState()
+    const handleTransaction = () => {
+      emitUndoRedoState()
+
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+
+      frameId = requestAnimationFrame(() => {
+        emitUndoRedoState()
+        frameId = null
+      })
+    }
+
+    editor.on('transaction', handleTransaction)
     return () => {
-      editor.off('update', handleUpdate)
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+      editor.off('transaction', handleTransaction)
     }
   }, [editor, activeFilePath])
 
@@ -2325,6 +2344,11 @@ export function TipTapEditor({
       editor.chain().focus().redo().run()
     }
 
+    const handleMobileToggleOutline = () => {
+      if (!isMobile) return
+      setMobileOutlineOpen((prev) => !prev)
+    }
+
     // Handle query for undo/redo capability
     const handleCanUndoRedo = ({ resolve }: { resolve: (can: { undo: boolean; redo: boolean }) => void }) => {
       if (!editor) {
@@ -2349,6 +2373,7 @@ export function TipTapEditor({
       emitter.on('get-quote-from-editor', handleGetQuote)
       emitter.on('editor-undo', handleUndo)
       emitter.on('editor-redo', handleRedo)
+      emitter.on('mobile-editor-toggle-outline', handleMobileToggleOutline)
       emitter.on('editor-can-undo-redo', handleCanUndoRedo)
       document.addEventListener('tiptap-insert-mermaid', handleInsertMermaid as EventListener)
       listenersSetup = true
@@ -2362,6 +2387,7 @@ export function TipTapEditor({
       emitter.off('get-quote-from-editor', handleGetQuote)
       emitter.off('editor-undo', handleUndo)
       emitter.off('editor-redo', handleRedo)
+      emitter.off('mobile-editor-toggle-outline', handleMobileToggleOutline)
       emitter.off('editor-can-undo-redo', handleCanUndoRedo)
       // Only remove event listener if it was actually added
       if (listenersSetup) {

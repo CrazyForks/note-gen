@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BaseDirectory, exists, mkdir, remove, rename as fsRename, stat, writeTextFile } from '@tauri-apps/plugin-fs'
 import { confirm } from '@tauri-apps/plugin-dialog'
 import { useTranslations } from 'next-intl'
-import { ChevronLeft, FilePlus, FileText, FolderPlus, Menu, Pencil, RefreshCw, Search, Trash2, Unplug } from 'lucide-react'
+import type { Editor } from '@tiptap/react'
+import { ChevronLeft, FilePlus, Folder, FolderPlus, List, Pencil, Redo2, RefreshCw, Search, SearchCode, Trash2, Undo2, Unplug } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -14,6 +15,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
+import emitter from '@/lib/emitter'
 import { toast } from '@/hooks/use-toast'
 import useArticleStore from '@/stores/article'
 import { getFilePathOptions } from '@/lib/workspace'
@@ -32,13 +34,16 @@ import { RepoNames } from '@/lib/sync/github.types'
 import { Store } from '@tauri-apps/plugin-store'
 import { S3Config, WebDAVConfig } from '@/types/sync'
 
+interface WritingHeaderProps {
+  editor: Editor | null
+}
+
 function shouldLoadRemoteOnTreeRefresh(options?: { isCreateFlow?: boolean }) {
   return options?.isCreateFlow !== true
 }
 
-export function WritingHeader() {
+export function WritingHeader({ editor }: WritingHeaderProps) {
   const t = useTranslations('record.chat.input.fileLink')
-  const tCommon = useTranslations('common')
   const tFile = useTranslations('article.file')
   const tContext = useTranslations('article.file.context')
   const tMobile = useTranslations('article.file.mobile')
@@ -71,11 +76,33 @@ export function WritingHeader() {
   const [renameTarget, setRenameTarget] = useState<BrowserEntry | null>(null)
   const [renameName, setRenameName] = useState('')
   const [renaming, setRenaming] = useState(false)
+  const [undoRedoState, setUndoRedoState] = useState({ undo: false, redo: false })
 
   const normalizedActivePath = normalizePath(activeFilePath)
-  const fileName = activeFilePath
-    ? activeFilePath.split('/').pop() || activeFilePath
-    : tCommon('defaultFileName')
+
+  const canUndo = editor ? undoRedoState.undo : false
+  const canRedo = editor ? undoRedoState.redo : false
+
+  useEffect(() => {
+    if (!editor) {
+      setUndoRedoState({ undo: false, redo: false })
+      return
+    }
+
+    setUndoRedoState({
+      undo: editor.can().undo(),
+      redo: editor.can().redo(),
+    })
+
+    const handleUndoRedoChanged = (state: { undo: boolean; redo: boolean }) => {
+      setUndoRedoState(state)
+    }
+
+    emitter.on('editor-undo-redo-changed', handleUndoRedoChanged)
+    return () => {
+      emitter.off('editor-undo-redo-changed', handleUndoRedoChanged)
+    }
+  }, [editor])
 
   const currentDirLabel = useMemo(() => {
     if (!currentDir) return tMobile('root')
@@ -560,134 +587,189 @@ export function WritingHeader() {
     })
   }
 
+  const handleUndo = useCallback(() => {
+    emitter.emit('editor-undo')
+  }, [])
+
+  const handleRedo = useCallback(() => {
+    emitter.emit('editor-redo')
+  }, [])
+
+  const handleToggleOutline = useCallback(() => {
+    emitter.emit('mobile-editor-toggle-outline' as any)
+  }, [])
+
+  const handleSearchReplace = useCallback(() => {
+    emitter.emit('editor-search-trigger' as any)
+  }, [])
+
   return (
-    <div className="mobile-page-header w-full flex items-center justify-between border-b px-4 text-sm">
-      <div className="flex items-center gap-2 truncate max-w-[70%]">
-        <FileText className="h-4 w-4" />
-        <span className="font-medium truncate">{fileName}</span>
+    <div className="mobile-page-header w-full flex items-center justify-between gap-3 border-b bg-background px-3 text-sm">
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9 rounded-full"
+          onClick={handleUndo}
+          disabled={!canUndo}
+          aria-label="撤销"
+        >
+          <Undo2 className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9 rounded-full"
+          onClick={handleRedo}
+          disabled={!canRedo}
+          aria-label="重做"
+        >
+          <Redo2 className="size-4" />
+        </Button>
       </div>
 
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">{tMobile('openFiles')}</span>
-          </Button>
-        </DrawerTrigger>
-        <DrawerContent className="h-[85%]">
-          <DrawerHeader>
-            <div className="flex items-center gap-2 min-w-0">
-              {currentDir !== '' ? (
-                <Button variant="ghost" size="icon" onClick={() => setCurrentDir(parentPath(currentDir))}>
-                  <ChevronLeft className="size-4" />
-                </Button>
-              ) : (
-                <div className="size-9" />
-              )}
-              <DrawerTitle className="truncate">{currentDirLabel}</DrawerTitle>
-            </div>
-          </DrawerHeader>
-          <div className="px-4 pb-4 h-full flex flex-col overflow-hidden">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="relative flex-1">
-                <Search className="size-4 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
-                <Input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder={t('searchPlaceholder')}
-                  className="h-9 pl-8"
-                />
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 shrink-0"
-                onClick={() => refreshTree(currentDir)}
-                title={tToolbar('refresh')}
-                aria-label={tToolbar('refresh')}
-                disabled={isBrowserLoading}
-              >
-                <RefreshCw className={`size-4 ${isBrowserLoading ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 shrink-0"
-                onClick={() => {
-                  setCreateType('file')
-                  setCreateName('')
-                }}
-                title={tToolbar('newArticle')}
-                aria-label={tToolbar('newArticle')}
-              >
-                <FilePlus className="size-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 shrink-0"
-                onClick={() => {
-                  setCreateType('folder')
-                  setCreateName('')
-                }}
-                title={tToolbar('newFolder')}
-                aria-label={tToolbar('newFolder')}
-              >
-                <FolderPlus className="size-4" />
-              </Button>
-            </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9 rounded-full"
+          onClick={handleSearchReplace}
+          aria-label="搜索替换"
+        >
+          <SearchCode className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9 rounded-full"
+          onClick={handleToggleOutline}
+          aria-label="大纲"
+        >
+          <List className="size-4" />
+        </Button>
 
-            <div className="flex-1 overflow-y-auto">
-              {isBrowserLoading ? (
-                <div className="text-sm text-muted-foreground py-8 text-center">{t('loading')}</div>
-              ) : visibleEntries.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-8 text-center">
-                  {searchQuery.trim() ? t('noFiles') : tFile('mobile.emptyDir')}
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerTrigger asChild>
+            <Button variant="ghost" size="icon" className="size-9 rounded-full">
+              <Folder className="size-4" />
+              <span className="sr-only">{tMobile('openFiles')}</span>
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="h-[85%]">
+            <DrawerHeader>
+              <div className="flex items-center gap-2 min-w-0">
+                {currentDir !== '' ? (
+                  <Button variant="ghost" size="icon" onClick={() => setCurrentDir(parentPath(currentDir))}>
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                ) : (
+                  <div className="size-9" />
+                )}
+              <DrawerTitle className="truncate">{currentDirLabel}</DrawerTitle>
+              </div>
+            </DrawerHeader>
+            <div className="px-4 pb-4 h-full flex flex-col overflow-hidden">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="relative flex-1">
+                  <Search className="size-4 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder={t('searchPlaceholder')}
+                    className="h-9 pl-8"
+                  />
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {visibleEntries.map((entry) => (
-                    <EntryListItem
-                      key={entry.relativePath}
-                      entry={entry}
-                      isActive={entry.type === 'file' && normalizedActivePath === entry.relativePath}
-                      onOpen={openEntry}
-                      remoteLabel={tMobile('remote')}
-                      subtitle={getEntrySubtitle(entry)}
-                      actions={[
-                        {
-                          key: 'rename',
-                          label: tContext('rename'),
-                          icon: <Pencil className="size-4" />,
-                          onClick: () => startRename(entry),
-                          disabled: !entry.isLocale,
-                          variant: 'outline',
-                        },
-                        ...(entry.type === 'file' && entry.sha ? [{
-                          key: 'delete-sync',
-                          label: tContext('deleteSyncFile'),
-                          icon: <Unplug className="size-4" />,
-                          onClick: () => handleDeleteSyncFile(entry),
-                          disabled: !entry.sha,
-                          variant: 'outline' as const,
-                        }] : []),
-                        {
-                          key: 'delete',
-                          label: entry.type === 'file' ? tContext('deleteLocalFile') : tContext('delete'),
-                          icon: <Trash2 className="size-4" />,
-                          onClick: () => handleDelete(entry),
-                          disabled: !entry.isLocale,
-                          variant: 'destructive',
-                        },
-                      ]}
-                    />
-                  ))}
-                </div>
-              )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  onClick={() => refreshTree(currentDir)}
+                  title={tToolbar('refresh')}
+                  aria-label={tToolbar('refresh')}
+                  disabled={isBrowserLoading}
+                >
+                  <RefreshCw className={`size-4 ${isBrowserLoading ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  onClick={() => {
+                    setCreateType('file')
+                    setCreateName('')
+                  }}
+                  title={tToolbar('newArticle')}
+                  aria-label={tToolbar('newArticle')}
+                >
+                  <FilePlus className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  onClick={() => {
+                    setCreateType('folder')
+                    setCreateName('')
+                  }}
+                  title={tToolbar('newFolder')}
+                  aria-label={tToolbar('newFolder')}
+                >
+                  <FolderPlus className="size-4" />
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {isBrowserLoading ? (
+                  <div className="text-sm text-muted-foreground py-8 text-center">{t('loading')}</div>
+                ) : visibleEntries.length === 0 ? (
+                  <div className="text-sm text-muted-foreground py-8 text-center">
+                    {searchQuery.trim() ? t('noFiles') : tFile('mobile.emptyDir')}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {visibleEntries.map((entry) => (
+                      <EntryListItem
+                        key={entry.relativePath}
+                        entry={entry}
+                        isActive={entry.type === 'file' && normalizedActivePath === entry.relativePath}
+                        onOpen={openEntry}
+                        remoteLabel={tMobile('remote')}
+                        subtitle={getEntrySubtitle(entry)}
+                        actions={[
+                          {
+                            key: 'rename',
+                            label: tContext('rename'),
+                            icon: <Pencil className="size-4" />,
+                            onClick: () => startRename(entry),
+                            disabled: !entry.isLocale,
+                            variant: 'outline',
+                          },
+                          ...(entry.type === 'file' && entry.sha ? [{
+                            key: 'delete-sync',
+                            label: tContext('deleteSyncFile'),
+                            icon: <Unplug className="size-4" />,
+                            onClick: () => handleDeleteSyncFile(entry),
+                            disabled: !entry.sha,
+                            variant: 'outline' as const,
+                          }] : []),
+                          {
+                            key: 'delete',
+                            label: entry.type === 'file' ? tContext('deleteLocalFile') : tContext('delete'),
+                            icon: <Trash2 className="size-4" />,
+                            onClick: () => handleDelete(entry),
+                            disabled: !entry.isLocale,
+                            variant: 'destructive',
+                          },
+                        ]}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </DrawerContent>
-      </Drawer>
+          </DrawerContent>
+        </Drawer>
+      </div>
 
       <NameInputDialog
         open={createType !== null}
