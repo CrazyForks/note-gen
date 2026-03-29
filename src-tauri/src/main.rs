@@ -14,7 +14,7 @@ mod skills;
 mod tray;
 mod ai;
 
-use screenshot::{screenshot};
+use screenshot::{cleanup_temp_screenshot_dir, screenshot};
 use fuzzy_search::{fuzzy_search, fuzzy_search_parallel};
 use keywords::{rank_keywords};
 use backup::{export_app_data, import_app_data, import_app_data_from_file};
@@ -82,10 +82,13 @@ fn main() {
 
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(|_app_handle, event| match event {
+        .run(|app_handle, event| match event {
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { has_visible_windows, .. } => {
-                window::handle_macos_reopen(&_app_handle, has_visible_windows);
+                window::handle_macos_reopen(&app_handle, has_visible_windows);
+            }
+            tauri::RunEvent::Exit => {
+                cleanup_temp_screenshot_dir(&app_handle);
             }
             _ => {}
         });

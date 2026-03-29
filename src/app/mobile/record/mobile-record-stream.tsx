@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 import { Trash2, MoveRight, CheckSquare, Filter, Plus, ListChecks, RotateCcw, Search, ChevronDown, XCircle } from 'lucide-react'
-import { filterMarks } from '@/app/core/main/mark/mark-filters.mjs'
+import { filterMarks, getTrashRecordFilters } from '@/app/core/main/mark/mark-filters'
 import { getMarkTypeChipClasses, MARK_TYPE_OPTIONS } from '@/app/core/main/mark/mark-type-meta'
 import useMarkStore, { RecordTimePreset } from '@/stores/mark'
 import useTagStore from '@/stores/tag'
@@ -140,10 +140,16 @@ export function MobileRecordStream() {
 
   const records = marks
   const tagMap = useMemo(() => new Map(tags.map((tag) => [tag.id, tag.name])), [tags])
-  const mobileRecordFilters = useMemo(() => ({
-    ...recordFilters,
-    tagId: 'all' as const,
-  }), [recordFilters])
+  const mobileRecordFilters = useMemo(() => {
+    if (trashState) {
+      return getTrashRecordFilters()
+    }
+
+    return {
+      ...recordFilters,
+      tagId: 'all' as const,
+    }
+  }, [trashState, recordFilters])
 
   const filteredRecords = useMemo(() => {
     return filterMarks(records, mobileRecordFilters)
