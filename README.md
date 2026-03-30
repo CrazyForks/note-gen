@@ -14,6 +14,21 @@
   <a href="https://www.producthunt.com/products/notegen-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-notegen&#0045;2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=956348&theme=light&t=1749194675492" alt="NoteGen - A&#0032;cross&#0045;platform&#0032;Markdown&#0032;note&#0045;taking&#0032;application | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </div>
 
+## Sponsor
+
+<table>
+  <tr>
+    <td width="60%" valign="top">
+      感谢 <a href="https://www.compshare.cn/coding-plan?ytag=GPU_YY_JL_git_note-gen" target="_blank">优云智算</a> 赞助了本项目！优云智算是 UCloud 旗下 AI 云平台，提供稳定、全面的国内外模型 API，仅一个 key 即可调用。主打包月、按量的高性价比 Coding Plan 套餐，基于官方 2~5 折优惠。支持接入 Claude Code、Codex 及 API 调用。支持企业高并发、7*24 技术支持、自助开票。通过此链接注册的用户，可得免费 5 元平台体验金！
+    </td>
+    <td width="40%" align="center">
+      <a href="https://www.compshare.cn/coding-plan?ytag=GPU_YY_JL_git_note-gen" target="_blank">
+        <img src="https://files.seeusercontent.com/2026/03/30/hh6D/e9ee714402f19640e6bba5ef32c2ae8f.jpg" alt="YouYun Sponsor" width="320" />
+      </a>
+    </td>
+  </tr>
+</table>
+
 ## Guide
 
 🖥️ Official Document: [English](https://notegen.top/en/) | [简体中文](https://notegen.top/cn/)
