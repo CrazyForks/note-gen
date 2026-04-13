@@ -19,6 +19,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/comp
 import { Separator } from "@/components/ui/separator"
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { BottomBarIconButton } from "@/components/bottom-bar-icon-button"
+import { getWorkspaceDisplayName } from "@/lib/workspace-name"
 
 export function FileFooter() {
   const { workspacePath, workspaceHistory, setWorkspacePath } = useSettingStore()
@@ -40,15 +41,9 @@ export function FileFooter() {
   const tFile = useTranslations('settings.file')
   const tToolbar = useTranslations('article.file.toolbar')
 
-  // 获取文件夹名称
-  const getWorkspaceName = (path: string) => {
-    if (!path) return tFile('workspace.defaultPath')
-    return path.split('/').pop() || path.split('\\').pop() || path
-  }
-
   // 当前工作区名称
   const currentWorkspaceName = useMemo(() => {
-    return getWorkspaceName(workspacePath)
+    return getWorkspaceDisplayName(workspacePath, tFile('workspace.defaultPath'))
   }, [workspacePath, tFile])
 
   // 选择工作区目录
@@ -132,9 +127,11 @@ export function FileFooter() {
               <DropdownMenuSeparator />
               <DropdownMenuLabel>{tFile('workspace.history')}</DropdownMenuLabel>
               {workspaceHistory.map((path, index) => (
-                <DropdownMenuItem key={index} onClick={() => switchWorkspace(path)}>
+              <DropdownMenuItem key={index} onClick={() => switchWorkspace(path)}>
                   <FolderOpen className="mr-2 h-4 w-4" />
-                  <span className="truncate" title={path}>{getWorkspaceName(path)}</span>
+                  <span className="truncate" title={path}>
+                    {getWorkspaceDisplayName(path, tFile('workspace.defaultPath'))}
+                  </span>
                 </DropdownMenuItem>
               ))}
             </>
