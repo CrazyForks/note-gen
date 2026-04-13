@@ -82,12 +82,23 @@ const PasteMarkdown = Extension.create({
       new Plugin({
         props: {
           handlePaste(_view, event, _slice) {
-            void _view
             void _slice
             const text = (event as ClipboardEvent).clipboardData?.getData('text/plain')
 
             if (!text) {
               return false
+            }
+
+            const { selection, schema } = _view.state
+            const codeBlockType = schema.nodes.codeBlock
+            const isPastingInsideCodeBlock =
+              codeBlockType != null &&
+              selection.$from.parent.type === codeBlockType &&
+              selection.$to.parent.type === codeBlockType
+
+            if (isPastingInsideCodeBlock) {
+              _view.dispatch(_view.state.tr.insertText(text, selection.from, selection.to))
+              return true
             }
 
             // 检查文本是否看起来像 Markdown
