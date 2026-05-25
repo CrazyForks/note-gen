@@ -185,12 +185,11 @@ export function EditorLayout() {
   // Check if file/folder exists
   const checkPathExists = useCallback(async (path: string): Promise<boolean> => {
     const { exists } = await import('@tauri-apps/plugin-fs')
-    const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
-    const workspace = await getWorkspacePath()
+    const { getFilePathOptions } = await import('@/lib/workspace')
     const pathOptions = await getFilePathOptions(path)
 
     try {
-      if (workspace.isCustom) {
+      if (!pathOptions.baseDir) {
         return await exists(pathOptions.path)
       } else {
         return await exists(pathOptions.path, { baseDir: pathOptions.baseDir })
@@ -267,7 +266,7 @@ export function EditorLayout() {
   useEffect(() => {
     if (!activeFilePath) return
 
-    const name = activeFilePath.split('/').pop() || activeFilePath
+    const name = activeFilePath.split(/[\\/]/).pop() || activeFilePath
     const isFolder = isFolderPath(activeFilePath)
 
     // Check if tab already exists

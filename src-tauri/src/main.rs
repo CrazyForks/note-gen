@@ -13,6 +13,7 @@ mod device;
 mod skills;
 mod tray;
 mod ai;
+mod file_open;
 
 use screenshot::{cleanup_temp_screenshot_dir, screenshot};
 use fuzzy_search::{fuzzy_search, fuzzy_search_parallel};
@@ -26,13 +27,16 @@ use ai::{ai_binary_request, ai_chat_completion_stream, ai_json_request, ai_multi
 
 fn main() {
     tauri::Builder::default()
-        // 核心插件 - 最先加载
+        // 单实例插件必须最先加载，避免 Windows 文件关联二次启动时继续初始化托盘等资源。
+        .plugin(tauri_plugin_single_instance::init(window::handle_single_instance))
+
+        // 核心插件
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_sql::Builder::default().build())
-        .plugin(tauri_plugin_single_instance::init(window::handle_single_instance))
 
         // MCP 服务器管理器
+        .manage(file_open::PendingOpenFiles::default())
         .manage(McpServerManager::new())
         .manage(RuntimeInstallManager::new())
         .manage(AiRequestManager::new())
@@ -75,6 +79,7 @@ fn main() {
             ai_multipart_request,
             ai_chat_completion_stream,
             cancel_ai_request,
+            file_open::drain_pending_open_files,
         ])
 
         // 应用设置 - 在所有插件和命令注册后
@@ -86,6 +91,10 @@ fn main() {
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { has_visible_windows, .. } => {
                 window::handle_macos_reopen(&app_handle, has_visible_windows);
+            }
+            #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+            tauri::RunEvent::Opened { urls } => {
+                file_open::handle_opened_urls(&app_handle, urls);
             }
             tauri::RunEvent::Exit => {
                 cleanup_temp_screenshot_dir(&app_handle);
