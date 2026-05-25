@@ -11,6 +11,7 @@ import { applyThemeColors, removeThemeColors } from '@/lib/theme-utils'
 import { getNormalizedImageHosting } from '@/lib/image-hosting-config'
 import { normalizeSpeechMode } from '@/lib/speech/preferences'
 import type { SpeechMode } from '@/lib/speech/types'
+import { applyNoteGenDefaultConfig, loadNoteGenDefaultConfig } from '@/lib/ai/notegen-default-models-runtime'
 
 export enum GenTemplateRange {
   All = 'all',
@@ -290,9 +291,9 @@ const useSettingStore = create<SettingState>((set, get) => ({
       config.models?.some(model => noteGenModelKeys.includes(model.id))
     )
     
-    let finalAiModelList = existingAiModelList
-    if (!hasNoteGenModels) {
-      finalAiModelList = [...existingAiModelList, ...noteGenDefaultModels]
+    const noteGenDefaultConfig = await loadNoteGenDefaultConfig(noteGenDefaultModels[0])
+    let finalAiModelList = applyNoteGenDefaultConfig(existingAiModelList, noteGenDefaultConfig)
+    if (JSON.stringify(finalAiModelList) !== JSON.stringify(existingAiModelList)) {
       await store.set('aiModelList', finalAiModelList)
       set({ aiModelList: finalAiModelList })
     }
@@ -468,7 +469,8 @@ const useSettingStore = create<SettingState>((set, get) => ({
         // 过滤出不在默认模型中的限时免费模型
         const limitedModels = resModels.data.filter((model: any) => {
           // 检查是否在 noteGenDefaultModels 的 models 数组中
-          return !noteGenDefaultModels[0].models?.some(defaultModel => defaultModel.model === model.id)
+          const noteGenFreeConfig = finalAiModelList.find(config => config.key === 'note-gen-free')
+          return !noteGenFreeConfig?.models?.some(defaultModel => defaultModel.model === model.id)
         })
         
         // 如果有限时免费模型,创建统一的 NoteGen Limited 配置
