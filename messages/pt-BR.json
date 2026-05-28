@@ -2642,7 +2642,16 @@
     "outline": {
       "title": "Esboço",
       "open": "Abrir Esboço",
-      "close": "Fechar Esboço"
+      "close": "Fechar Esboço",
+      "empty": "Nenhum título",
+      "noResults": "Nenhum título encontrado",
+      "searchPlaceholder": "Pesquisar títulos",
+      "clearSearch": "Limpar pesquisa",
+      "expandHeading": "Expandir {title}",
+      "collapseHeading": "Recolher {title}",
+      "untitledHeading": "Sem título H{level}",
+      "resizeHandle": "Arraste para redimensionar o sumário",
+      "editHeading": "Editar título {title}"
     },
     "copySuccess": "Cópia Bem-sucedida",
     "copySuccessDescription": "Copiado para a área de transferência",

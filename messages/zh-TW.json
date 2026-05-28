@@ -2564,7 +2564,16 @@
     "outline": {
       "title": "大綱",
       "open": "打開大綱",
-      "close": "關閉大綱"
+      "close": "關閉大綱",
+      "empty": "暫無標題",
+      "noResults": "沒有匹配的標題",
+      "searchPlaceholder": "搜尋標題",
+      "clearSearch": "清空搜尋",
+      "expandHeading": "展開 {title}",
+      "collapseHeading": "折疊 {title}",
+      "untitledHeading": "未命名 H{level}",
+      "resizeHandle": "拖曳調整大綱寬度",
+      "editHeading": "編輯標題 {title}"
     },
     "translation": {
       "fail": "翻譯失敗",

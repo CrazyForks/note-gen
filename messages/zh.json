@@ -2610,7 +2610,16 @@
     "outline": {
       "title": "大纲",
       "open": "打开大纲",
-      "close": "关闭大纲"
+      "close": "关闭大纲",
+      "empty": "暂无标题",
+      "noResults": "没有匹配的标题",
+      "searchPlaceholder": "搜索标题",
+      "clearSearch": "清空搜索",
+      "expandHeading": "展开 {title}",
+      "collapseHeading": "折叠 {title}",
+      "untitledHeading": "未命名 H{level}",
+      "resizeHandle": "拖拽调整大纲宽度",
+      "editHeading": "编辑标题 {title}"
     },
     "translation": {
       "fail": "翻译失败",

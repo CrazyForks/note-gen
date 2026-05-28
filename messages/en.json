@@ -2736,7 +2736,16 @@
     "outline": {
       "title": "Outline",
       "open": "Open Outline",
-      "close": "Close Outline"
+      "close": "Close Outline",
+      "empty": "No headings",
+      "noResults": "No matching headings",
+      "searchPlaceholder": "Search headings",
+      "clearSearch": "Clear search",
+      "expandHeading": "Expand {title}",
+      "collapseHeading": "Collapse {title}",
+      "untitledHeading": "Untitled H{level}",
+      "resizeHandle": "Drag to resize outline",
+      "editHeading": "Edit heading {title}"
     },
     "translation": {
       "fail": "Translation failed",

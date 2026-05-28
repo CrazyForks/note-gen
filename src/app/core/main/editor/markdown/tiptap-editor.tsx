@@ -68,8 +68,12 @@ import { MobileEditorMoreSheet } from './mobile-editor-more-sheet'
 import { shouldRestorePendingQuote } from './quote-session'
 import { getEditorContentContainerClass } from '@/lib/editor-layout-styles'
 import { getResultIndexToFocus } from './search-navigation'
-import { isOutlineOnLeft, type OutlinePosition } from '@/lib/outline-preferences'
-import { OUTLINE_PANEL_PADDING_CLASS } from '@/lib/outline-styles'
+import {
+  DEFAULT_OUTLINE_WIDTH,
+  getOutlineContentPadding,
+  isOutlineOnLeft,
+  type OutlinePosition,
+} from '@/lib/outline-preferences'
 import { EditorShortcutsExtension } from './editor-shortcuts-extension'
 import useEditorShortcutStore from '@/stores/editor-shortcut'
 import type { EditorShortcutCommandId } from '@/config/editor-shortcuts'
@@ -257,6 +261,7 @@ interface TipTapEditorProps {
   onEditorReady?: (editor: any) => void
   outlineOpen?: boolean
   outlinePosition?: OutlinePosition
+  outlineWidth?: number
   onToggleOutline?: () => void
   autoScroll?: boolean
   showOverlay?: boolean
@@ -302,6 +307,7 @@ export function TipTapEditor({
   onEditorReady,
   outlineOpen,
   outlinePosition = 'right',
+  outlineWidth = DEFAULT_OUTLINE_WIDTH,
   onToggleOutline,
   autoScroll = false,
   showOverlay = false,
@@ -2891,6 +2897,7 @@ export function TipTapEditor({
   }
 
   const effectiveOutlineOpen = isMobile ? mobileOutlineOpen : outlineOpen
+  const outlineContentPadding = `${getOutlineContentPadding(outlineWidth)}px`
   const handleOutlineToggle = () => {
     if (isMobile) {
       setMobileOutlineOpen((prev) => !prev)
@@ -2927,7 +2934,7 @@ export function TipTapEditor({
           style={
             !isMobile && outlineOpen
               ? {
-                [isOutlineOnLeft(outlinePosition) ? 'paddingLeft' : 'paddingRight']: OUTLINE_PANEL_PADDING_CLASS,
+                [isOutlineOnLeft(outlinePosition) ? 'paddingLeft' : 'paddingRight']: outlineContentPadding,
               }
               : undefined
           }

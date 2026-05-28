@@ -7,15 +7,23 @@ import { Outline } from './outline'
 import { Loader2, Download } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import emitter from '@/lib/emitter'
-import { DEFAULT_OUTLINE_POSITION, normalizeOutlinePosition, type OutlinePosition } from '@/lib/outline-preferences'
+import {
+  DEFAULT_OUTLINE_POSITION,
+  DEFAULT_OUTLINE_WIDTH,
+  normalizeOutlinePosition,
+  normalizeOutlineWidth,
+  OUTLINE_WIDTH_STORE_KEY,
+  type OutlinePosition,
+} from '@/lib/outline-preferences'
 import { Store } from '@tauri-apps/plugin-store'
 
 interface MdEditorProps {
   tabContentsRef: RefObject<Record<string, string>>
   filePath: string
+  isActive: boolean
 }
 
-export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
+export function MdEditor({ tabContentsRef, filePath, isActive }: MdEditorProps) {
   const {
     saveCurrentArticle,
     isPulling,
@@ -43,6 +51,7 @@ export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
   // Outline panel state
   const [outlineOpen, setOutlineOpen] = useState(false)
   const [outlinePosition, setOutlinePosition] = useState<OutlinePosition>(DEFAULT_OUTLINE_POSITION)
+  const [outlineWidth, setOutlineWidth] = useState(DEFAULT_OUTLINE_WIDTH)
   // State for editor instance (to trigger re-render when ready)
   const [editorInstance, setEditorInstance] = useState<any>(null)
   // Track if editor has called onEditorReady (meaning it's fully initialized)
@@ -113,14 +122,45 @@ export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
     }
   }, [filePath])
 
+  const loadOutlinePreferences = useCallback(async () => {
+    const store = await Store.load('store.json')
+    setOutlineOpen(await store.get<boolean>('enableOutline') || false)
+    setOutlinePosition(normalizeOutlinePosition(await store.get('outlinePosition')))
+    setOutlineWidth(normalizeOutlineWidth(await store.get(OUTLINE_WIDTH_STORE_KEY)))
+  }, [])
+
   useEffect(() => {
-    async function loadOutlinePreferences() {
-      const store = await Store.load('store.json')
-      setOutlineOpen(await store.get<boolean>('enableOutline') || false)
-      setOutlinePosition(normalizeOutlinePosition(await store.get('outlinePosition')))
-    }
+    loadOutlinePreferences()
+  }, [loadOutlinePreferences])
+
+  useEffect(() => {
+    if (!isActive) return
 
     loadOutlinePreferences()
+  }, [isActive, loadOutlinePreferences])
+
+  const handleToggleOutline = useCallback(() => {
+    setOutlineOpen((previous) => {
+      const next = !previous
+
+      void (async () => {
+        const store = await Store.load('store.json')
+        await store.set('enableOutline', next)
+      })()
+
+      return next
+    })
+  }, [])
+
+  const handleOutlineWidthChange = useCallback((width: number) => {
+    setOutlineWidth(normalizeOutlineWidth(width))
+  }, [])
+
+  const handleOutlineWidthCommit = useCallback(async (width: number) => {
+    const normalizedWidth = normalizeOutlineWidth(width)
+    setOutlineWidth(normalizedWidth)
+    const store = await Store.load('store.json')
+    await store.set(OUTLINE_WIDTH_STORE_KEY, normalizedWidth)
   }, [])
 
   // Load content from cache or disk - only on first mount per file
@@ -387,7 +427,8 @@ export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
         onEditorReady={handleEditorReady}
         outlineOpen={outlineOpen}
         outlinePosition={outlinePosition}
-        onToggleOutline={() => setOutlineOpen(prev => !prev)}
+        outlineWidth={outlineWidth}
+        onToggleOutline={handleToggleOutline}
         editable={!isPulling && !aiStreaming}
         autoScroll={aiStreaming}
         showOverlay={aiStreaming}
@@ -406,6 +447,10 @@ export function MdEditor({ tabContentsRef, filePath }: MdEditorProps) {
           editor={editorInstance}
           isOpen={outlineOpen}
           position={outlinePosition}
+          documentKey={filePath}
+          width={outlineWidth}
+          onWidthChange={handleOutlineWidthChange}
+          onWidthCommit={handleOutlineWidthCommit}
           floating
         />
       )}

@@ -521,6 +521,7 @@ export function EditorLayout() {
             key={tab.id}
             tabContentsRef={tabContentsRef}
             filePath={tab.path}
+            isActive={isActive}
           />
         )}
         {itemType === 'unknown' && (

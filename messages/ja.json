@@ -2697,7 +2697,16 @@
     "outline": {
       "title": "アウトライン",
       "open": "アウトラインを開く",
-      "close": "アウトラインを閉じる"
+      "close": "アウトラインを閉じる",
+      "empty": "見出しがありません",
+      "noResults": "一致する見出しがありません",
+      "searchPlaceholder": "見出しを検索",
+      "clearSearch": "検索をクリア",
+      "expandHeading": "{title}を展開",
+      "collapseHeading": "{title}を折りたたむ",
+      "untitledHeading": "無題 H{level}",
+      "resizeHandle": "ドラッグしてアウトライン幅を変更",
+      "editHeading": "見出しを編集 {title}"
     },
     "translation": {
       "fail": "翻訳に失敗しました",
