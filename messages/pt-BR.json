@@ -1901,6 +1901,20 @@
           "agentDescription": "Assistente inteligente, pode executar ações"
         },
         "attachImage": "Anexar imagens",
+        "imageAttachment": {
+          "selectSuccess": "{count, plural, one {# imagem anexada} other {# imagens anexadas}}",
+          "pasteSuccess": "{count, plural, one {# imagem colada} other {# imagens coladas}}",
+          "dropSuccess": "{count, plural, one {# imagem solta} other {# imagens soltas}}",
+          "maxCount": "Você pode anexar até {count} imagens",
+          "oversized": "{name} é maior que {size} e foi ignorado",
+          "oversizedMultiple": "{count} imagens são maiores que {size} e foram ignoradas",
+          "unsupported": "{name} não é um formato de imagem compatível",
+          "unsupportedMultiple": "{count} arquivos não são formatos de imagem compatíveis",
+          "saveFailed": "Falha ao salvar a imagem. Tente novamente",
+          "saveFailedMultiple": "Falha ao salvar {count} imagens. Tente novamente",
+          "selectFailed": "Falha ao selecionar imagens. Tente novamente",
+          "dropHint": "Solte as imagens para anexar"
+        },
         "agent": {
           "running": "Agente em Execução",
           "thinking": "Pensando",

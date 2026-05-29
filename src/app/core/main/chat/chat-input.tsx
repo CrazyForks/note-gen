@@ -28,8 +28,10 @@ import { isMobileDevice } from '@/lib/check'
 import { QuoteDisplay } from "./quote-display"
 import type { PendingQuote } from "@/stores/chat"
 import { convertFileSrc } from "@tauri-apps/api/core"
-import { readTextFile, writeFile, BaseDirectory, exists } from "@tauri-apps/plugin-fs"
+import { readTextFile, writeFile, BaseDirectory, exists, mkdir, stat } from "@tauri-apps/plugin-fs"
 import { ShineBorder } from "@/components/ui/shine-border"
+import { toast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 import {
   DndContext,
   closestCenter,
@@ -46,6 +48,56 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { buildTypingFrames } from './onboarding-typing'
+
+const MAX_IMAGE_ATTACHMENTS = 6
+const MAX_IMAGE_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024
+const IMAGE_ATTACHMENT_DIR = 'screenshot'
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'])
+const MIME_EXTENSION_MAP: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/bmp': 'bmp',
+  'image/svg+xml': 'svg',
+}
+
+function getFileName(path: string) {
+  return path.split(/[\\/]/).pop() || path
+}
+
+function getExtension(fileName: string) {
+  return fileName.split('.').pop()?.toLowerCase() || ''
+}
+
+function isSupportedImageName(fileName: string) {
+  return IMAGE_EXTENSIONS.has(getExtension(fileName))
+}
+
+function isSupportedImageType(type: string) {
+  return Object.prototype.hasOwnProperty.call(MIME_EXTENSION_MAP, type)
+}
+
+function getImageExtension(fileName: string, type: string) {
+  const extension = getExtension(fileName)
+  if (IMAGE_EXTENSIONS.has(extension)) {
+    return extension
+  }
+
+  return MIME_EXTENSION_MAP[type] || 'png'
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(bytes % (1024 * 1024) === 0 ? 0 : 1)} MB`
+  }
+
+  return `${Math.max(1, Math.ceil(bytes / 1024))} KB`
+}
+
+function createImageAttachmentId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
 
 // 可排序的工具栏项组件 - 定义在外部以避免每次 ChatInput re-render 时重新创建
 interface SortableToolbarItemProps {
@@ -125,14 +177,17 @@ export const ChatInput = React.memo(function ChatInput() {
   const [tempInput, setTempInput] = useState('')
   const [linkedResource, setLinkedResource] = useState<LinkedResource | null>(null)
   const [attachedImages, setAttachedImages] = useState<ImageAttachment[]>([])
+  const [isImageDragOver, setIsImageDragOver] = useState(false)
   const chatSendRef = useRef<any>(null)
   const isMobile = useIsMobile()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const placeholderTimerRef = useRef<NodeJS.Timeout | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const isMobileDevice_ = isMobileDevice()
+  const imageDragDepthRef = useRef(0)
   const onboardingAgentPromptArmedRef = useRef(false)
   const onboardingTypingTimerRefs = useRef<number[]>([])
+  const maxImageSizeLabel = formatFileSize(MAX_IMAGE_ATTACHMENT_SIZE_BYTES)
 
   const applyTypedText = useCallback((value: string) => {
     setText(value)
@@ -213,8 +268,199 @@ export const ChatInput = React.memo(function ChatInput() {
     clearPendingQuote()
   }
 
+  function showImageSuccessToast(count: number, key: 'selectSuccess' | 'pasteSuccess' | 'dropSuccess') {
+    toast({
+      description: t(`record.chat.input.imageAttachment.${key}`, { count })
+    })
+  }
+
+  function showImageFailureToast(description: string) {
+    toast({
+      variant: "destructive",
+      description
+    })
+  }
+
+  function showSkippedImageToasts(skipped: {
+    unsupported: string[]
+    oversized: string[]
+    failed: number
+  }) {
+    if (skipped.unsupported.length === 1) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.unsupported', {
+        name: skipped.unsupported[0],
+      }))
+    } else if (skipped.unsupported.length > 1) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.unsupportedMultiple', {
+        count: skipped.unsupported.length,
+      }))
+    }
+
+    if (skipped.oversized.length === 1) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.oversized', {
+        name: skipped.oversized[0],
+        size: maxImageSizeLabel,
+      }))
+    } else if (skipped.oversized.length > 1) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.oversizedMultiple', {
+        count: skipped.oversized.length,
+        size: maxImageSizeLabel,
+      }))
+    }
+
+    if (skipped.failed === 1) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.saveFailed'))
+    } else if (skipped.failed > 1) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.saveFailedMultiple', {
+        count: skipped.failed,
+      }))
+    }
+  }
+
+  function appendImageAttachments(images: ImageAttachment[], successKey: 'selectSuccess' | 'pasteSuccess' | 'dropSuccess') {
+    if (images.length === 0) {
+      return 0
+    }
+
+    const remainingCount = MAX_IMAGE_ATTACHMENTS - attachedImages.length
+    if (remainingCount <= 0) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.maxCount', {
+        count: MAX_IMAGE_ATTACHMENTS,
+      }))
+      return 0
+    }
+
+    const acceptedImages = images.slice(0, remainingCount)
+    if (images.length > remainingCount) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.maxCount', {
+        count: MAX_IMAGE_ATTACHMENTS,
+      }))
+    }
+
+    setAttachedImages(prev => [...prev, ...acceptedImages])
+    showImageSuccessToast(acceptedImages.length, successKey)
+    return acceptedImages.length
+  }
+
+  async function ensureImageAttachmentDir() {
+    const dirExists = await exists(IMAGE_ATTACHMENT_DIR, { baseDir: BaseDirectory.AppData })
+    if (!dirExists) {
+      await mkdir(IMAGE_ATTACHMENT_DIR, { baseDir: BaseDirectory.AppData })
+    }
+  }
+
+  async function resolveAppDataFilePath(filePath: string) {
+    const { appDataDir, join } = await import('@tauri-apps/api/path')
+    const appData = await appDataDir()
+    return await join(appData, filePath)
+  }
+
+  async function createAttachmentFromBlob(blob: Blob, name: string, source: 'file' | 'paste') {
+    const extension = getImageExtension(name, blob.type)
+    const fileName = `${source}-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`
+    const filePath = `${IMAGE_ATTACHMENT_DIR}/${fileName}`
+    const arrayBuffer = await blob.arrayBuffer()
+    const uint8Array = new Uint8Array(arrayBuffer)
+
+    await ensureImageAttachmentDir()
+    await writeFile(filePath, uint8Array, { baseDir: BaseDirectory.AppData })
+
+    const fullPath = await resolveAppDataFilePath(filePath)
+    return {
+      id: createImageAttachmentId(source),
+      url: convertFileSrc(fullPath),
+      name: fileName,
+      source
+    } satisfies ImageAttachment
+  }
+
+  async function buildAttachmentsFromBrowserFiles(files: File[], source: 'file' | 'paste', maxCount: number) {
+    const newImages: ImageAttachment[] = []
+    const skipped = {
+      unsupported: [] as string[],
+      oversized: [] as string[],
+      failed: 0,
+    }
+
+    for (const file of files) {
+      if (newImages.length >= maxCount) {
+        break
+      }
+
+      const fileName = file.name || `${source}-image`
+      if (!isSupportedImageType(file.type) && !isSupportedImageName(fileName)) {
+        skipped.unsupported.push(fileName)
+        continue
+      }
+
+      if (file.size > MAX_IMAGE_ATTACHMENT_SIZE_BYTES) {
+        skipped.oversized.push(fileName)
+        continue
+      }
+
+      try {
+        newImages.push(await createAttachmentFromBlob(file, fileName, source))
+      } catch (error) {
+        console.error('Failed to save image attachment:', error)
+        skipped.failed += 1
+      }
+    }
+
+    showSkippedImageToasts(skipped)
+    return newImages
+  }
+
+  async function buildAttachmentsFromLocalPaths(paths: string[], maxCount: number) {
+    const newImages: ImageAttachment[] = []
+    const skipped = {
+      unsupported: [] as string[],
+      oversized: [] as string[],
+      failed: 0,
+    }
+
+    for (const path of paths) {
+      if (newImages.length >= maxCount) {
+        break
+      }
+
+      const fileName = getFileName(path)
+      if (!isSupportedImageName(fileName)) {
+        skipped.unsupported.push(fileName)
+        continue
+      }
+
+      try {
+        const fileStat = await stat(path)
+        if (typeof fileStat.size === 'number' && fileStat.size > MAX_IMAGE_ATTACHMENT_SIZE_BYTES) {
+          skipped.oversized.push(fileName)
+          continue
+        }
+
+        newImages.push({
+          id: createImageAttachmentId('local'),
+          url: convertFileSrc(path),
+          name: fileName,
+          source: 'file' as const
+        })
+      } catch (error) {
+        console.error('Failed to read selected image:', error)
+        skipped.failed += 1
+      }
+    }
+
+    showSkippedImageToasts(skipped)
+    return newImages
+  }
+
   async function handleSelectLocalImages() {
     try {
+      if (attachedImages.length >= MAX_IMAGE_ATTACHMENTS) {
+        showImageFailureToast(t('record.chat.input.imageAttachment.maxCount', {
+          count: MAX_IMAGE_ATTACHMENTS,
+        }))
+        return
+      }
+
       // 移动端使用 HTML5 file input
       if (isMobileDevice_) {
         imageInputRef.current?.click()
@@ -232,22 +478,31 @@ export const ChatInput = React.memo(function ChatInput() {
       })
 
       if (selected && Array.isArray(selected)) {
-        const newImages: ImageAttachment[] = selected.map((path) => ({
-          id: `local-${Date.now()}-${Math.random()}`,
-          url: convertFileSrc(path),
-          name: path.split('/').pop() || path,
-          source: 'file' as const
-        }))
-        
-        setAttachedImages(prev => [...prev, ...newImages])
+        const remainingCount = MAX_IMAGE_ATTACHMENTS - attachedImages.length
+        if (selected.length > remainingCount) {
+          showImageFailureToast(t('record.chat.input.imageAttachment.maxCount', {
+            count: MAX_IMAGE_ATTACHMENTS,
+          }))
+        }
+
+        const newImages = await buildAttachmentsFromLocalPaths(selected, remainingCount)
+        appendImageAttachments(newImages, 'selectSuccess')
       }
     } catch (error) {
       console.error('Failed to select files:', error)
+      showImageFailureToast(t('record.chat.input.imageAttachment.selectFailed'))
     }
   }
 
   // 移动端图片选择，交给系统决定从相册还是相机获取
   async function handleSelectFromGallery() {
+    if (attachedImages.length >= MAX_IMAGE_ATTACHMENTS) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.maxCount', {
+        count: MAX_IMAGE_ATTACHMENTS,
+      }))
+      return
+    }
+
     if (isMobileDevice_) {
       if (imageInputRef.current) {
         imageInputRef.current.removeAttribute('capture')
@@ -262,24 +517,23 @@ export const ChatInput = React.memo(function ChatInput() {
       const files = event.target.files
       if (!files || files.length === 0) return
 
-      const newImages: ImageAttachment[] = []
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
-        const url = URL.createObjectURL(file)
-        newImages.push({
-          id: `local-${Date.now()}-${Math.random()}`,
-          url,
-          name: file.name,
-          source: 'file' as const
-        })
+      const selectedFiles = Array.from(files)
+      const remainingCount = MAX_IMAGE_ATTACHMENTS - attachedImages.length
+      const imageCandidateCount = selectedFiles.filter(file => isSupportedImageType(file.type) || isSupportedImageName(file.name)).length
+      if (imageCandidateCount > remainingCount) {
+        showImageFailureToast(t('record.chat.input.imageAttachment.maxCount', {
+          count: MAX_IMAGE_ATTACHMENTS,
+        }))
       }
 
-      setAttachedImages(prev => [...prev, ...newImages])
+      const newImages = await buildAttachmentsFromBrowserFiles(selectedFiles, 'file', remainingCount)
+      appendImageAttachments(newImages, 'selectSuccess')
       
       // 重置 input
       event.target.value = ''
     } catch (error) {
       console.error('Error in handleImageInputChange:', error)
+      showImageFailureToast(t('record.chat.input.imageAttachment.selectFailed'))
     }
   }
 
@@ -292,39 +546,99 @@ export const ChatInput = React.memo(function ChatInput() {
 
     e.preventDefault()
 
-    const newImages: ImageAttachment[] = []
-    for (const item of imageItems) {
-      const blob = item.getAsFile()
-      if (!blob) continue
+    const files = imageItems
+      .map(item => item.getAsFile())
+      .filter((file): file is File => Boolean(file))
 
-      try {
-        const arrayBuffer = await blob.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
-        const fileName = `paste-${Date.now()}-${Math.random().toString(36).substring(7)}.png`
-        const filePath = `screenshot/${fileName}`
-        
-        await writeFile(filePath, uint8Array, { baseDir: BaseDirectory.AppData })
-        
-        const fullPath = await (async () => {
-          const { appDataDir, join } = await import('@tauri-apps/api/path')
-          const appData = await appDataDir()
-          return await join(appData, filePath)
-        })()
-
-        newImages.push({
-          id: `paste-${Date.now()}-${Math.random()}`,
-          url: convertFileSrc(fullPath),
-          name: fileName,
-          source: 'paste'
-        })
-      } catch (error) {
-        console.error('Failed to save pasted image:', error)
-      }
+    const remainingCount = MAX_IMAGE_ATTACHMENTS - attachedImages.length
+    const imageCandidateCount = files.filter(file => isSupportedImageType(file.type) || isSupportedImageName(file.name)).length
+    if (imageCandidateCount > remainingCount) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.maxCount', {
+        count: MAX_IMAGE_ATTACHMENTS,
+      }))
     }
 
-    if (newImages.length > 0) {
-      setAttachedImages(prev => [...prev, ...newImages])
+    const newImages = await buildAttachmentsFromBrowserFiles(files, 'paste', remainingCount)
+    appendImageAttachments(newImages, 'pasteSuccess')
+  }
+
+  function hasImageTransfer(dataTransfer: DataTransfer) {
+    const items = Array.from(dataTransfer.items || [])
+    if (items.some(item => item.kind === 'file' && isSupportedImageType(item.type))) {
+      return true
     }
+
+    return Array.from(dataTransfer.files || []).some(file => isSupportedImageType(file.type) || isSupportedImageName(file.name))
+  }
+
+  function hasFileTransfer(dataTransfer: DataTransfer) {
+    const items = Array.from(dataTransfer.items || [])
+    return items.some(item => item.kind === 'file') || Array.from(dataTransfer.files || []).length > 0
+  }
+
+  function handleImageDragEnter(e: React.DragEvent<HTMLDivElement>) {
+    if (loading || !primaryModel || !hasFileTransfer(e.dataTransfer)) {
+      return
+    }
+
+    e.preventDefault()
+    if (!hasImageTransfer(e.dataTransfer)) {
+      return
+    }
+
+    imageDragDepthRef.current += 1
+    setIsImageDragOver(true)
+  }
+
+  function handleImageDragOver(e: React.DragEvent<HTMLDivElement>) {
+    if (loading || !primaryModel || !hasFileTransfer(e.dataTransfer)) {
+      return
+    }
+
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+    if (hasImageTransfer(e.dataTransfer)) {
+      setIsImageDragOver(true)
+    }
+  }
+
+  function handleImageDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    if (!isImageDragOver && !hasImageTransfer(e.dataTransfer)) {
+      return
+    }
+
+    imageDragDepthRef.current = Math.max(0, imageDragDepthRef.current - 1)
+    if (imageDragDepthRef.current === 0) {
+      setIsImageDragOver(false)
+    }
+  }
+
+  async function handleImageDrop(e: React.DragEvent<HTMLDivElement>) {
+    if (!hasFileTransfer(e.dataTransfer)) {
+      imageDragDepthRef.current = 0
+      setIsImageDragOver(false)
+      return
+    }
+
+    e.preventDefault()
+    imageDragDepthRef.current = 0
+    setIsImageDragOver(false)
+
+    if (loading || !primaryModel) {
+      return
+    }
+
+    const files = Array.from(e.dataTransfer.files || [])
+    const remainingCount = MAX_IMAGE_ATTACHMENTS - attachedImages.length
+    const imageCandidateCount = files.filter(file => isSupportedImageType(file.type) || isSupportedImageName(file.name)).length
+    if (imageCandidateCount > remainingCount) {
+      showImageFailureToast(t('record.chat.input.imageAttachment.maxCount', {
+        count: MAX_IMAGE_ATTACHMENTS,
+      }))
+    }
+
+    const newImages = await buildAttachmentsFromBrowserFiles(files, 'file', remainingCount)
+    appendImageAttachments(newImages, 'dropSuccess')
   }
 
   // 处理发送后的清理工作
@@ -694,13 +1008,30 @@ ${previewLines.join('\n')}
         linkedResource={linkedResource}
         onFileRemove={removeLinkedFile}
       />
-      <div className="group relative flex flex-col border rounded-xl z-10 gap-1 p-1 w-full bg-background focus-within:border-primary transition-colors overflow-hidden">
+      <div
+        className={cn(
+          "group relative flex flex-col border rounded-xl z-10 gap-1 p-1 w-full bg-background focus-within:border-primary transition-colors overflow-hidden",
+          isImageDragOver && "border-primary bg-primary/5"
+        )}
+        onDragEnter={handleImageDragEnter}
+        onDragOver={handleImageDragOver}
+        onDragLeave={handleImageDragLeave}
+        onDrop={handleImageDrop}
+      >
         {loading && (
           <ShineBorder
             borderWidth={1}
             duration={5}
             shineColor={["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A"]}
           />
+        )}
+        {isImageDragOver && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-[1px]">
+            <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-foreground shadow-sm">
+              <ImageIcon className="size-4 text-primary" />
+              <span>{t('record.chat.input.imageAttachment.dropHint')}</span>
+            </div>
+          </div>
         )}
         {pendingQuote && (
           <QuoteDisplay quoteData={pendingQuote} onRemove={removeQuote} />

@@ -1906,6 +1906,20 @@
           "agentDescription": "Smart assistant, can execute actions"
         },
         "attachImage": "Attach images",
+        "imageAttachment": {
+          "selectSuccess": "{count, plural, one {Attached # image} other {Attached # images}}",
+          "pasteSuccess": "{count, plural, one {Pasted # image} other {Pasted # images}}",
+          "dropSuccess": "{count, plural, one {Dropped # image} other {Dropped # images}}",
+          "maxCount": "You can attach up to {count} images",
+          "oversized": "{name} is larger than {size} and was skipped",
+          "oversizedMultiple": "{count} images are larger than {size} and were skipped",
+          "unsupported": "{name} is not a supported image format",
+          "unsupportedMultiple": "{count} files are not supported image formats",
+          "saveFailed": "Failed to save image. Please try again",
+          "saveFailedMultiple": "Failed to save {count} images. Please try again",
+          "selectFailed": "Failed to select images. Please try again",
+          "dropHint": "Drop images to attach"
+        },
         "imageSelector": {
           "title": "Select Images",
           "local": "Local Files",

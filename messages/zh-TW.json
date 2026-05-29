@@ -1829,6 +1829,20 @@
           "agentDescription": "智能助手，可執行操作"
         },
         "attachImage": "附加圖片",
+        "imageAttachment": {
+          "selectSuccess": "已附加 {count} 張圖片",
+          "pasteSuccess": "已貼上 {count} 張圖片",
+          "dropSuccess": "已拖入 {count} 張圖片",
+          "maxCount": "最多可附加 {count} 張圖片",
+          "oversized": "{name} 超過 {size}，已略過",
+          "oversizedMultiple": "{count} 張圖片超過 {size}，已略過",
+          "unsupported": "{name} 不是支援的圖片格式",
+          "unsupportedMultiple": "{count} 個檔案不是支援的圖片格式",
+          "saveFailed": "圖片儲存失敗，請重試",
+          "saveFailedMultiple": "{count} 張圖片儲存失敗，請重試",
+          "selectFailed": "選擇圖片失敗，請重試",
+          "dropHint": "放開以附加圖片"
+        },
         "imageSelector": {
           "title": "選擇圖片",
           "local": "本地文件",
