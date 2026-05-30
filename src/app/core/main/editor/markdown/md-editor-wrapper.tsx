@@ -313,12 +313,6 @@ export function MdEditor({ tabContentsRef, filePath, isActive }: MdEditorProps) 
     }
   }, [saveCurrentArticle, filePath, tabContentsRef, activeFilePath])
 
-  // Handle quote to chat - get selected text and emit event
-  const handleQuoteToChat = useCallback(() => {
-    // Get the selected text from the active editor
-    emitter.emit('get-quote-from-editor')
-  }, [])
-
   // Handle editor ready - store editor instance
   const handleEditorReady = useCallback((editor: any) => {
     setEditorInstance(editor)
@@ -423,7 +417,6 @@ export function MdEditor({ tabContentsRef, filePath, isActive }: MdEditorProps) 
         onChange={handleContentChange}
         placeholder={tEditor('placeholder')}
         activeFilePath={filePath}
-        onQuoteToChat={handleQuoteToChat}
         onEditorReady={handleEditorReady}
         outlineOpen={outlineOpen}
         outlinePosition={outlinePosition}

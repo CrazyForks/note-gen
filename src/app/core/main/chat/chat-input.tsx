@@ -27,6 +27,8 @@ import { TooltipButton } from "@/components/tooltip-button"
 import { isMobileDevice } from '@/lib/check'
 import { QuoteDisplay } from "./quote-display"
 import type { PendingQuote } from "@/stores/chat"
+import { AgentApprovalPanel } from "./agent-approval-panel"
+import { cancelPendingAgentAction, confirmPendingAgentAction } from "./agent-approval-actions"
 import { convertFileSrc } from "@tauri-apps/api/core"
 import { readTextFile, writeFile, BaseDirectory, exists, mkdir, stat } from "@tauri-apps/plugin-fs"
 import { ShineBorder } from "@/components/ui/shine-border"
@@ -166,6 +168,9 @@ export const ChatInput = React.memo(function ChatInput() {
     pendingQuote,
     setPendingQuote,
     clearPendingQuote,
+    editorSelectionQuote,
+    clearEditorSelectionQuote,
+    agentState,
   } = useChatStore()
   const { marks, trashState } = useMarkStore()
   const { activeFilePath } = useArticleStore()
@@ -188,6 +193,7 @@ export const ChatInput = React.memo(function ChatInput() {
   const onboardingAgentPromptArmedRef = useRef(false)
   const onboardingTypingTimerRefs = useRef<number[]>([])
   const maxImageSizeLabel = formatFileSize(MAX_IMAGE_ATTACHMENT_SIZE_BYTES)
+  const activeQuote = pendingQuote || editorSelectionQuote
 
   const applyTypedText = useCallback((value: string) => {
     setText(value)
@@ -266,6 +272,7 @@ export const ChatInput = React.memo(function ChatInput() {
 
   function removeQuote() {
     clearPendingQuote()
+    clearEditorSelectionQuote()
   }
 
   function showImageSuccessToast(count: number, key: 'selectSuccess' | 'pasteSuccess' | 'dropSuccess') {
@@ -836,7 +843,7 @@ export const ChatInput = React.memo(function ChatInput() {
           const truncatedNote = totalLines > 100 ? `\n... (共 ${totalLines} 行，后 ${totalLines - 100} 行省略)` : ''
 
           return `已关联当前编辑器文件：${filePath.split('/').pop() || filePath}
-你可以直接基于下面的行号和版本使用 replace_editor_content。
+你可以直接基于下面的行号和版本使用 editor_replace_lines。
 
 编辑器版本：v${editorContent.version}
 行号预览：
@@ -845,7 +852,7 @@ ${previewLines.join('\n')}
 \`\`\`${truncatedNote}
 
 优先使用：
-- 修改某个区块/列表：replace_editor_content({startLine: 4, endLine: 5, replaceContent: "新内容", version: ${editorContent.version}})
+- 修改某个区块/列表：editor_replace_lines({startLine: 4, endLine: 5, replaceContent: "新内容", version: ${editorContent.version}})
 - 仅在有精确选区位置时才使用 from/to
 `
         }
@@ -878,7 +885,7 @@ ${previewLines.join('\n')}
       const truncatedNote = totalLines > 100 ? `\n... (共 ${totalLines} 行，后 ${totalLines - 100} 行省略)` : ''
 
       return `已关联文件：${filePath.split('/').pop() || filePath}
-你可以使用 replace_editor_content 工具通过行号修改内容。
+如需修改这个非当前编辑器文件，请基于完整内容生成更新后的 Markdown，并使用 note_update_file 写入。
 
 行号预览：
 \`\`\`
@@ -886,8 +893,7 @@ ${previewLines.join('\n')}
 \`\`\`${truncatedNote}
 
 使用示例：
-- 修改第 4-5 行：replace_editor_content({startLine: 4, endLine: 5, replaceContent: "新内容"})
-- 替换第 10 行的特定内容：replace_editor_content({startLine: 10, endLine: 10, replaceContent: "新内容"})
+- 更新文件：note_update_file({filePath: "${filePath}", content: "完整更新后的 Markdown"})
 `
     } catch (error) {
       console.error('生成文件预览失败:', error)
@@ -1004,6 +1010,11 @@ ${previewLines.join('\n')}
           className="hidden"
         />
       )}
+      <AgentApprovalPanel
+        pendingConfirmation={agentState.pendingConfirmation}
+        onConfirm={confirmPendingAgentAction}
+        onCancel={cancelPendingAgentAction}
+      />
       <LinkedFileDisplay
         linkedResource={linkedResource}
         onFileRemove={removeLinkedFile}
@@ -1033,8 +1044,8 @@ ${previewLines.join('\n')}
             </div>
           </div>
         )}
-        {pendingQuote && (
-          <QuoteDisplay quoteData={pendingQuote} onRemove={removeQuote} />
+        {activeQuote && (
+          <QuoteDisplay quoteData={activeQuote} onRemove={removeQuote} />
         )}
         <ImageAttachments images={attachedImages} onRemove={removeImage} />
         <div className="relative w-full flex items-start">
@@ -1138,7 +1149,7 @@ ${previewLines.join('\n')}
               onClick={isMobile ? handleSelectFromGallery : handleSelectLocalImages}
               disabled={!primaryModel || loading}
             />
-            <ChatSend inputValue={text} onSent={handleSent} linkedResource={linkedResource} attachedImages={attachedImages} quoteData={pendingQuote} ref={chatSendRef} />
+            <ChatSend inputValue={text} onSent={handleSent} linkedResource={linkedResource} attachedImages={attachedImages} quoteData={activeQuote} ref={chatSendRef} />
           </div>
         </div>
 

@@ -80,6 +80,38 @@ export function EditorLayout() {
   const [showOrganizeNextStepDialog, setShowOrganizeNextStepDialog] = useState(false)
   const [onboardingResumeFilePath, setOnboardingResumeFilePath] = useState('')
 
+  useEffect(() => {
+    const handleFileContentUpdated = (event: { path: string; content: string }) => {
+      if (!event?.path) {
+        return
+      }
+
+      tabContentsRef.current[event.path] = event.content
+    }
+
+    const handleFilePathChanged = (event: { oldPath: string; newPath: string; content?: string }) => {
+      if (!event?.oldPath || !event?.newPath) {
+        return
+      }
+
+      const cachedContent = typeof event.content === 'string'
+        ? event.content
+        : tabContentsRef.current[event.oldPath]
+
+      delete tabContentsRef.current[event.oldPath]
+      if (typeof cachedContent === 'string') {
+        tabContentsRef.current[event.newPath] = cachedContent
+      }
+    }
+
+    emitter.on('editor-file-content-updated', handleFileContentUpdated as any)
+    emitter.on('editor-file-path-changed', handleFilePathChanged as any)
+    return () => {
+      emitter.off('editor-file-content-updated', handleFileContentUpdated as any)
+      emitter.off('editor-file-path-changed', handleFilePathChanged as any)
+    }
+  }, [])
+
   const persistOnboardingProgress = useCallback(async (progress: OnboardingProgress) => {
     const store = await Store.load('store.json')
     await store.set(ONBOARDING_PROGRESS_STORE_KEY, progress)

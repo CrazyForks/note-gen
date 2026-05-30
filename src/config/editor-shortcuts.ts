@@ -40,7 +40,6 @@ export const editorShortcutDefinitions = [
   { id: 'toggleOrderedList', group: 'format', defaultShortcut: 'Shift+Mod+7' },
   { id: 'toggleTaskList', group: 'format', defaultShortcut: 'Shift+Mod+9' },
   { id: 'toggleCodeBlock', group: 'format', defaultShortcut: 'Mod+Alt+C' },
-  { id: 'quoteToChat', group: 'format', defaultShortcut: 'Shift+Mod+Q', selectionRequired: true },
 
   { id: 'openAiMenu', group: 'ai', defaultShortcut: 'Mod+J', selectionRequired: true },
   { id: 'aiContinue', group: 'ai', defaultShortcut: 'Shift+Mod+J' },

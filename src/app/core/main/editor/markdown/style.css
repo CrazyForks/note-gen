@@ -722,6 +722,27 @@
   background-color: hsl(var(--primary) / 0.24);
 }
 
+.tiptap-editor .ProseMirror .tiptap-blur-selection {
+  background-color: hsl(var(--primary) / 0.18);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.16);
+}
+
+.tiptap-editor .ProseMirror.ProseMirror-focused .tiptap-blur-selection {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.dark .tiptap-editor .ProseMirror .tiptap-blur-selection {
+  background-color: hsl(var(--primary) / 0.26);
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.22);
+}
+
+.dark .tiptap-editor .ProseMirror.ProseMirror-focused .tiptap-blur-selection {
+  background-color: transparent;
+  box-shadow: none;
+}
+
 /* 暗色模式适配 */
 .dark .tiptap-editor .ProseMirror code {
   background-color: hsl(var(--muted) / 0.3);

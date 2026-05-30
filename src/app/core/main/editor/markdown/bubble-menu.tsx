@@ -14,7 +14,6 @@ import {
   ListOrdered,
   CheckSquare,
   Sparkles,
-  MessageCircle,
   Minimize2,
   Maximize2,
   Languages,
@@ -43,7 +42,6 @@ interface BubbleMenuProps {
   onAIConcise?: () => void
   onAIExpand?: () => void
   onAITranslate?: (targetLanguage: string) => void
-  onQuoteToChat?: () => void
   openAiMenuSignal?: number
   openTranslateMenuSignal?: number
   openLinkInputSignal?: number
@@ -55,7 +53,6 @@ export function BubbleMenu({
   onAIConcise,
   onAIExpand,
   onAITranslate,
-  onQuoteToChat,
   openAiMenuSignal = 0,
   openTranslateMenuSignal = 0,
   openLinkInputSignal = 0,
@@ -327,12 +324,6 @@ export function BubbleMenu({
   const toggleTaskList = () => editor.chain().focus().toggleTaskList().run()
   const toggleCodeBlock = () => editor.chain().focus().toggleCodeBlock().run()
 
-  const handleQuoteToChat = useCallback(() => {
-    onQuoteToChat?.()
-    setShow(false)
-    setShowAISubmenu(false)
-  }, [onQuoteToChat])
-
   const isActive = (name: string, attrs?: Record<string, unknown>) =>
     editor.isActive(name, attrs)
 
@@ -409,9 +400,6 @@ export function BubbleMenu({
                 )}
               </div>
 
-              <button className="w-full px-3 py-1.5 text-left text-sm hover:bg-muted flex items-center gap-2" onClick={() => { setShowAISubmenu(false); handleQuoteToChat() }}>
-                <MessageCircle className="w-3.5 h-3.5" /><span>{t('bubbleMenu.quoteToChat')}</span>
-              </button>
             </div>
           )}
         </div>

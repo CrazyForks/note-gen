@@ -22,13 +22,14 @@ import { Markdown } from '@tiptap/markdown'
 import { SearchAndReplace } from '@sereneinserenade/tiptap-search-and-replace'
 import UniqueId from '@tiptap/extension-unique-id'
 import { Extension, nodeInputRule, ResizableNodeView, type Editor as CoreEditor, type ResizableNodeViewDirection } from '@tiptap/core'
-import { Plugin, TextSelection } from '@tiptap/pm/state'
+import { AllSelection, Plugin, PluginKey, TextSelection, type Selection } from '@tiptap/pm/state'
+import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view'
 import 'katex/dist/katex.min.css'
 import { InlineMath, BlockMath } from './math-extension'
 import { MermaidDiagram } from './mermaid-extension'
 import { MathEditorDialog } from './math-editor-dialog'
 import { SearchReplacePanel } from './search-replace-panel'
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { Store } from '@tauri-apps/plugin-store'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -59,7 +60,7 @@ import { MarkdownParagraph, normalizeMarkdownPlaceholders } from './markdown-par
 import { StableCodeBlockLowlight } from './code-block-extension'
 import { shouldTransformImageSrcToWorkspaceAsset } from './image-src'
 import useSettingStore from '@/stores/setting'
-import useChatStore from '@/stores/chat'
+import useChatStore, { type PendingQuote } from '@/stores/chat'
 import { Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { buildMobileSelectionContext, isMobileSelectionContextStale } from './mobile-selection-context'
@@ -221,6 +222,194 @@ const PasteMarkdown = Extension.create({
   },
 })
 
+interface BlurSelectionState {
+  focused: boolean
+  from: number
+  to: number
+}
+
+const blurSelectionPluginKey = new PluginKey<BlurSelectionState>('blurSelectionHighlight')
+
+function isFullDocumentRange(from: number, to: number, docSize: number): boolean {
+  const start = Math.min(from, to)
+  const end = Math.max(from, to)
+
+  if (start === end || docSize <= 0) {
+    return false
+  }
+
+  if (start <= 0 && end >= docSize) {
+    return true
+  }
+
+  return docSize > 2 && start <= 1 && end >= docSize - 1
+}
+
+function isFullDocumentSelection(selection: Selection, docSize: number): boolean {
+  if (selection.empty) {
+    return false
+  }
+
+  return selection instanceof AllSelection || isFullDocumentRange(selection.from, selection.to, docSize)
+}
+
+function isFocusWithinEditor(view: EditorView): boolean {
+  const activeElement = view.dom.ownerDocument.activeElement
+
+  return view.hasFocus() || Boolean(activeElement && view.dom.contains(activeElement))
+}
+
+const BlurSelectionHighlight = Extension.create({
+  name: 'blurSelectionHighlight',
+
+  addProseMirrorPlugins() {
+    let pendingBlurFrame: number | null = null
+    let pendingBlurWindow: Window | null = null
+
+    const cancelPendingBlur = () => {
+      if (pendingBlurFrame === null) {
+        return
+      }
+
+      pendingBlurWindow?.cancelAnimationFrame(pendingBlurFrame)
+      pendingBlurFrame = null
+      pendingBlurWindow = null
+    }
+
+    const setFocused = (view: EditorView) => {
+      cancelPendingBlur()
+      view.dispatch(view.state.tr.setMeta(blurSelectionPluginKey, {
+        focused: true,
+        from: 0,
+        to: 0,
+      }))
+    }
+
+    const setBlurredIfFocusLeftEditor = (view: EditorView) => {
+      if (isFocusWithinEditor(view)) {
+        setFocused(view)
+        return
+      }
+
+      const { selection } = view.state
+      const { from, to } = selection
+      const shouldKeepSelection = from !== to && !isFullDocumentSelection(selection, view.state.doc.content.size)
+      view.dispatch(view.state.tr.setMeta(blurSelectionPluginKey, {
+        focused: false,
+        from: shouldKeepSelection ? from : 0,
+        to: shouldKeepSelection ? to : 0,
+      }))
+    }
+
+    return [
+      new Plugin<BlurSelectionState>({
+        key: blurSelectionPluginKey,
+        view: () => ({
+          destroy() {
+            cancelPendingBlur()
+          },
+        }),
+        state: {
+          init: () => ({
+            focused: false,
+            from: 0,
+            to: 0,
+          }),
+          apply(tr, value) {
+            const meta = tr.getMeta(blurSelectionPluginKey) as Partial<BlurSelectionState> | undefined
+            const mapped = {
+              ...value,
+              from: tr.mapping.map(value.from),
+              to: tr.mapping.map(value.to),
+            }
+            const next = meta ? { ...mapped, ...meta } : mapped
+            const { from, to } = tr.selection
+
+            if (meta && ('from' in meta || 'to' in meta)) {
+              return next
+            }
+
+            if (!tr.selection.empty) {
+              if (isFullDocumentSelection(tr.selection, tr.doc.content.size)) {
+                return {
+                  ...next,
+                  from: 0,
+                  to: 0,
+                }
+              }
+
+              return {
+                ...next,
+                from,
+                to,
+              }
+            }
+
+            if (tr.selection.empty) {
+              return {
+                ...next,
+                from: 0,
+                to: 0,
+              }
+            }
+
+            return next
+          },
+        },
+        props: {
+          decorations(state) {
+            const pluginState = blurSelectionPluginKey.getState(state)
+            if (!pluginState || pluginState.focused || pluginState.from === pluginState.to) {
+              return DecorationSet.empty
+            }
+
+            const from = Math.max(0, Math.min(pluginState.from, state.doc.content.size))
+            const to = Math.max(0, Math.min(pluginState.to, state.doc.content.size))
+            if (from === to || isFullDocumentRange(from, to, state.doc.content.size)) {
+              return DecorationSet.empty
+            }
+
+            return DecorationSet.create(state.doc, [
+              Decoration.inline(Math.min(from, to), Math.max(from, to), {
+                class: 'tiptap-blur-selection',
+              }),
+            ])
+          },
+          handleDOMEvents: {
+            focus(view) {
+              setFocused(view)
+              return false
+            },
+            mousedown(view, event) {
+              if (event.target instanceof Node && view.dom.contains(event.target)) {
+                setFocused(view)
+              }
+              return false
+            },
+            blur(view) {
+              cancelPendingBlur()
+              pendingBlurWindow = view.dom.ownerDocument.defaultView
+
+              if (!pendingBlurWindow) {
+                setBlurredIfFocusLeftEditor(view)
+                return false
+              }
+
+              pendingBlurFrame = pendingBlurWindow.requestAnimationFrame(() => {
+                pendingBlurFrame = null
+                pendingBlurWindow = null
+                setBlurredIfFocusLeftEditor(view)
+              })
+
+              return false
+            },
+          },
+        },
+      }),
+    ]
+  },
+})
+
 
 // 简单的启发式函数：检查文本是否看起来像 Markdown
 function looksLikeMarkdown(text: string): boolean {
@@ -256,7 +445,6 @@ interface TipTapEditorProps {
   placeholder?: string
   editable?: boolean
   activeFilePath?: string
-  onQuoteToChat?: () => void
   onReady?: () => void
   onEditorReady?: (editor: any) => void
   outlineOpen?: boolean
@@ -302,7 +490,6 @@ export function TipTapEditor({
   placeholder,
   editable = true,
   activeFilePath = '',
-  onQuoteToChat,
   onReady,
   onEditorReady,
   outlineOpen,
@@ -694,6 +881,7 @@ export function TipTapEditor({
       }),
       // 自定义粘贴 Markdown 扩展
       PasteMarkdown,
+      BlurSelectionHighlight,
     ],
     content: initialContent,
     contentType: 'markdown',
@@ -716,6 +904,26 @@ export function TipTapEditor({
     },
   })
 
+  const clearBlurSelectionHighlight = useCallback(() => {
+    if (!editor || editor.isDestroyed) {
+      return
+    }
+
+    editor.view.dispatch(editor.state.tr.setMeta(blurSelectionPluginKey, {
+      focused: true,
+      from: 0,
+      to: 0,
+    }))
+  }, [editor])
+
+  const handleEditorMouseDownCapture = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return
+    }
+
+    clearBlurSelectionHighlight()
+  }, [clearBlurSelectionHighlight])
+
   const persistEditorViewState = useCallback(() => {
     if (!editor || !activeFilePath || !scrollContainerRef.current) {
       return
@@ -725,15 +933,32 @@ export function TipTapEditor({
       return
     }
 
-    const { from, to } = editor.state.selection
+    const { selection } = editor.state
+    const docSize = editor.state.doc.content.size
+    const previousState = lastViewStateRef.current
+    let selectionFrom = selection.from
+    let selectionTo = selection.to
+
+    if (isFullDocumentSelection(selection, docSize)) {
+      if (
+        previousState?.path === activeFilePath &&
+        !isFullDocumentRange(previousState.selectionFrom, previousState.selectionTo, docSize)
+      ) {
+        selectionFrom = previousState.selectionFrom
+        selectionTo = previousState.selectionTo
+      } else {
+        selectionFrom = clampSelectionPosition(selection.to, docSize)
+        selectionTo = selectionFrom
+      }
+    }
+
     const nextState = {
       path: activeFilePath,
-      selectionFrom: from,
-      selectionTo: to,
+      selectionFrom,
+      selectionTo,
       scrollTop: scrollContainerRef.current.scrollTop,
     }
 
-    const previousState = lastViewStateRef.current
     if (
       previousState &&
       previousState.path === nextState.path &&
@@ -746,8 +971,8 @@ export function TipTapEditor({
 
     lastViewStateRef.current = nextState
     setEditorViewState(activeFilePath, {
-      selectionFrom: from,
-      selectionTo: to,
+      selectionFrom,
+      selectionTo,
       scrollTop: nextState.scrollTop,
     })
   }, [activeFilePath, editor, setEditorViewState])
@@ -812,9 +1037,15 @@ export function TipTapEditor({
     }
 
     const docSize = editor.state.doc.content.size
-    const selectionFrom = clampSelectionPosition(savedViewState.selectionFrom, docSize)
-    const selectionTo = clampSelectionPosition(savedViewState.selectionTo, docSize)
+    let selectionFrom = clampSelectionPosition(savedViewState.selectionFrom, docSize)
+    let selectionTo = clampSelectionPosition(savedViewState.selectionTo, docSize)
     const wantedSelection = Math.max(savedViewState.selectionFrom, savedViewState.selectionTo)
+    const normalizedFullDocumentSelection = isFullDocumentRange(selectionFrom, selectionTo, docSize)
+
+    if (normalizedFullDocumentSelection) {
+      selectionFrom = clampSelectionPosition(selectionTo, docSize)
+      selectionTo = selectionFrom
+    }
 
     if (docSize < wantedSelection && attempt < 5) {
       setTimeout(() => {
@@ -846,9 +1077,16 @@ export function TipTapEditor({
           selectionTo,
           scrollTop: savedViewState.scrollTop,
         }
+        if (normalizedFullDocumentSelection) {
+          setEditorViewState(path, {
+            selectionFrom,
+            selectionTo,
+            scrollTop: savedViewState.scrollTop,
+          })
+        }
       })
     })
-  }, [editor, getEditorViewState])
+  }, [editor, getEditorViewState, setEditorViewState])
 
   // 处理编辑器内链接点击
   useEffect(() => {
@@ -1036,11 +1274,6 @@ export function TipTapEditor({
     if (!editor || !mobileContext) return
 
     switch (action) {
-      case 'quote':
-        if (restoreMobileContextSelection()) {
-          onQuoteToChat?.()
-        }
-        return
       case 'bold':
         if (restoreMobileContextSelection()) {
           editor.chain().focus().toggleBold().run()
@@ -1165,7 +1398,6 @@ export function TipTapEditor({
   }, [
     editor,
     mobileContext,
-    onQuoteToChat,
     restoreMobileContextSelection,
     updateMobileContext,
   ])
@@ -1961,10 +2193,6 @@ export function TipTapEditor({
       toggleOrderedList: (targetEditor) => targetEditor.chain().focus().toggleOrderedList().run(),
       toggleTaskList: (targetEditor) => targetEditor.chain().focus().toggleTaskList().run(),
       toggleCodeBlock: (targetEditor) => targetEditor.chain().focus().toggleCodeBlock().run(),
-      quoteToChat: () => {
-        onQuoteToChat?.()
-        return true
-      },
       openAiMenu: () => {
         setOpenAiMenuSignal((value) => value + 1)
         return true
@@ -2060,7 +2288,6 @@ export function TipTapEditor({
   }, [
     insertImageAtSelection,
     isMobile,
-    onQuoteToChat,
     onTerminate,
     onToggleOutline,
   ])
@@ -2542,6 +2769,55 @@ export function TipTapEditor({
 
   // Editor tools event handlers for Agent integration
   useEffect(() => {
+    const buildCurrentQuoteData = (): PendingQuote | null => {
+      if (!editor) {
+        return null
+      }
+
+      const { from, to } = editor.state.selection
+      if (from === to) {
+        return null
+      }
+
+      const quote = editor.state.doc.textBetween(from, to)
+      if (!quote.trim()) {
+        return null
+      }
+
+      let selectedMarkdown = quote
+      if (editor.markdown) {
+        try {
+          const slice = editor.state.doc.slice(from, to)
+          const json = { type: 'doc', content: slice.content.toJSON() }
+          selectedMarkdown = editor.markdown.serialize(json).trim() || quote
+        } catch {
+          selectedMarkdown = quote
+        }
+      }
+
+      const fileName = activeFilePath?.split('/').pop() || ''
+      const textBeforeFrom = editor.state.doc.textBetween(0, from, '\n', '\n')
+      const startLine = (textBeforeFrom.match(/\n/g)?.length || 0) + 1
+
+      const textBeforeTo = editor.state.doc.textBetween(0, to, '\n', '\n')
+      const endLine = (textBeforeTo.match(/\n/g)?.length || 0) + 1
+
+      return {
+        quote,
+        fullContent: selectedMarkdown,
+        fileName,
+        startLine,
+        endLine,
+        from,
+        to,
+        articlePath: activeFilePath || '',
+      }
+    }
+
+    const syncEditorSelectionQuote = () => {
+      useChatStore.getState().setEditorSelectionQuote(buildCurrentQuoteData())
+    }
+
     // Get editor selection
     const handleGetSelection = ({ resolve }: { resolve: (data: { text: string; from: number; to: number; html?: string; startLine?: number; endLine?: number }) => void }) => {
       if (!editor) {
@@ -2597,7 +2873,15 @@ export function TipTapEditor({
     }
 
     // Insert content at cursor
-    const handleInsert = ({ content, resolve }: { content: string; resolve: (result: { success: boolean; insertedLength: number; newCursorPosition?: number }) => void }) => {
+    const handleInsert = ({
+      content,
+      position,
+      resolve,
+    }: {
+      content: string;
+      position?: number;
+      resolve: (result: { success: boolean; insertedLength: number; newCursorPosition?: number }) => void;
+    }) => {
       if (!editor) {
         resolve({ success: false, insertedLength: 0 })
         return
@@ -2607,6 +2891,11 @@ export function TipTapEditor({
         // Insert content with markdown parsing
         // Wrap in setTimeout to avoid React lifecycle flushSync conflict
         runDeferredEditorCommand(() => {
+          if (typeof position === 'number') {
+            const insertPosition = clampSelectionPosition(position, editor.state.doc.content.size)
+            editor.commands.setTextSelection({ from: insertPosition, to: insertPosition })
+          }
+
           editor.commands.insertContent(content, { contentType: 'markdown' })
 
           // Use the actual cursor position after transaction
@@ -2770,30 +3059,8 @@ export function TipTapEditor({
 
     // Get quote from editor for chat
     const handleGetQuote = () => {
-      if (!editor) return
-      const { from, to } = editor.state.selection
-      if (from !== to) {
-        const quote = editor.state.doc.textBetween(from, to)
-        const fileName = activeFilePath?.split('/').pop() || ''
-        const textBeforeFrom = editor.state.doc.textBetween(0, from, '\n', '\n')
-        const startLine = (textBeforeFrom.match(/\n/g)?.length || 0) + 1
-
-        const textBeforeTo = editor.state.doc.textBetween(0, to, '\n', '\n')
-        const endLine = (textBeforeTo.match(/\n/g)?.length || 0) + 1
-        const markdownLines = editor.getMarkdown().split('\n')
-        const quotedMarkdown = markdownLines.slice(startLine - 1, endLine).join('\n')
-
-        const quoteData = {
-          quote,
-          fullContent: quotedMarkdown || quote,
-          fileName,
-          startLine,
-          endLine,
-          from,
-          to,
-          articlePath: activeFilePath || '',
-        }
-
+      const quoteData = buildCurrentQuoteData()
+      if (quoteData) {
         useChatStore.getState().setPendingQuote(quoteData)
         emitter.emit('insert-quote', quoteData)
       }
@@ -2863,7 +3130,9 @@ export function TipTapEditor({
       emitter.on('editor-redo', handleRedo)
       emitter.on('mobile-editor-toggle-outline', handleMobileToggleOutline)
       emitter.on('editor-can-undo-redo', handleCanUndoRedo)
+      editor.on('selectionUpdate', syncEditorSelectionQuote)
       document.addEventListener('tiptap-insert-mermaid', handleInsertMermaid as EventListener)
+      syncEditorSelectionQuote()
       listenersSetup = true
     }
 
@@ -2877,6 +3146,8 @@ export function TipTapEditor({
       emitter.off('editor-redo', handleRedo)
       emitter.off('mobile-editor-toggle-outline', handleMobileToggleOutline)
       emitter.off('editor-can-undo-redo', handleCanUndoRedo)
+      editor?.off('selectionUpdate', syncEditorSelectionQuote)
+      useChatStore.getState().clearEditorSelectionQuote()
       // Only remove event listener if it was actually added
       if (listenersSetup) {
         document.removeEventListener('tiptap-insert-mermaid', handleInsertMermaid as EventListener)
@@ -2921,6 +3192,7 @@ export function TipTapEditor({
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-x-hidden overflow-y-auto relative"
+        onMouseDownCapture={handleEditorMouseDownCapture}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleEditorDrop}
       >
@@ -2953,7 +3225,6 @@ export function TipTapEditor({
               onAIConcise={handleAIConcise}
               onAIExpand={handleAIExpand}
               onAITranslate={handleAITranslate}
-              onQuoteToChat={onQuoteToChat}
               openAiMenuSignal={openAiMenuSignal}
               openTranslateMenuSignal={openTranslateMenuSignal}
               openLinkInputSignal={openLinkInputSignal}

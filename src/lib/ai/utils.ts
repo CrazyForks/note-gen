@@ -277,3 +277,38 @@ export async function createOpenAIClient(AiConfig?: AiConfig): Promise<OpenAICom
     apiKey,
   })
 }
+
+function supportsEnableThinkingSwitch(aiConfig?: AiConfig): boolean {
+  const model = aiConfig?.model?.toLowerCase() || ''
+  const baseURL = aiConfig?.baseURL?.toLowerCase() || ''
+
+  if (!model) {
+    return false
+  }
+
+  if (model.includes('qwen3') || model.includes('qwq')) {
+    return true
+  }
+
+  const isQwenProvider =
+    baseURL.includes('dashscope') ||
+    baseURL.includes('aliyuncs') ||
+    baseURL.includes('siliconflow') ||
+    baseURL.includes('notegen')
+
+  return isQwenProvider && model.includes('qwen')
+}
+
+export function withEditorFastAiRequestOptions<const T extends OpenAI.Chat.ChatCompletionCreateParams>(
+  params: T,
+  aiConfig?: AiConfig
+): T {
+  if (!supportsEnableThinkingSwitch(aiConfig)) {
+    return params
+  }
+
+  return {
+    ...params,
+    enable_thinking: false,
+  } as T
+}

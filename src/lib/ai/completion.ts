@@ -1,4 +1,10 @@
-import { getAISettings, validateAIService, createOpenAIClient, handleAIError } from './utils';
+import {
+  getAISettings,
+  validateAIService,
+  createOpenAIClient,
+  handleAIError,
+  withEditorFastAiRequestOptions,
+} from './utils';
 
 /**
  * 清理补全结果
@@ -43,7 +49,7 @@ ${context}
 
 Continuation:`
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create(withEditorFastAiRequestOptions({
       model: aiConfig?.model || '',
       messages: [
         {
@@ -54,7 +60,7 @@ Continuation:`
       temperature: 0.7,
       max_tokens: 80,
       top_p: 0.95,
-    }, {
+    }, aiConfig), {
       signal: abortSignal
     })
 
@@ -95,7 +101,7 @@ ${context}
 
 Continuation:`
 
-    const stream = await openai.chat.completions.create({
+    const stream = await openai.chat.completions.create(withEditorFastAiRequestOptions({
       model: aiConfig?.model || '',
       messages: [
         {
@@ -107,7 +113,7 @@ Continuation:`
       max_tokens: 80,
       top_p: 0.95,
       stream: true,
-    }, {
+    }, aiConfig), {
       signal: abortSignal
     })
 
