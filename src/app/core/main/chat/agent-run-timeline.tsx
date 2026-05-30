@@ -268,7 +268,7 @@ export function AgentRunTimeline({
             const visibleMessage = shouldShowEventMessage(event) ? event.message : undefined
             const inputDetail = compactTraceInput(event.input)
             const outputDetail = compactTraceOutput(event, visibleMessage)
-            const hasDetails = Boolean(inputDetail !== undefined || outputDetail !== undefined)
+            const hasDetails = Boolean(visibleMessage || inputDetail !== undefined || outputDetail !== undefined)
             const displayDuration = event.duration ?? (
               event.status === "running"
                 ? Math.max(0, liveNow - event.timestamp)
@@ -286,7 +286,7 @@ export function AgentRunTimeline({
                   <span className="mt-0.5 shrink-0">{eventIcon(event)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate">
+                      <span className={expanded ? "min-w-0 break-words [overflow-wrap:anywhere]" : "truncate"}>
                         {event.toolName ? formatAgentToolName(event.toolName) : event.title}
                       </span>
                       {displayDuration !== undefined && (
@@ -312,6 +312,14 @@ export function AgentRunTimeline({
 
                 {expanded && hasDetails && (
                   <div className="ml-6 flex flex-col gap-2 border-l pl-3 pb-2 text-xs">
+                    {visibleMessage && (
+                      <div className="flex flex-col gap-1">
+                        <div className="font-medium text-muted-foreground">描述</div>
+                        <div className="rounded bg-muted/60 p-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-muted-foreground">
+                          {visibleMessage}
+                        </div>
+                      </div>
+                    )}
                     {inputDetail !== undefined && (
                       <div className="flex flex-col gap-1">
                         <div className="font-medium text-muted-foreground">参数</div>
