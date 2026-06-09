@@ -1344,6 +1344,10 @@
           "title": "ウィンドウを開く/隠す",
           "desc": "主ウィンドウを開く/隠す。"
         },
+        "screenshotRecord": {
+          "title": "スクリーンショット記録",
+          "desc": "スクリーンショット記録を開き、ウィンドウまたは画面を切り抜いて保存します。"
+        },
         "quickRecordText": {
           "title": "テキストを素早く記録します",
           "desc": "主ウィンドウを開き、テキスト記録を表示します。"
@@ -1496,7 +1500,37 @@
       "fileUnsupportedContent": "このファイル形式のテキスト抽出は未対応です。元ファイルのパスを保存しました。",
       "fileReadFailed": "ファイルのテキスト読み取りに失敗しました。元ファイルのパスを保存しました。",
       "imageUploadFallback": "画像をローカルに保存しました",
-      "imageUploadFallbackDescription": "画像ホストへのアップロードに失敗したため、ローカル画像を使用します。"
+      "imageUploadFallbackDescription": "画像ホストへのアップロードに失敗したため、ローカル画像を使用します。",
+      "screenshotRecordTitle": "スクリーンショット記録",
+      "screenshotCapturing": "取得可能なウィンドウをキャプチャ中...",
+      "screenshotCaptureFailed": "画面をキャプチャできません",
+      "screenshotPermissionHint": "システムの画面収録権限を確認してから再試行してください。",
+      "screenshotEmpty": "キャプチャ可能なウィンドウがありません",
+      "screenshotSourceCount": "{count} 件のウィンドウが利用可能",
+      "screenshotNoSource": "利用可能なウィンドウはありません",
+      "screenshotRefresh": "再取得",
+      "retry": "再試行",
+      "screenshotSave": "スクリーンショットを保存",
+      "screenshotSaveAndRecognize": "保存して認識",
+      "screenshotSaveOnly": "スクリーンショットのみ保存",
+      "screenshotSaveFailed": "スクリーンショット記録の保存に失敗しました",
+      "screenshotRecognitionPending": "スクリーンショットを保存しました。画像認識中...",
+      "screenshotRecognitionComplete": "画像認識が完了しました",
+      "screenshotRecognitionFailed": "画像認識に失敗しました",
+      "screenshotRecognitionOff": "認識オフ",
+      "screenshotRecognitionMethod": "認識",
+      "screenshotNoText": "このスクリーンショットから文字を認識できませんでした",
+      "screenshotSavedOnly": "認識せずに画像を保存しました",
+      "screenshotRecognizing": "認識中...",
+      "screenshotRecognizeAgain": "再認識",
+      "screenshotAiDescription": "AI 説明",
+      "screenshotOcrContent": "OCR 内容",
+      "screenshotCopyImageLink": "画像リンクをコピー",
+      "screenshotShowInFolder": "フォルダで表示",
+      "screenshotKeyboardHint": "Enter で保存、Esc でキャンセル、矢印キーでソース切替。",
+      "screenshotModeWindow": "ウィンドウ",
+      "screenshotModeRegion": "範囲",
+      "screenshotModeDisplay": "ディスプレイ"
     },
     "syncStatus": {
       "checking_remote": "リモート更新を確認中",

@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { CheckSquare, Clipboard, CopySlash, Mic, ImagePlus, Link, FileText, SquarePen } from "lucide-react"
+import { CheckSquare, Clipboard, CopySlash, Mic, ImagePlus, Link, FileText, SquarePen, ScanText } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 interface SimpleMobileToolProps {
@@ -20,6 +20,8 @@ export function SimpleMobileTool({ toolId, onToolClick }: SimpleMobileToolProps)
         return { icon: <CopySlash className="w-5 h-5" />, label: t('record.mark.type.text') }
       case 'recording':
         return { icon: <Mic className="w-5 h-5" />, label: t('record.mark.type.recording') }
+      case 'screenshotImport':
+        return { icon: <ScanText className="w-5 h-5" />, label: t('record.mark.type.screenshot') }
       case 'image':
         return { icon: <ImagePlus className="w-5 h-5" />, label: t('record.mark.type.image') }
       case 'link':

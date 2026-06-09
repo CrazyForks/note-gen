@@ -19,12 +19,13 @@ export function MobileRecordTools({ onClose }: MobileRecordToolsProps) {
   const t = useTranslations()
   const { loadFileTree, setActiveFilePath } = useArticleStore()
 
-  // 移动端固定的记录工具（排除截图）
+  // 移动端截图记录通过系统图片选择导入截图。
   const mobileTools = [
     { id: 'write' },
     { id: 'clipboard' },
     { id: 'text' },
     { id: 'recording' },
+    { id: 'screenshotImport' },
     { id: 'image' },
     { id: 'link' },
     { id: 'file' },
@@ -112,6 +113,14 @@ export function MobileRecordTools({ onClose }: MobileRecordToolsProps) {
 
     if (toolId === 'clipboard') {
       await handleSmartClipboard()
+      return
+    }
+
+    if (toolId === 'screenshotImport') {
+      emitter.emit('toolbar-shortcut-image')
+      if (onClose) {
+        onClose()
+      }
       return
     }
 

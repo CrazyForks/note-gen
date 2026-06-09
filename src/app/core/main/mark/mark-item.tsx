@@ -19,7 +19,7 @@ import useMarkStore from "@/stores/mark";
 import useTagStore from "@/stores/tag";
 import { fetchAiDesc } from "@/lib/ai/description";
 import { appDataDir } from "@tauri-apps/api/path";
-import { CheckSquare, ImageUp, RefreshCw, Settings2, Square } from "lucide-react";
+import { AlertCircle, CheckSquare, ImageUp, LoaderCircle, RefreshCw, Settings2, Square } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { confirm } from "@tauri-apps/plugin-dialog";
@@ -42,6 +42,7 @@ import { canOpenMarkSource, getMarkOpenAction } from "./mark-open-path";
 import { useSidebarStore } from "@/stores/sidebar";
 import useArticleStore from "@/stores/article";
 import { createRecordTab } from "./mark-record-tab";
+import { getImageRecordDisplayText, getImageRecordStatus, type ImageRecordStatusLabels, isImageRecord } from "./image-record-status";
 
 dayjs.extend(relativeTime)
 
@@ -205,9 +206,56 @@ MarkDetailTrigger.displayName = 'MarkDetailTrigger'
 
 export type MarkItemVariant = 'list' | 'compact' | 'cards'
 
+function getImageStatusClasses(status: string | null) {
+  switch (status) {
+  case 'pending':
+    return "border-amber-300/70 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-200"
+  case 'failed':
+    return "border-red-300/70 bg-red-50 text-red-800 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-200"
+  case 'noText':
+    return "border-zinc-300/70 bg-zinc-50 text-zinc-700 dark:border-zinc-500/40 dark:bg-zinc-500/15 dark:text-zinc-200"
+  case 'savedOnly':
+    return "border-blue-300/70 bg-blue-50 text-blue-800 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200"
+  default:
+    return "border-zinc-300/70 bg-zinc-50 text-zinc-700 dark:border-zinc-500/40 dark:bg-zinc-500/15 dark:text-zinc-200"
+  }
+}
+
+function ImageRecordStatusBadge({
+  status,
+  label,
+  compact = false,
+}: {
+  status: string | null
+  label: string
+  compact?: boolean
+}) {
+  if (!status || !label) {
+    return null
+  }
+
+  const icon = status === 'pending'
+    ? <LoaderCircle className="size-3 animate-spin" />
+    : status === 'failed'
+      ? <AlertCircle className="size-3" />
+      : null
+
+  return (
+    <span className={cn(
+      "inline-flex shrink-0 items-center gap-1 rounded-full border font-medium",
+      compact ? "px-1.5 py-0 text-[10px]" : "px-2 py-0.5 text-[11px]",
+      getImageStatusClasses(status)
+    )}>
+      {icon}
+      <span className="max-w-28 truncate">{label}</span>
+    </span>
+  )
+}
+
 export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = true}: {mark: Mark, variant?: MarkItemVariant, interactive?: boolean}) => {
   const t = useTranslations('record.mark.type');
   const todoT = useTranslations('record.mark.todo');
+  const captureT = useTranslations('record.capture');
   const recordingT = useTranslations('recording');
   const { isMultiSelectMode, selectedMarkIds, toggleMarkSelection } = useMarkStore();
   const { recordTextSize, sttModel } = useSettingStore();
@@ -215,6 +263,14 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
   const router = useRouter();
   const isMobile = useIsMobile();
   const [isRetryingTranscription, setIsRetryingTranscription] = useState(false);
+  const imageStatusLabels: ImageRecordStatusLabels = useMemo(() => ({
+    pending: captureT('screenshotRecognitionPending'),
+    failed: captureT('screenshotRecognitionFailed'),
+    noText: captureT('screenshotNoText'),
+    savedOnly: captureT('screenshotSavedOnly'),
+  }), [captureT])
+  const imageStatus = useMemo(() => getImageRecordStatus(mark, imageStatusLabels), [imageStatusLabels, mark])
+  const imageStatusText = useMemo(() => getImageRecordDisplayText(mark, imageStatusLabels), [imageStatusLabels, mark])
 
   const lineHeight = useMemo(() => getLineHeight(recordTextSize), [recordTextSize])
   const lineHeightRem = useMemo(() => getLineHeightRem(recordTextSize), [recordTextSize])
@@ -307,7 +363,7 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
   }, [fetchMarks, isMobile, isRetryingTranscription, mark, recordingT, router, sttModel])
 
   const renderListTextBlock = (title: string, preview?: string) => {
-    const displayTitle = compactRecordText(title) || t(mark.type)
+    const displayTitle = compactRecordText(title) || imageStatusText || t(mark.type)
     const displayPreview = compactRecordText(preview)
     const shouldShowPreview = Boolean(displayPreview && displayPreview !== displayTitle)
 
@@ -346,6 +402,9 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
         <span className={cn(getMarkTypeListBadgeClasses(mark.type, 'xs'), 'shrink-0')}>
           {t(mark.type)}
         </span>
+        {isImageRecord(mark) ? (
+          <ImageRecordStatusBadge status={imageStatus} label={imageStatusText} compact />
+        ) : null}
         {mark.type === 'todo' && itemContent.todo ? (
           <span className={`size-2 shrink-0 rounded-full ${todoPriorityDotClass}`} />
         ) : null}
@@ -361,7 +420,7 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
           ) : (
             <MarkDetailTrigger
               mark={mark}
-              content={itemContent.title || itemContent.preview || t(mark.type)}
+              content={itemContent.title || itemContent.preview || imageStatusText || t(mark.type)}
               className={`block max-w-full truncate text-${recordTextSize} font-medium ${interactive ? 'hover:underline' : ''}`}
               interactive={interactive}
             />
@@ -398,13 +457,18 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
           <span className="ml-auto shrink-0 text-xs">{dayjs(mark.createdAt).format('MM-DD HH:mm')}</span>
         </div>
         {isImageCard && mark.url ? (
-          <div className="w-full min-w-0 max-w-full overflow-hidden rounded-md bg-zinc-100">
+          <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-md bg-zinc-100">
             <ImageViewer
               url={mark.url}
               path={mark.type === 'scan' ? 'screenshot' : 'image'}
               imageClassName="h-auto max-h-56 w-full object-cover"
               interactive={interactive}
             />
+            {imageStatus ? (
+              <div className="absolute left-2 top-2">
+                <ImageRecordStatusBadge status={imageStatus} label={imageStatusText} />
+              </div>
+            ) : null}
           </div>
         ) : null}
         <div className="w-full min-w-0 max-w-full space-y-1.5 overflow-hidden">
@@ -419,7 +483,7 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
           ) : (
             <MarkDetailTrigger
               mark={mark}
-              content={itemContent.title || itemContent.preview || t(mark.type)}
+              content={itemContent.title || itemContent.preview || imageStatusText || t(mark.type)}
               className={`block max-w-full truncate text-${recordTextSize} font-semibold ${interactive ? 'hover:underline' : ''}`}
               interactive={interactive}
             />
@@ -497,9 +561,10 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
             <span className={cn(getMarkTypeListBadgeClasses(mark.type, 'xs'), 'shrink-0')}>
               {t(mark.type)}
             </span>
+            <ImageRecordStatusBadge status={imageStatus} label={imageStatusText} compact />
             <span className={`ml-auto shrink-0 text-${recordTextSize}`}>{dayjs(mark.createdAt).fromNow()}</span>
           </div>
-          {renderListTextBlock(itemContent.title || mark.desc || t(mark.type), itemContent.preview)}
+          {renderListTextBlock(itemContent.title || mark.desc || imageStatusText || t(mark.type), itemContent.preview)}
         </div>
     )
     case 'image':
@@ -509,10 +574,11 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
             <span className={cn(getMarkTypeListBadgeClasses(mark.type, 'xs'), 'shrink-0')}>
               {t(mark.type)}
             </span>
+            <ImageRecordStatusBadge status={imageStatus} label={imageStatusText} compact />
             {mark.url.includes('http') ? <ImageUp className="size-3 text-zinc-400" /> : null}
             <span className={`ml-auto shrink-0 text-${recordTextSize}`}>{dayjs(mark.createdAt).fromNow()}</span>
           </div>
-          {renderListTextBlock(itemContent.title || mark.desc || t(mark.type), itemContent.preview)}
+          {renderListTextBlock(itemContent.title || mark.desc || imageStatusText || t(mark.type), itemContent.preview)}
         </div>
     )
     case 'link':

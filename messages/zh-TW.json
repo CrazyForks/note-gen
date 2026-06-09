@@ -1338,6 +1338,10 @@
           "title": "打開/隱藏窗口",
           "desc": "打開/隱藏程序主窗口。"
         },
+        "screenshotRecord": {
+          "title": "截圖記錄",
+          "desc": "開啟截圖記錄，裁切視窗或螢幕並保存。"
+        },
         "quickRecordText": {
           "title": "快速記錄文本",
           "desc": "快速打開程式主窗口，並調出文本記錄。"
@@ -1490,7 +1494,37 @@
       "fileUnsupportedContent": "暫不支援提取該類型文件的文字，已保存原文件路徑。",
       "fileReadFailed": "文件文字讀取失敗，已保存原文件路徑。",
       "imageUploadFallback": "圖片已保存到本地",
-      "imageUploadFallbackDescription": "圖床上傳失敗，已繼續使用本地圖片。"
+      "imageUploadFallbackDescription": "圖床上傳失敗，已繼續使用本地圖片。",
+      "screenshotRecordTitle": "截圖記錄",
+      "screenshotCapturing": "正在取得可截圖的視窗...",
+      "screenshotCaptureFailed": "無法取得螢幕截圖",
+      "screenshotPermissionHint": "請檢查系統螢幕錄製權限後重試。",
+      "screenshotEmpty": "未找到可截圖的視窗",
+      "screenshotSourceCount": "可用視窗 {count} 個",
+      "screenshotNoSource": "暫無可用視窗",
+      "screenshotRefresh": "重新截圖",
+      "retry": "重試",
+      "screenshotSave": "保存截圖",
+      "screenshotSaveAndRecognize": "保存並識別",
+      "screenshotSaveOnly": "僅保存截圖",
+      "screenshotSaveFailed": "截圖記錄保存失敗",
+      "screenshotRecognitionPending": "截圖已保存，正在進行圖片識別...",
+      "screenshotRecognitionComplete": "圖片識別完成",
+      "screenshotRecognitionFailed": "圖片識別失敗",
+      "screenshotRecognitionOff": "未識別",
+      "screenshotRecognitionMethod": "識別方式",
+      "screenshotNoText": "這張截圖未識別到文字",
+      "screenshotSavedOnly": "已保存圖片，未進行識別",
+      "screenshotRecognizing": "識別中...",
+      "screenshotRecognizeAgain": "重新識別",
+      "screenshotAiDescription": "AI 描述",
+      "screenshotOcrContent": "OCR 內容",
+      "screenshotCopyImageLink": "複製圖片連結",
+      "screenshotShowInFolder": "在資料夾中顯示",
+      "screenshotKeyboardHint": "Enter 保存，Esc 取消，方向鍵切換來源。",
+      "screenshotModeWindow": "視窗",
+      "screenshotModeRegion": "區域",
+      "screenshotModeDisplay": "螢幕"
     },
     "syncStatus": {
       "checking_remote": "正在檢查遠端更新",

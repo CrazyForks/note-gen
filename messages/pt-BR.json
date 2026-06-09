@@ -1395,6 +1395,10 @@
           "title": "Abrir/Ocultar Janela",
           "desc": "Abrir/Ocultar a janela principal."
         },
+        "screenshotRecord": {
+          "title": "Registro por captura",
+          "desc": "Abrir registro por captura e salvar uma janela ou tela recortada."
+        },
         "quickRecordText": {
           "title": "Gravação Rápida de Texto",
           "desc": "Abrir rapidamente a janela principal e alternar para a gravação de texto."
@@ -1513,7 +1517,37 @@
       "fileUnsupportedContent": "A extração de texto não é compatível com este tipo de arquivo. O caminho original foi salvo.",
       "fileReadFailed": "Falha ao ler o texto do arquivo. O caminho original foi salvo.",
       "imageUploadFallback": "Imagem salva localmente",
-      "imageUploadFallbackDescription": "Falha no upload para o host de imagens, então a imagem local foi mantida."
+      "imageUploadFallbackDescription": "Falha no upload para o host de imagens, então a imagem local foi mantida.",
+      "screenshotRecordTitle": "Registro por captura",
+      "screenshotCapturing": "Capturando janelas disponíveis...",
+      "screenshotCaptureFailed": "Não foi possível capturar a tela",
+      "screenshotPermissionHint": "Verifique a permissão de gravação de tela do sistema e tente novamente.",
+      "screenshotEmpty": "Nenhuma janela capturável encontrada",
+      "screenshotSourceCount": "{count} janelas disponíveis",
+      "screenshotNoSource": "Nenhuma janela disponível",
+      "screenshotRefresh": "Atualizar",
+      "retry": "Tentar novamente",
+      "screenshotSave": "Salvar captura",
+      "screenshotSaveAndRecognize": "Salvar e reconhecer",
+      "screenshotSaveOnly": "Salvar apenas a captura",
+      "screenshotSaveFailed": "Falha ao salvar registro de captura",
+      "screenshotRecognitionPending": "Captura salva. Reconhecimento de imagem em andamento...",
+      "screenshotRecognitionComplete": "Reconhecimento de imagem concluído",
+      "screenshotRecognitionFailed": "Falha no reconhecimento de imagem",
+      "screenshotRecognitionOff": "Reconhecimento desativado",
+      "screenshotRecognitionMethod": "Reconhecimento",
+      "screenshotNoText": "Nenhum texto foi reconhecido nesta captura",
+      "screenshotSavedOnly": "Imagem salva sem reconhecimento",
+      "screenshotRecognizing": "Reconhecendo...",
+      "screenshotRecognizeAgain": "Reconhecer novamente",
+      "screenshotAiDescription": "Descrição da IA",
+      "screenshotOcrContent": "Conteúdo OCR",
+      "screenshotCopyImageLink": "Copiar link da imagem",
+      "screenshotShowInFolder": "Mostrar na pasta",
+      "screenshotKeyboardHint": "Enter salva, Esc cancela, setas alternam a fonte.",
+      "screenshotModeWindow": "Janela",
+      "screenshotModeRegion": "Região",
+      "screenshotModeDisplay": "Tela"
     },
     "syncStatus": {
       "checking_remote": "Verificando atualizações remotas",

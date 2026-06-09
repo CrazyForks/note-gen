@@ -9,7 +9,6 @@ import { useSidebarStore } from "@/stores/sidebar"
 import { useEffect, useState, useRef } from 'react'
 import { Store } from '@tauri-apps/plugin-store'
 import { ImperativePanelHandle } from 'react-resizable-panels'
-import { invoke } from "@tauri-apps/api/core"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import emitter from '@/lib/emitter'
 import { useRouter } from 'next/navigation'
@@ -252,8 +251,7 @@ function Page() {
       const action = event.payload
       switch (action) {
         case 'screenshot':
-          await invoke('screenshot')
-          emitter.emit('screenshot-shortcut-register', undefined)
+          emitter.emit('toolbar-shortcut-scan')
           break
         case 'text':
           emitter.emit('text-shortcut-register', undefined)

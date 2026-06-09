@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import dayjs from "dayjs"
-import { FileText } from "lucide-react"
+import { Copy, FileText, FolderOpen, RefreshCw } from "lucide-react"
 import { useTranslations } from "next-intl"
 import type { Mark } from "@/db/marks"
 import { LocalImage } from "@/components/local-image"
@@ -27,6 +27,14 @@ import useTagStore from "@/stores/tag"
 import useSettingStore from "@/stores/setting"
 import { parseTodoMarkContent } from "./mark-list-item-content"
 import type { Priority } from "./todo-form"
+import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs"
+import ocr from "@/lib/ocr"
+import { fetchAiDesc, fetchAiDescByImage } from "@/lib/ai/description"
+import { toast } from "@/hooks/use-toast"
+import { appDataDir } from "@tauri-apps/api/path"
+import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener"
+import { getMarkOpenAction } from "./mark-open-path"
+import { getImageRecordDisplayText, type ImageRecordStatusLabels } from "./image-record-status"
 
 const getWordCount = (text: string): number => {
   if (!text) return 0
@@ -43,6 +51,42 @@ const getImageSrc = (mark: Mark): string | null => {
   }
 
   return `/${mark.type === 'scan' ? 'screenshot' : 'image'}/${mark.url}`
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = ''
+  const chunkSize = 0x8000
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize)
+    binary += String.fromCharCode(...chunk)
+  }
+
+  return btoa(binary)
+}
+
+function getLocalImagePath(mark: Mark) {
+  if (!mark.url || mark.url.includes('http') || (mark.type !== 'image' && mark.type !== 'scan')) {
+    return null
+  }
+
+  return `${mark.type === 'scan' ? 'screenshot' : 'image'}/${mark.url}`
+}
+
+function getImageMimeType(url: string) {
+  const extension = url.split('.').pop()?.toLowerCase()
+
+  switch (extension) {
+  case 'jpg':
+  case 'jpeg':
+    return 'image/jpeg'
+  case 'webp':
+    return 'image/webp'
+  case 'gif':
+    return 'image/gif'
+  default:
+    return 'image/png'
+  }
 }
 
 interface TodoData {
@@ -211,11 +255,20 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
   const t = useTranslations()
   const markT = useTranslations('record.mark')
   const { updateMark } = useMarkStore()
-  const { recordTextSize } = useSettingStore()
+  const { recordTextSize, primaryImageMethod, primaryModel } = useSettingStore()
   const [value, setValue] = useState('')
   const [descValue, setDescValue] = useState('')
+  const [isRecognizingImage, setIsRecognizingImage] = useState(false)
   const imageSrc = getImageSrc(mark)
   const wordCount = getWordCount(mark.content || '')
+  const shouldShowDescription = mark.type !== 'text' && mark.type !== 'recording' && (mark.desc !== mark.content || Boolean(imageSrc))
+  const imageStatusLabels: ImageRecordStatusLabels = useMemo(() => ({
+    pending: t('record.capture.screenshotRecognitionPending'),
+    failed: t('record.capture.screenshotRecognitionFailed'),
+    noText: t('record.capture.screenshotNoText'),
+    savedOnly: t('record.capture.screenshotSavedOnly'),
+  }), [t])
+  const imageStatusText = getImageRecordDisplayText(mark, imageStatusLabels)
 
   useEffect(() => {
     setValue(mark.content || '')
@@ -241,6 +294,87 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
     })
   }, [mark, updateMark])
 
+  const handleRecognizeImage = useCallback(async () => {
+    if (mark.type !== 'image' && mark.type !== 'scan') {
+      return
+    }
+
+    setIsRecognizingImage(true)
+
+    try {
+      const localImagePath = getLocalImagePath(mark)
+      let content = ''
+      let desc = ''
+
+      if (primaryImageMethod === 'ocr' && localImagePath) {
+        content = await ocr(localImagePath) || ''
+
+        if (primaryModel && content.trim()) {
+          desc = await fetchAiDesc(content).then(res => res ? res : content) || content
+        } else {
+          desc = content
+        }
+      } else {
+        let imageUrl = mark.url
+
+        if (localImagePath) {
+          const bytes = await readFile(localImagePath, { baseDir: BaseDirectory.AppData })
+          imageUrl = `data:${getImageMimeType(mark.url)};base64,${bytesToBase64(bytes)}`
+        }
+
+        content = await fetchAiDescByImage(imageUrl) || ''
+        desc = content
+      }
+
+      await updateMark({
+        ...mark,
+        content,
+        desc: desc || content || t('record.capture.screenshotNoText'),
+      })
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('record.capture.screenshotRecognitionFailed'),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsRecognizingImage(false)
+    }
+  }, [mark, primaryImageMethod, primaryModel, t, updateMark])
+
+  const handleCopyImageLink = useCallback(async () => {
+    if (!mark.url) {
+      return
+    }
+
+    await navigator.clipboard.writeText(mark.url)
+    toast({ title: t('record.mark.toolbar.copied') })
+  }, [mark.url, t])
+
+  const handleShowImageInFolder = useCallback(async () => {
+    try {
+      const appDir = await appDataDir()
+      const action = getMarkOpenAction(mark, appDir, 'folder')
+
+      if (!action?.path) {
+        return
+      }
+
+      if (action.mode === 'reveal') {
+        await revealItemInDir(action.path)
+        return
+      }
+
+      await openPath(action.path)
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('common.error'),
+        variant: 'destructive',
+      })
+    }
+  }, [mark, t])
+
   if (mark.type === 'todo') {
     return <TodoDetailEditor mark={mark} />
   }
@@ -256,25 +390,62 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
       <DetailItem title="字数">
         {wordCount}
       </DetailItem>
-      {mark.type !== 'text' && mark.type !== 'recording' && mark.desc !== mark.content ? (
-        <DetailItem title={markT('desc')}>
+      {shouldShowDescription ? (
+        <DetailItem title={imageSrc ? t('record.capture.screenshotAiDescription') : markT('desc')}>
           <Textarea
             id="record-detail-desc"
             className="min-h-28 w-full min-w-0 max-w-full resize-y"
             value={descValue}
             onChange={textDescChangeHandler}
-            placeholder={markT('desc')}
+            placeholder={imageSrc ? imageStatusText || t('record.capture.screenshotAiDescription') : markT('desc')}
           />
         </DetailItem>
       ) : null}
       {imageSrc ? (
         <DetailItem title={t(`record.mark.type.${mark.type}`)}>
-          <div className="flex min-h-56 w-full min-w-0 max-w-full items-center justify-center overflow-hidden rounded-md bg-muted/20 p-2">
-            <LocalImage
-              src={imageSrc}
-              alt=""
-              className="max-h-[52vh] w-full max-w-full object-contain"
-            />
+          <div className="space-y-3">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleCopyImageLink}
+                disabled={!mark.url}
+              >
+                <Copy className="h-4 w-4" />
+                {t('record.capture.screenshotCopyImageLink')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleShowImageInFolder}
+                disabled={mark.url.includes('http')}
+              >
+                <FolderOpen className="h-4 w-4" />
+                {t('record.capture.screenshotShowInFolder')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleRecognizeImage}
+                disabled={isRecognizingImage}
+              >
+                <RefreshCw className={cn("h-4 w-4", isRecognizingImage && "animate-spin")} />
+                {isRecognizingImage ? t('record.capture.screenshotRecognizing') : t('record.capture.screenshotRecognizeAgain')}
+              </Button>
+            </div>
+            <div className="flex min-h-56 w-full min-w-0 max-w-full items-center justify-center overflow-hidden rounded-md bg-muted/20 p-2">
+              <LocalImage
+                src={imageSrc}
+                alt=""
+                className="max-h-[52vh] w-full max-w-full object-contain"
+              />
+            </div>
           </div>
         </DetailItem>
       ) : null}
@@ -301,12 +472,12 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
           )}
         </DetailItem>
       ) : null}
-      <DetailItem title={markT('content')} className="border-b-0">
+      <DetailItem title={imageSrc ? t('record.capture.screenshotOcrContent') : markT('content')} className="border-b-0">
         <Textarea
           id="record-detail-content"
           value={value}
           onChange={textMarkChangeHandler}
-          placeholder={markT('content')}
+          placeholder={imageSrc ? t('record.capture.screenshotOcrContent') : markT('content')}
           className={cn("min-h-[420px] w-full min-w-0 max-w-full resize-y leading-relaxed", `text-${recordTextSize}`)}
         />
       </DetailItem>

@@ -1436,6 +1436,10 @@
           "title": "Open/Hide Window",
           "desc": "Open/Hide the main window."
         },
+        "screenshotRecord": {
+          "title": "Screenshot Record",
+          "desc": "Open screenshot recording and save a cropped window or display."
+        },
         "quickRecordText": {
           "title": "Quick Record Text",
           "desc": "Quickly open the main window and switch to text recording."
@@ -1482,7 +1486,37 @@
       "fileUnsupportedContent": "Text extraction is not supported for this file type. The original file path was saved.",
       "fileReadFailed": "Failed to read file text. The original file path was saved.",
       "imageUploadFallback": "Image saved locally",
-      "imageUploadFallbackDescription": "Image hosting upload failed, so the local image was kept."
+      "imageUploadFallbackDescription": "Image hosting upload failed, so the local image was kept.",
+      "screenshotRecordTitle": "Screenshot Record",
+      "screenshotCapturing": "Capturing available windows...",
+      "screenshotCaptureFailed": "Unable to capture the screen",
+      "screenshotPermissionHint": "Check the system screen recording permission, then retry.",
+      "screenshotEmpty": "No capturable windows found",
+      "screenshotSourceCount": "{count} windows available",
+      "screenshotNoSource": "No window available",
+      "screenshotRefresh": "Refresh",
+      "retry": "Retry",
+      "screenshotSave": "Save screenshot",
+      "screenshotSaveAndRecognize": "Save and recognize",
+      "screenshotSaveOnly": "Save screenshot only",
+      "screenshotSaveFailed": "Failed to save screenshot record",
+      "screenshotRecognitionPending": "Screenshot saved. Image recognition is running...",
+      "screenshotRecognitionComplete": "Image recognition complete",
+      "screenshotRecognitionFailed": "Image recognition failed",
+      "screenshotRecognitionOff": "Recognition off",
+      "screenshotRecognitionMethod": "Recognition",
+      "screenshotNoText": "No text was recognized from this screenshot",
+      "screenshotSavedOnly": "Image saved without recognition",
+      "screenshotRecognizing": "Recognizing...",
+      "screenshotRecognizeAgain": "Recognize again",
+      "screenshotAiDescription": "AI description",
+      "screenshotOcrContent": "OCR content",
+      "screenshotCopyImageLink": "Copy image link",
+      "screenshotShowInFolder": "Show in folder",
+      "screenshotKeyboardHint": "Enter to save, Esc to cancel, arrow keys to switch source.",
+      "screenshotModeWindow": "Window",
+      "screenshotModeRegion": "Region",
+      "screenshotModeDisplay": "Display"
     },
     "syncStatus": {
       "checking_remote": "Checking remote updates",
