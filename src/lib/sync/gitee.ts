@@ -2,7 +2,7 @@ import { toast } from '@/hooks/use-toast';
 import { Store } from '@tauri-apps/plugin-store';
 import { v4 as uuid } from 'uuid';
 import { fetch, Proxy } from '@tauri-apps/plugin-http'
-import { buildRepoContentPath, buildRepoContentsEndpoint, pickNestedFileEntry } from './remote-file'
+import { buildRepoContentPath, buildRepoContentsEndpoint, debugSyncPath, pickNestedFileEntry } from './remote-file'
 export { decodeBase64ToString } from './remote-file'
 // Remove unused imports - these types are not actually used in this file
 
@@ -212,6 +212,13 @@ export async function uploadFile(
       : targetPath
       ? buildRepoContentPath({ path: targetPath, filename })
       : buildRepoContentPath({ filename: filename || id })
+    debugSyncPath('gitee.uploadFile', {
+      inputPath: path,
+      filename,
+      resolvedExistingPath: resolvedExistingFile?.path,
+      finalPath,
+      hasSha: Boolean(sha),
+    })
 
     // 将内容转换为 Base64（Gitee API 要求）
     const base64Content = Buffer.from(file, 'utf-8').toString('base64')
@@ -293,6 +300,10 @@ export async function getFiles({ path, repo, ref }: { path: string, repo: string
 
   const giteeUsername = await store.get<string>('giteeUsername')
   const normalizedPath = buildRepoContentPath({ path })
+  debugSyncPath('gitee.getFiles', {
+    inputPath: path,
+    normalizedPath,
+  })
 
   // 获取代理设置
   const proxyUrl = await store.get<string>('proxy')
@@ -337,6 +348,13 @@ export async function getFiles({ path, repo, ref }: { path: string, repo: string
               return resolvedEntry
             }
           }
+
+          debugSyncPath('gitee.getFiles.fileNotFoundFromListing', {
+            inputPath: path,
+            normalizedPath,
+            listingCount: data.length,
+          })
+          return null
         }
         return data;
       }

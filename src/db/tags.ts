@@ -1,5 +1,6 @@
 import { getDb } from "./index"
 import { Store } from '@tauri-apps/plugin-store';
+import { enqueueAutoDataSync } from '@/lib/sync/auto-data-sync-queue'
 
 export interface Tag {
   id: number
@@ -11,13 +12,7 @@ export interface Tag {
 }
 
 function enqueueRecordsAutoSync(reason: string) {
-  void import('@/lib/sync/auto-data-sync-queue')
-    .then(({ enqueueAutoDataSync }) => {
-      enqueueAutoDataSync('records', reason)
-    })
-    .catch((error) => {
-      console.error('Error enqueueing records auto sync:', error)
-    })
+  enqueueAutoDataSync('records', reason)
 }
 
 // 创建 tags 表

@@ -10,6 +10,7 @@ import { s3Upload } from './s3'
 import { webdavUpload } from './webdav'
 import { S3Config, WebDAVConfig } from '@/types/sync'
 import { buildGithubCreateTreePayload, buildGitlabCommitActions } from './folder-sync-payload'
+import { buildRepoContentPath, debugSyncPath } from './remote-file'
 
 export interface FolderSyncResult {
   success: boolean
@@ -71,6 +72,11 @@ export class FolderSync {
 
         // 相对路径作为远程路径
         const remotePath = file.path
+        debugSyncPath('folderSync.collectFile', {
+          localFolderPath,
+          sourcePath: file.path,
+          remotePath,
+        })
 
         filesToUpload.push({
           path: remotePath,
@@ -353,8 +359,11 @@ export class FolderSync {
     const headers = new Headers()
     headers.append('Authorization', `Bearer ${giteaAccessToken}`)
 
-    // 对路径进行编码处理，与 getFiles 保持一致
-    const encodedPath = path.replace(/\s/g, '_').split('/').map(encodeURIComponent).join('/')
+      const encodedPath = buildRepoContentPath({ path })
+      debugSyncPath('folderSync.gitea.listFiles', {
+        inputPath: path,
+        encodedPath,
+      })
     const url = `${apiBaseUrl}/repos/${giteaUsername}/${repo}/contents${encodedPath ? '/' + encodedPath : ''}`
 
     try {
@@ -416,7 +425,13 @@ export class FolderSync {
 
     const uploadPromises = files.map(async (file) => {
       const base64Content = Buffer.from(file.content).toString('base64')
-      const url = `https://gitee.com/api/v5/repos/${giteeUsername}/${repo}/contents/${file.path}`
+      const encodedPath = buildRepoContentPath({ path: file.path })
+      debugSyncPath('folderSync.gitee.uploadFile', {
+        inputPath: file.path,
+        encodedPath,
+        hasSha: Boolean(file.sha),
+      })
+      const url = `https://gitee.com/api/v5/repos/${giteeUsername}/${repo}/contents/${encodedPath}`
 
       const body: Record<string, unknown> = {
         access_token: giteeAccessToken,
@@ -557,15 +572,14 @@ export class FolderSync {
       const file = files[i]
       const base64Content = Buffer.from(file.content).toString('base64')
 
-      // 分离路径和文件名
-      const lastSlashIndex = file.path.lastIndexOf('/')
-      const dirPath = lastSlashIndex > 0 ? file.path.substring(0, lastSlashIndex) : ''
-      const fileName = lastSlashIndex > 0 ? file.path.substring(lastSlashIndex + 1) : file.path
-
-      // 编码路径
-      const normalizedPath = dirPath
-        ? `${dirPath.split('/').map(p => encodeURIComponent(p.replace(/\s/g, '_'))).join('/')}/${fileName.replace(/\s/g, '_')}`
-        : fileName.replace(/\s/g, '_')
+      const fileName = file.path.split('/').pop() || file.path
+      const normalizedPath = buildRepoContentPath({ path: file.path })
+      debugSyncPath('folderSync.gitea.uploadFile', {
+        inputPath: file.path,
+        filename: fileName,
+        normalizedPath,
+        hasSha: Boolean(file.sha),
+      })
 
       const url = `${apiBaseUrl}/repos/${giteaUsername}/${repo}/contents/${normalizedPath}`
 

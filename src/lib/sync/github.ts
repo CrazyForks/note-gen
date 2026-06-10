@@ -3,7 +3,7 @@ import { Store } from '@tauri-apps/plugin-store';
 import { v4 as uuid } from 'uuid';
 import { GithubError, GithubRepoInfo, OctokitResponse } from './github.types';
 import { fetch, Proxy } from '@tauri-apps/plugin-http'
-import { buildRepoContentPath, buildRepoContentsEndpoint } from './remote-file'
+import { buildRepoContentPath, buildRepoContentsEndpoint, debugSyncPath } from './remote-file'
 export { decodeBase64ToString } from './remote-file';
 
 export function uint8ArrayToBase64(data: Uint8Array) {
@@ -61,6 +61,11 @@ export async function uploadFile(
   
   try {
     const contentPath = buildRepoContentPath({ path, filename })
+    debugSyncPath('github.uploadFile', {
+      inputPath: path,
+      filename,
+      contentPath,
+    })
 
     // 将内容转换为 Base64（GitHub API 要求）
     const base64Content = Buffer.from(file, 'utf-8').toString('base64')
@@ -116,11 +121,11 @@ export async function getFiles({ path, repo, ref }: { path: string, repo: string
 
   const githubUsername = await store.get('githubUsername')
 
-  // 只对空格进行转义，保留中文字符的原始 UTF-8 编码
-  const safePath = path.replace(/\s/g, '_')
-
-  // 对 URL 路径进行编码
-  const encodedPath = safePath.split('/').map(segment => encodeURIComponent(segment)).join('/')
+  const encodedPath = buildRepoContentPath({ path })
+  debugSyncPath('github.getFiles', {
+    inputPath: path,
+    encodedPath,
+  })
 
   // 获取代理设置
   const proxyUrl = await store.get<string>('proxy')
@@ -225,9 +230,6 @@ export async function getFileCommits({ path, repo }: { path: string, repo: strin
 
   const githubUsername = await store.get('githubUsername')
 
-  // 只对空格进行转义，保留中文字符的原始 UTF-8 编码
-  const safePath = path.replace(/\s/g, '_')
-
   // 获取代理设置
   const proxyUrl = await store.get<string>('proxy')
   const proxy: Proxy | undefined = proxyUrl ? {
@@ -248,7 +250,12 @@ export async function getFileCommits({ path, repo }: { path: string, repo: strin
       proxy
     };
     
-    const url = `https://api.github.com/repos/${githubUsername}/${repo}/commits?path=${encodeURIComponent(safePath)}&per_page=100`;
+    const commitPath = encodeURIComponent(path)
+    debugSyncPath('github.getFileCommits', {
+      inputPath: path,
+      commitPath,
+    })
+    const url = `https://api.github.com/repos/${githubUsername}/${repo}/commits?path=${commitPath}&per_page=100`;
     const response = await fetch(url, requestOptions);
 
     if (response.status >= 200 && response.status < 300) {

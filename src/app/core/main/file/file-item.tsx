@@ -32,6 +32,7 @@ import { VectorKnowledgeMenu } from "./vector-knowledge-menu";
 import { isSkillsFolder } from "@/lib/skills/utils";
 import { exportMarkdownFile, type MarkdownExportFormat } from "../editor/markdown/markdown-export";
 import { setFileManagerDragData } from "./file-dnd";
+import { debugSyncPath } from "@/lib/sync/remote-file";
 
 type Platform = 'macos' | 'windows' | 'linux' | 'unknown'
 
@@ -48,9 +49,8 @@ function buildFileRenamePlan({
   currentPath: string
   enteredName: string
 }) {
-  const sanitizedName = enteredName.replace(/\s+/g, '_')
-  const needsMarkdownSuffix = originalName === '' && !sanitizedName.endsWith('.md')
-  const displayName = needsMarkdownSuffix ? `${sanitizedName}.md` : sanitizedName
+  const needsMarkdownSuffix = originalName === '' && !enteredName.endsWith('.md')
+  const displayName = needsMarkdownSuffix ? `${enteredName}.md` : enteredName
   const parentPath = currentPath.split('/').slice(0, -1).join('/')
   const targetRelativePath = parentPath ? `${parentPath}/${displayName}` : displayName
 
@@ -71,7 +71,7 @@ function showPdfExportStartToast() {
 export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?: () => void }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
   const [name, setName] = useState(item.name)
-  const [isComposing, setIsComposing] = useState(false) // 追踪输入法合成状态
+  const [, setIsComposing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { activeFilePath, setActiveFilePath, readArticle, fileTree, setFileTree, loadFileTree, vectorIndexedFiles, checkFileVectorIndexed, cleanTabsByDeletedFile, cleanTabsByDeletedFolder } = useArticleStore()
   const setArticleState = useArticleStore.setState
@@ -137,58 +137,18 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
 
   // 优化的输入处理，支持输入法
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target
-    const value = input.value
-    const cursorPosition = input.selectionStart || 0
-    
-    // 如果正在使用输入法合成，不进行空格替换
-    if (isComposing) {
-      setName(value)
-      return
-    }
-    
-    // 检查是否包含空格，只有包含空格时才需要处理光标位置
-    if (value.includes(' ')) {
-      const sanitizedValue = value.replace(/\s+/g, '_')
-      setName(sanitizedValue)
-      
-      // 保持光标位置
-      requestAnimationFrame(() => {
-        if (input.selectionStart !== null) {
-          input.setSelectionRange(cursorPosition, cursorPosition)
-        }
-      })
-    } else {
-      setName(value)
-    }
-  }, [isComposing])
+    setName(e.target.value)
+  }, [])
 
   // 输入法合成开始
   const handleCompositionStart = useCallback(() => {
     setIsComposing(true)
   }, [])
 
-  // 输入法合成结束，进行空格替换
+  // 输入法合成结束
   const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
     setIsComposing(false)
-    const input = e.currentTarget
-    const value = input.value
-    const cursorPosition = input.selectionStart || 0
-    
-    // 只有当值包含空格时才需要替换和恢复光标位置
-    if (value.includes(' ')) {
-      const sanitizedValue = value.replace(/\s+/g, '_')
-      setName(sanitizedValue)
-      
-      // 计算新的光标位置（空格变为下划线，长度不变，所以位置保持不变）
-      requestAnimationFrame(() => {
-        if (input.selectionStart !== null) {
-          input.setSelectionRange(cursorPosition, cursorPosition)
-        }
-      })
-    } else {
-      setName(value)
-    }
+    setName(e.currentTarget.value)
   }, [])
 
   async function handleSelectFile() {
@@ -489,8 +449,7 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
       finalName = await generateUniqueFilename(parentPath, 'Untitled')
       setName(finalName)
     } else {
-      // 统一处理：将空格替换为下划线，确保本地和远程文件名一致
-      finalName = name.replace(/\s+/g, '_')
+      finalName = name
       setName(finalName)
     }
   
@@ -499,6 +458,12 @@ export function FileItem({ item, focusSidebar }: { item: DirTree; focusSidebar?:
         originalName,
         currentPath: path,
         enteredName: finalName,
+      })
+      debugSyncPath('file.renamePlan', {
+        originalName,
+        enteredName: finalName,
+        displayName: renamePlan.displayName,
+        targetRelativePath: renamePlan.targetRelativePath,
       })
       const { displayName, operation, targetRelativePath } = renamePlan
       

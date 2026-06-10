@@ -37,6 +37,13 @@ function isKnownTauriDevNoise(message: string) {
   }
 
   if (
+    message.includes('Fetch API cannot load ipc://localhost') &&
+    message.includes('access control checks')
+  ) {
+    return true
+  }
+
+  if (
     message.includes("[TAURI] Couldn't find callback id") &&
     message.includes('app is reloaded while Rust is running an asynchronous operation')
   ) {
@@ -50,10 +57,17 @@ function isKnownTauriDevNoise(message: string) {
     return true
   }
 
-  return (
-    message.includes('__nextjs_original-stack-frames') &&
-    message.includes('access control')
-  )
+  if (
+    (message.includes('__nextjs_original-stack-frames') ||
+      message.includes('__nextjs_original-stack-frame')) &&
+    (message.includes('access control') ||
+      message.includes('getOriginalStackFrames') ||
+      message.includes('localhost:3456'))
+  ) {
+    return true
+  }
+
+  return false
 }
 
 export function ConsoleFilter() {

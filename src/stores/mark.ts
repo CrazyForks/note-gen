@@ -13,6 +13,7 @@ import { create } from 'zustand'
 import { S3Config } from '@/types/sync'
 import { normalizeRecordFilters } from '@/app/core/main/mark/mark-filters'
 import { normalizeRecordViewMode } from '@/app/core/main/mark/mark-view-mode.mjs'
+import { setAutoDataSyncApplyingRemote } from '@/lib/sync/auto-data-sync-queue'
 
 interface RecordDataDownloadOptions {
   allowMissingRemote?: boolean
@@ -567,7 +568,6 @@ const useMarkStore = create<MarkState>((set, get) => ({
       }
     }
     if (hasRemoteData) {
-      const { setAutoDataSyncApplyingRemote } = await import('@/lib/sync/auto-data-sync-queue')
       setAutoDataSyncApplyingRemote(true)
       try {
         await deleteAllMarks()

@@ -10,6 +10,7 @@ import { getRemoteFileContent, hasEmptyRemoteFileContent, isMissingRemoteFileErr
 import { Store } from '@tauri-apps/plugin-store'
 import { create } from 'zustand'
 import { S3Config, WebDAVConfig } from '@/types/sync'
+import { setAutoDataSyncApplyingRemote } from '@/lib/sync/auto-data-sync-queue'
 
 interface RecordDataDownloadOptions {
   allowMissingRemote?: boolean
@@ -259,7 +260,6 @@ const useTagStore = create<TagState>((set, get) => ({
       }
     }
     if (hasRemoteData) {
-      const { setAutoDataSyncApplyingRemote } = await import('@/lib/sync/auto-data-sync-queue')
       setAutoDataSyncApplyingRemote(true)
       try {
         await deleteAllTags()

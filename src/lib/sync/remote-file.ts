@@ -1,44 +1,55 @@
-function normalizeSegment(segment: string, preserveWhitespace = false) {
-  return preserveWhitespace ? segment : segment.replace(/\s/g, '_')
-}
-
-function encodePath(path: string, preserveWhitespace = false) {
+function encodePath(path: string) {
   return path
     .split('/')
     .filter(Boolean)
-    .map(segment => encodeURIComponent(normalizeSegment(segment, preserveWhitespace)))
+    .map(segment => encodeURIComponent(segment))
     .join('/')
 }
 
-export function buildRepoContentPath({
-  path,
-  filename,
-  preserveWhitespace = false,
-}: {
+export function debugSyncPath(_scope: string, _payload: Record<string, unknown>) {
+  // Sync diagnostics are intentionally quiet in normal builds.
+}
+
+export function debugSyncPerf(_scope: string, _payload: Record<string, unknown>) {
+  // Sync diagnostics are intentionally quiet in normal builds.
+}
+
+export function buildRemoteLogicalPath(options: {
   path?: string
   filename?: string
   preserveWhitespace?: boolean
 }) {
+  const { path, filename } = options
   const normalizedPath = path?.replace(/^\/+|\/+$/g, '') || ''
-  const normalizedFilename = filename ? normalizeSegment(filename, preserveWhitespace) : ''
+  const normalizedFilename = filename || ''
 
   if (!normalizedPath) {
-    return normalizedFilename ? encodePath(normalizedFilename, preserveWhitespace) : ''
+    return normalizedFilename
   }
 
   if (!normalizedFilename) {
-    return encodePath(normalizedPath, preserveWhitespace)
+    return normalizedPath
   }
 
   const segments = normalizedPath
     .split('/')
     .filter(Boolean)
-    .map(segment => normalizeSegment(segment, preserveWhitespace))
   if (segments[segments.length - 1] !== normalizedFilename) {
     segments.push(normalizedFilename)
   }
 
-  return segments.map(encodeURIComponent).join('/')
+  return segments.join('/')
+}
+
+export function buildRepoContentPath(options: {
+  path?: string
+  filename?: string
+  preserveWhitespace?: boolean
+}) {
+  const logicalPath = buildRemoteLogicalPath(options)
+  const encodedPath = encodePath(logicalPath)
+
+  return encodedPath
 }
 
 export function buildRepoContentsEndpoint(path?: string) {
@@ -66,8 +77,8 @@ export function pickNestedFileEntry(entries: RemoteDirectoryEntry[], requestedPa
     return null
   }
 
-  const expectedName = requestedPath.split('/').filter(Boolean).pop()?.replace(/\s/g, '_')
-  const normalizedRequestedPath = requestedPath.replace(/\s/g, '_')
+  const normalizedRequestedPath = requestedPath.replace(/^\/+|\/+$/g, '')
+  const expectedName = normalizedRequestedPath.split('/').filter(Boolean).pop()
   const pathMatch = files.find(entry => entry.path === normalizedRequestedPath)
   if (pathMatch) {
     return pathMatch

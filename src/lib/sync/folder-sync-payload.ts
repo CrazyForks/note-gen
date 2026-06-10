@@ -1,3 +1,5 @@
+import { debugSyncPath } from './remote-file'
+
 export interface FolderSyncFilePayload {
   path: string
   content: string
@@ -24,12 +26,19 @@ export interface GitlabCommitAction {
 }
 
 export function buildGithubTreeEntries(files: FolderSyncFilePayload[]): GithubTreeEntry[] {
-  return files.map((file) => ({
-    path: file.path,
-    mode: '100644',
-    type: 'blob',
-    content: file.content,
-  }))
+  return files.map((file) => {
+    debugSyncPath('folderSync.github.treeEntry', {
+      filePath: file.path,
+      hasSha: Boolean(file.sha),
+    })
+
+    return {
+      path: file.path,
+      mode: '100644',
+      type: 'blob',
+      content: file.content,
+    }
+  })
 }
 
 export function buildGithubCreateTreePayload(
@@ -43,10 +52,18 @@ export function buildGithubCreateTreePayload(
 }
 
 export function buildGitlabCommitActions(files: FolderSyncFilePayload[]): GitlabCommitAction[] {
-  return files.map((file) => ({
-    action: file.sha ? 'update' : 'create',
-    file_path: file.path,
-    content: file.content,
-    ...(file.sha ? { sha: file.sha } : {}),
-  }))
+  return files.map((file) => {
+    debugSyncPath('folderSync.gitlab.action', {
+      filePath: file.path,
+      action: file.sha ? 'update' : 'create',
+      hasSha: Boolean(file.sha),
+    })
+
+    return {
+      action: file.sha ? 'update' : 'create',
+      file_path: file.path,
+      content: file.content,
+      ...(file.sha ? { sha: file.sha } : {}),
+    }
+  })
 }

@@ -21,10 +21,19 @@ import { cloneDeep, uniq } from 'lodash-es'
 import { create } from 'zustand'
 import { getFilePathOptions, getWorkspacePath, isAbsoluteFsPath, toWorkspaceRelativePath } from '@/lib/workspace'
 import emitter from '@/lib/emitter'
+import type { Events } from '@/lib/emitter'
 import { isSkillsFolder } from '@/lib/skills/utils'
 import { buildVectorIndexedMap, getVectorDocumentKey } from '@/lib/vector-document-key'
 import { buildRemotePathsToLoad } from './article-remote-sync'
+import { debugSyncPath } from '@/lib/sync/remote-file'
 import type { Mark } from '@/db/marks'
+
+type SyncPushCompletedEvent = Events['sync-push-completed']
+type SyncPushCompletedListener = (event: SyncPushCompletedEvent) => void
+
+type ArticleSyncListenerGlobal = typeof globalThis & {
+  __noteGenArticleSyncPushCompletedListener?: SyncPushCompletedListener
+}
 
 // 缓存 Store 实例，避免每次都重新加载
 let storeInstance: Store | null = null
@@ -366,13 +375,27 @@ const useArticleStore = create<NoteState>((set, get) => ({
 
   // 初始化事件监听器
   initEventListeners: () => {
+    const globalState = globalThis as ArticleSyncListenerGlobal
+    if (globalState.__noteGenArticleSyncPushCompletedListener) {
+      emitter.off('sync-push-completed', globalState.__noteGenArticleSyncPushCompletedListener)
+    }
+
     // 监听同步推送完成事件，更新文件树的 sha 状态
-    emitter.on('sync-push-completed', ((event: { path: string; success: boolean; sha?: string }) => {
+    const syncPushCompletedListener: SyncPushCompletedListener = (event) => {
       const { path, success, sha } = event
+      debugSyncPath('article.syncPushCompleted', {
+        path,
+        success,
+        sha,
+        hasSha: Boolean(sha),
+      })
       if (success && sha) {
         get().updateFileSha(path, sha)
       }
-    }) as any)
+    }
+
+    emitter.on('sync-push-completed', syncPushCompletedListener)
+    globalState.__noteGenArticleSyncPushCompletedListener = syncPushCompletedListener
   },
   setSortType: async (sortType: SortType) => {
     set({ sortType })
@@ -2039,6 +2062,13 @@ const useArticleStore = create<NoteState>((set, get) => ({
         const itemPath = computedParentPath(item)
         if (itemPath === path && item.isFile) {
           item.sha = sha
+          debugSyncPath('article.updateFileSha.match', {
+            path,
+            itemPath,
+            name: item.name,
+            depth,
+            sha,
+          })
           return true
         }
         if (item.children && updateShaInTree(item.children, depth + 1)) {
@@ -2052,7 +2082,10 @@ const useArticleStore = create<NoteState>((set, get) => ({
       const sortedTree = get().sortFileTree(cacheTree)
       set({ fileTree: sortedTree })
     } else {
-      // 未找到匹配的文件
+      debugSyncPath('article.updateFileSha.miss', {
+        path,
+        sha,
+      })
     }
   },
 

@@ -29,17 +29,25 @@ import { pasteIntoFolder } from './paste-into-folder'
 import emitter from '@/lib/emitter'
 import { LinkedFolder } from '@/lib/files'
 import {
+  collectFolderMarkdownPaths,
+  deleteLocalFolderIfExists,
+  deleteRemoteFolder,
+  deleteVectorDocumentsByPaths,
+  removeFolderFromTree,
+} from './delete-folder-utils'
+import {
   getFileManagerDragPath,
   getPathAfterMove,
   hasFileManagerDragData,
   moveFileManagerEntry,
   setFileManagerDragData,
 } from '../file-dnd'
+import { debugSyncPath } from "@/lib/sync/remote-file";
 
 export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar?: () => void }) {
   const [isEditing, setIsEditing] = useState(item.isEditing)
   const [name, setName] = useState(item.name)
-  const [isComposing, setIsComposing] = useState(false)
+  const [, setIsComposing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const dragExpandTimeoutRef = useRef<number | null>(null)
@@ -80,6 +88,7 @@ export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar
     vectorIndexedFiles,
     moveLocalEntry,
     syncOpenTabsForPathChange,
+    cleanTabsByDeletedFolder,
   } = useArticleStore()
   const { setClipboardItem, clipboardItem, clipboardOperation } = useClipboardStore()
 
@@ -250,11 +259,7 @@ export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar
   // 删除文件夹
   async function handleDeleteFolder() {
     try {
-      // 获取工作区路径信息
-      const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
-      const workspace = await getWorkspacePath()
       const { ask } = await import('@tauri-apps/plugin-dialog')
-      const { remove } = await import('@tauri-apps/plugin-fs')
 
       // 确认删除操作
       const confirmed = await ask(t('context.confirmDelete', { name: item.name }), {
@@ -264,13 +269,11 @@ export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar
 
       if (!confirmed) return
 
-      // 根据工作区类型确定正确的路径
-      const pathOptions = await getFilePathOptions(path)
-
-      if (workspace.isCustom) {
-        await remove(pathOptions.path, { recursive: true })
-      } else {
-        await remove(pathOptions.path, { baseDir: pathOptions.baseDir, recursive: true })
+      const markdownPaths = await collectFolderMarkdownPaths(path, item)
+      const localDeleted = await deleteLocalFolderIfExists(path)
+      const remoteResult = await deleteRemoteFolder(item, localDeleted)
+      if (remoteResult.failedPaths.length > 0) {
+        throw new Error(`Delete remote folder failed: ${remoteResult.failedPaths.join(', ')}`)
       }
 
       // 如果删除的文件夹包含当前活动文件，清除活动文件路径
@@ -278,43 +281,16 @@ export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar
         setActiveFilePath('')
       }
 
+      await cleanTabsByDeletedFolder(path)
+
       // 从文件树中移除该文件夹
       const cacheTree = cloneDeep(fileTree)
-      const parentFolder = currentFolder?.parent
-
-      if (parentFolder && parentFolder.children) {
-        const index = parentFolder.children.findIndex(child => child.name === item.name)
-        if (index !== -1) {
-          parentFolder.children.splice(index, 1)
-        }
-      } else {
-        const index = cacheTree.findIndex(child => child.name === item.name)
-        if (index !== -1) {
-          cacheTree.splice(index, 1)
-        }
-      }
-
+      removeFolderFromTree(cacheTree, path)
       setFileTree(cacheTree)
 
       // 删除向量数据库中该文件夹下所有文件的记录
       try {
-        const { getAllMarkdownFiles } = await import('@/lib/files')
-        const { deleteVectorDocumentsByFilename } = await import('@/db/vector')
-        const allFiles = await getAllMarkdownFiles()
-
-        // 找出该文件夹下的所有 Markdown 文件
-        const folderPrefix = path.endsWith('/') ? path : path + '/'
-        const filesInFolder = allFiles.filter(file => file.relativePath.startsWith(folderPrefix))
-
-        // 删除这些文件的向量数据
-        for (const file of filesInFolder) {
-          const filename = file.relativePath
-          try {
-            await deleteVectorDocumentsByFilename(filename)
-          } catch (error) {
-            console.error(`删除文件 ${filename} 的向量数据失败:`, error)
-          }
-        }
+        await deleteVectorDocumentsByPaths(markdownPaths)
       } catch (error) {
         console.error('删除文件夹向量数据失败:', error)
       }
@@ -331,89 +307,55 @@ export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar
 
   // 优化的输入处理，支持输入法
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target
-    const value = input.value
-    const cursorPosition = input.selectionStart || 0
-    
-    // 如果正在使用输入法合成，不进行空格替换
-    if (isComposing) {
-      setName(value)
-      return
-    }
-    
-    // 检查是否包含空格，只有包含空格时才需要处理光标位置
-    if (value.includes(' ')) {
-      const sanitizedValue = value.replace(/\s+/g, '_')
-      setName(sanitizedValue)
-      
-      // 保持光标位置
-      requestAnimationFrame(() => {
-        if (input.selectionStart !== null) {
-          input.setSelectionRange(cursorPosition, cursorPosition)
-        }
-      })
-    } else {
-      setName(value)
-    }
-  }, [isComposing])
+    setName(e.target.value)
+  }, [])
 
   // 输入法合成开始
   const handleCompositionStart = useCallback(() => {
     setIsComposing(true)
   }, [])
 
-  // 输入法合成结束，进行空格替换
+  // 输入法合成结束
   const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
     setIsComposing(false)
-    const input = e.currentTarget
-    const value = input.value
-    const cursorPosition = input.selectionStart || 0
-    
-    // 只有当值包含空格时才需要替换和恢复光标位置
-    if (value.includes(' ')) {
-      const sanitizedValue = value.replace(/\s+/g, '_')
-      setName(sanitizedValue)
-      
-      // 计算新的光标位置（空格变为下划线，长度不变，所以位置保持不变）
-      requestAnimationFrame(() => {
-        if (input.selectionStart !== null) {
-          input.setSelectionRange(cursorPosition, cursorPosition)
-        }
-      })
-    } else {
-      setName(value)
-    }
+    setName(e.currentTarget.value)
   }, [])
 
   // 创建或修改文件夹名称
   async function handleRename() {
-    // 统一处理：将空格替换为下划线，确保本地和远程文件名一致
-    const sanitizedName = name.replace(/\s+/g, '_')
-    setName(sanitizedName)
+    const nextName = name
+    setName(nextName)
 
     // 获取工作区路径信息
     const { getFilePathOptions, getWorkspacePath } = await import('@/lib/workspace')
     const workspace = await getWorkspacePath()
 
     // 修改文件夹名称
-    if (sanitizedName && sanitizedName !== item.name && item.name !== '') {
+    if (nextName && nextName !== item.name && item.name !== '') {
       // 更新缓存树中的名称
       if (parentFolder && parentFolder.children) {
         const folderIndex = parentFolder?.children?.findIndex(folder => folder.name === item.name)
         if (folderIndex !== undefined && folderIndex !== -1) {
-          parentFolder.children[folderIndex].name = sanitizedName
+          parentFolder.children[folderIndex].name = nextName
           parentFolder.children[folderIndex].isEditing = false
         }
       } else {
         const folderIndex = cacheTree.findIndex(folder => folder.name === item.name)
-        cacheTree[folderIndex].name = sanitizedName
+        cacheTree[folderIndex].name = nextName
         cacheTree[folderIndex].isEditing = false
       }
       
       // 获取源路径和目标路径
       const oldPathOptions = await getFilePathOptions(path)
       const parentPath = path.split('/').slice(0, -1).join('/')
-      const newPathOptions = await getFilePathOptions(joinRelativePath(parentPath, sanitizedName))
+      const targetRelativePath = joinRelativePath(parentPath, nextName)
+      const newPathOptions = await getFilePathOptions(targetRelativePath)
+      debugSyncPath('folder.renamePlan', {
+        originalName: item.name,
+        enteredName: nextName,
+        sourcePath: path,
+        targetRelativePath,
+      })
       
       // 根据工作区类型执行重命名操作
       if (workspace.isCustom) {
@@ -426,15 +368,15 @@ export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar
       }
     } else {
       // 已有文件夹但名称未改变，直接取消编辑
-      if (item.name !== '' && sanitizedName === item.name) {
+      if (item.name !== '' && nextName === item.name) {
         setIsEditing(false)
         return
       }
 
       // 新建文件夹
-      if (sanitizedName !== '') {
+      if (nextName !== '') {
         // 检查文件夹是否已存在
-        const newFolderPath = joinRelativePath(path, sanitizedName)
+        const newFolderPath = joinRelativePath(path, nextName)
         const pathOptions = await getFilePathOptions(newFolderPath)
         
         let isExists = false
@@ -458,11 +400,11 @@ export function FolderItem({ item, focusSidebar }: { item: DirTree; focusSidebar
           // 更新缓存树
           if (parentFolder && parentFolder.children) {
             const index = parentFolder.children?.findIndex(item => item.name === '')
-            parentFolder.children[index].name = sanitizedName
+            parentFolder.children[index].name = nextName
             parentFolder.children[index].isEditing = false
           } else {
             const index = cacheTree?.findIndex(item => item.name === '')
-            cacheTree[index].name = sanitizedName
+            cacheTree[index].name = nextName
             cacheTree[index].isEditing = false
           }
         }

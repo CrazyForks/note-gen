@@ -2,6 +2,7 @@ import { getDb } from "./index"
 import { BaseDirectory, exists, mkdir, remove } from "@tauri-apps/plugin-fs"
 import { insertActivityEvent } from './activity'
 import { truncateActivityText } from '@/lib/activity/events'
+import { enqueueAutoDataSync } from '@/lib/sync/auto-data-sync-queue'
 
 export interface Mark {
   id: number
@@ -79,13 +80,7 @@ async function deleteMarkLocalAssets(marks: Pick<Mark, 'type' | 'url'>[]) {
 }
 
 function enqueueRecordsAutoSync(reason: string) {
-  void import('@/lib/sync/auto-data-sync-queue')
-    .then(({ enqueueAutoDataSync }) => {
-      enqueueAutoDataSync('records', reason)
-    })
-    .catch((error) => {
-      console.error('Error enqueueing records auto sync:', error)
-    })
+  enqueueAutoDataSync('records', reason)
 }
 
 
