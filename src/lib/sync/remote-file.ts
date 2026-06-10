@@ -7,10 +7,14 @@ function encodePath(path: string) {
 }
 
 export function debugSyncPath(_scope: string, _payload: Record<string, unknown>) {
+  void _scope
+  void _payload
   // Sync diagnostics are intentionally quiet in normal builds.
 }
 
 export function debugSyncPerf(_scope: string, _payload: Record<string, unknown>) {
+  void _scope
+  void _payload
   // Sync diagnostics are intentionally quiet in normal builds.
 }
 
