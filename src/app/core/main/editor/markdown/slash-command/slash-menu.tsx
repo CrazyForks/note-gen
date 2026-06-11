@@ -50,6 +50,8 @@ export const SlashMenu = forwardRef<SlashMenuRef, SlashMenuProps>(({ editor, que
       taskListDesc: t('items.taskListDesc'),
       image: t('items.image'),
       imageDesc: t('items.imageDesc'),
+      file: t('items.file'),
+      fileDesc: t('items.fileDesc'),
       table: t('items.table'),
       tableDesc: t('items.tableDesc'),
       blockquote: t('items.blockquote'),
@@ -84,6 +86,9 @@ export const SlashMenu = forwardRef<SlashMenuRef, SlashMenuProps>(({ editor, que
       saveSuccess: t('imageUpload.saveSuccess'),
       savePath: t('imageUpload.savePath'),
       failed: t('imageUpload.failed'),
+    },
+    fileInsert: {
+      failed: t('fileInsert.failed'),
     },
   }), [t])
 

@@ -31,13 +31,15 @@ import { MathEditorDialog } from './math-editor-dialog'
 import { SearchReplacePanel } from './search-replace-panel'
 import { useEffect, useRef, useCallback, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { Store } from '@tauri-apps/plugin-store'
-import { openUrl } from '@tauri-apps/plugin-opener'
+import { openPath, openUrl } from '@tauri-apps/plugin-opener'
 import { open } from '@tauri-apps/plugin-dialog'
 import { readFile } from '@tauri-apps/plugin-fs'
+import { appDataDir, join } from '@tauri-apps/api/path'
 import { handleImageUpload } from '@/lib/image-handler'
 import useArticleStore from '@/stores/article'
 import { cn, convertImageByWorkspace } from '@/lib/utils'
 import { resolveImagePathFromMarkdown } from '@/lib/markdown-image-path'
+import { getFilePathOptions, getWorkspacePath, isAbsoluteFsPath } from '@/lib/workspace'
 import { isMobileDevice } from '@/lib/check'
 import { useTranslations } from 'next-intl'
 import { replaceLinesInRange } from '@/lib/agent/react-diff-helpers'
@@ -79,6 +81,7 @@ import { EditorShortcutsExtension } from './editor-shortcuts-extension'
 import useEditorShortcutStore from '@/stores/editor-shortcut'
 import type { EditorShortcutCommandId } from '@/config/editor-shortcuts'
 import { isAiSuggestionShortcutVisible } from '@/lib/ai-suggestion-shortcut-state'
+import { getFileManagerDragPath, hasFileManagerDragData } from '@/app/core/main/file/file-dnd'
 import './style.css'
 
 const lowlight = createLowlight(common)
@@ -93,6 +96,335 @@ const IMAGE_RESIZE_DIRECTIONS: ResizableNodeViewDirection[] = [
   'bottom-left',
   'bottom-right',
 ]
+
+const INTERNAL_TEXT_FILE_PATH_RE = /\.(?:md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template)$/i
+const INTERNAL_IMAGE_FILE_PATH_RE = /\.(?:jpg|jpeg|png|gif|bmp|webp|svg)$/i
+const WINDOWS_ABSOLUTE_PATH_RE = /^[a-zA-Z]:[\\/]/
+
+type DroppedFileWithPath = File & {
+  path?: string
+  webkitRelativePath?: string
+}
+
+type DroppedFileLink = {
+  label: string
+  path: string
+}
+
+function safeDecodeURIComponent(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+function getLinkProtocol(href: string): string | null {
+  if (WINDOWS_ABSOLUTE_PATH_RE.test(href)) {
+    return null
+  }
+
+  return href.match(/^([a-z][a-z0-9+.-]*):/i)?.[1].toLowerCase() ?? null
+}
+
+function stripLocalLinkFragment(href: string): string {
+  const hashIndex = href.indexOf('#')
+  return hashIndex >= 0 ? href.slice(0, hashIndex) : href
+}
+
+function normalizeLocalFilePath(path: string): string {
+  const normalized = path.trim().replace(/\\/g, '/')
+  const hasUncPrefix = normalized.startsWith('//')
+  const hasLeadingSlash = normalized.startsWith('/')
+  const segments: string[] = []
+
+  normalized.split('/').forEach((segment) => {
+    if (!segment || segment === '.') {
+      return
+    }
+
+    if (segment === '..') {
+      if (segments.length > 0 && segments[segments.length - 1] !== '..') {
+        segments.pop()
+      } else if (!hasLeadingSlash) {
+        segments.push(segment)
+      }
+      return
+    }
+
+    segments.push(segment)
+  })
+
+  const normalizedPath = segments.join('/')
+  if (hasUncPrefix) {
+    return `//${normalizedPath}`
+  }
+
+  return hasLeadingSlash ? `/${normalizedPath}` : normalizedPath
+}
+
+function getFilePathFromFileUrl(href: string): string {
+  try {
+    const url = new URL(href)
+    let pathname = safeDecodeURIComponent(url.pathname)
+
+    if (url.hostname && url.hostname !== 'localhost') {
+      pathname = `//${url.hostname}${pathname}`
+    }
+
+    if (pathname.startsWith('/') && WINDOWS_ABSOLUTE_PATH_RE.test(pathname.slice(1))) {
+      return pathname.slice(1)
+    }
+
+    return pathname
+  } catch {
+    const withoutProtocol = href.replace(/^file:\/\//i, '')
+    return safeDecodeURIComponent(stripLocalLinkFragment(withoutProtocol))
+  }
+}
+
+function getPathName(path: string): string {
+  const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
+  return normalized.split('/').filter(Boolean).pop() || normalized || path
+}
+
+function normalizeWorkspacePathSegments(path: string): string[] {
+  const normalized = path
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.?\//, '')
+    .replace(/\/+/g, '/')
+
+  if (!normalized) {
+    return []
+  }
+
+  const segments: string[] = []
+
+  normalized.split('/').forEach((segment) => {
+    if (!segment || segment === '.') {
+      return
+    }
+
+    if (segment === '..') {
+      if (segments.length > 0) {
+        segments.pop()
+      }
+      return
+    }
+
+    segments.push(segment)
+  })
+
+  return segments
+}
+
+function toMarkdownRelativePath(currentFilePath: string, targetWorkspacePath: string): string {
+  const currentSegments = normalizeWorkspacePathSegments(currentFilePath)
+  const currentDirSegments = currentSegments.slice(0, -1)
+  const targetSegments = normalizeWorkspacePathSegments(targetWorkspacePath)
+
+  let commonPrefixLength = 0
+  while (
+    commonPrefixLength < currentDirSegments.length &&
+    commonPrefixLength < targetSegments.length &&
+    currentDirSegments[commonPrefixLength] === targetSegments[commonPrefixLength]
+  ) {
+    commonPrefixLength += 1
+  }
+
+  const upwardSegments = new Array(currentDirSegments.length - commonPrefixLength).fill('..')
+  const downwardSegments = targetSegments.slice(commonPrefixLength)
+  return [...upwardSegments, ...downwardSegments].join('/') || getPathName(targetWorkspacePath)
+}
+
+function encodeLocalLinkHref(path: string): string {
+  return encodeURI(path)
+    .replace(/#/g, '%23')
+    .replace(/\?/g, '%3F')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29')
+}
+
+function toFileUrl(path: string): string {
+  const normalized = normalizeLocalFilePath(path)
+  const encodedPath = encodeLocalLinkHref(normalized)
+
+  if (normalized.startsWith('//')) {
+    return `file:${encodedPath}`
+  }
+
+  if (normalized.startsWith('/') || WINDOWS_ABSOLUTE_PATH_RE.test(normalized)) {
+    return `file://${normalized.startsWith('/') ? '' : '/'}${encodedPath}`
+  }
+
+  return encodedPath
+}
+
+function escapeMarkdownLinkText(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/\[/g, '\\[').replace(/\]/g, '\\]')
+}
+
+function escapeMarkdownText(text: string): string {
+  return text.replace(/\\/g, '\\\\')
+}
+
+function createMarkdownLink(href: string, label: string): string {
+  return `[${escapeMarkdownLinkText(label)}](${href})`
+}
+
+function getDroppedFilePath(file: File): string | null {
+  const droppedFile = file as DroppedFileWithPath
+  return droppedFile.path || droppedFile.webkitRelativePath || null
+}
+
+function normalizePathForCompare(path: string): string {
+  const normalized = normalizeLocalFilePath(path).replace(/\/+$/, '')
+  return WINDOWS_ABSOLUTE_PATH_RE.test(normalized) ? normalized.toLowerCase() : normalized
+}
+
+function getPathInsideRoot(path: string, root: string): string | null {
+  const normalizedPath = normalizePathForCompare(path)
+  const normalizedRoot = normalizePathForCompare(root)
+
+  if (normalizedPath === normalizedRoot) {
+    return ''
+  }
+
+  if (!normalizedPath.startsWith(`${normalizedRoot}/`)) {
+    return null
+  }
+
+  return normalizeLocalFilePath(path).slice(normalizeLocalFilePath(root).replace(/\/+$/, '').length + 1)
+}
+
+async function getWorkspaceRelativePathForAbsolutePath(path: string): Promise<string | null> {
+  const workspace = await getWorkspacePath()
+
+  if (workspace.isCustom) {
+    return getPathInsideRoot(path, workspace.path)
+  }
+
+  const appDir = await appDataDir()
+  const defaultWorkspacePath = await join(appDir, 'article')
+  return getPathInsideRoot(path, defaultWorkspacePath)
+}
+
+async function getMarkdownHrefForDroppedPath(path: string, currentFilePath: string): Promise<string> {
+  const normalizedPath = normalizeLocalFilePath(path)
+
+  if (isAbsoluteFsPath(normalizedPath)) {
+    const workspaceRelativePath = await getWorkspaceRelativePathForAbsolutePath(normalizedPath)
+
+    if (workspaceRelativePath !== null) {
+      return encodeLocalLinkHref(toMarkdownRelativePath(currentFilePath, workspaceRelativePath))
+    }
+
+    return toFileUrl(normalizedPath)
+  }
+
+  return encodeLocalLinkHref(toMarkdownRelativePath(currentFilePath, normalizedPath))
+}
+
+async function createMarkdownLinksForDroppedPaths(files: DroppedFileLink[], currentFilePath: string): Promise<string[]> {
+  return await Promise.all(
+    files.map(async (file) => {
+      const href = await getMarkdownHrefForDroppedPath(file.path, currentFilePath)
+      return createMarkdownLink(href, file.label)
+    })
+  )
+}
+
+function getFileUrlsFromDataTransfer(dataTransfer: DataTransfer): string[] {
+  const uriList = dataTransfer.getData('text/uri-list')
+
+  if (uriList) {
+    return uriList
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#') && line.startsWith('file://'))
+  }
+
+  const plainText = dataTransfer.getData('text/plain') || dataTransfer.getData('text')
+  if (!plainText) {
+    return []
+  }
+
+  return plainText
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.startsWith('file://'))
+}
+
+async function getDroppedFileMarkdownLinks(dataTransfer: DataTransfer, currentFilePath: string): Promise<string[]> {
+  const droppedFiles: DroppedFileLink[] = []
+
+  if (hasFileManagerDragData(dataTransfer)) {
+    const path = getFileManagerDragPath(dataTransfer).trim()
+    if (path) {
+      droppedFiles.push({ path, label: getPathName(path) })
+    }
+  } else {
+    const fileUrls = getFileUrlsFromDataTransfer(dataTransfer)
+
+    if (fileUrls.length > 0) {
+      fileUrls.forEach((fileUrl) => {
+        const path = normalizeLocalFilePath(getFilePathFromFileUrl(fileUrl))
+        droppedFiles.push({ path, label: getPathName(path) })
+      })
+    } else {
+      Array.from(dataTransfer.files || []).forEach((file) => {
+        const path = getDroppedFilePath(file)
+        if (path) {
+          droppedFiles.push({ path, label: file.name || getPathName(path) })
+        }
+      })
+    }
+  }
+
+  return await createMarkdownLinksForDroppedPaths(droppedFiles, currentFilePath)
+}
+
+function resolveLocalLinkPath(href: string, currentFilePath: string): string {
+  const decodedPath = safeDecodeURIComponent(stripLocalLinkFragment(href)).trim()
+
+  if (!decodedPath) {
+    return ''
+  }
+
+  if (isAbsoluteFsPath(decodedPath)) {
+    return normalizeLocalFilePath(decodedPath)
+  }
+
+  const parentDir = currentFilePath.includes('/')
+    ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/'))
+    : ''
+  return normalizeLocalFilePath(parentDir ? `${parentDir}/${decodedPath}` : decodedPath)
+}
+
+function isInternalFilePath(path: string): boolean {
+  return INTERNAL_TEXT_FILE_PATH_RE.test(path) || INTERNAL_IMAGE_FILE_PATH_RE.test(path)
+}
+
+async function getOpenableLocalPath(path: string): Promise<string> {
+  if (isAbsoluteFsPath(path)) {
+    return path
+  }
+
+  const workspace = await getWorkspacePath()
+
+  if (workspace.isCustom) {
+    const pathOptions = await getFilePathOptions(path)
+    return pathOptions.path
+  }
+
+  const appDir = await appDataDir()
+  return await join(appDir, 'article', path)
+}
+
+async function openLocalPathWithDefaultApp(path: string) {
+  await openPath(await getOpenableLocalPath(path))
+}
 
 function parseImageDimension(value: unknown): number | null {
   if (typeof value === 'number') {
@@ -625,6 +957,7 @@ export function TipTapEditor({
       }),
       Link.configure({
         openOnClick: false,
+        protocols: ['file'],
       }),
       TaskList,
       TaskItem.configure({
@@ -1189,100 +1522,62 @@ export function TipTapEditor({
 
     const editorElement = editorContainerRef.current
 
+    const openFileInApp = async (path: string) => {
+      await useArticleStore.getState().setActiveFilePath(path)
+    }
+
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement
       const anchor = target.closest('a')
 
       if (!anchor) return
 
-      let href = anchor.getAttribute('href')
+      const href = anchor.getAttribute('href')?.trim()
       if (!href) return
+      if (href.startsWith('#')) return
 
       // 阻止默认行为
       event.preventDefault()
       // 阻止事件冒泡，防止其他处理器触发
       event.stopPropagation()
 
-      // 处理 file:// 协议
-      if (href.startsWith('file://')) {
-        href = href.replace(/^file:\/\//, '')
-        // Windows 路径处理
-        if (href.startsWith('/') && !href.match(/^[A-Z]:/)) {
-          href = href.substring(1)
-        }
-        openUrl(`file://${href}`).catch(console.error)
-        return
-      }
+      void (async () => {
+        const protocol = getLinkProtocol(href)
 
-      // 检查是否是本地开发服务器的 URL (localhost 或 127.0.0.1)
-      const isLocalUrl = href.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//)
+        if (protocol === 'file') {
+          const filePath = normalizeLocalFilePath(getFilePathFromFileUrl(href))
 
-      // 根据链接类型执行不同操作
-      if (href.startsWith('http://') || href.startsWith('https://')) {
-        if (isLocalUrl) {
-          // 本地开发服务器 URL，提取路径部分作为本地文件
-          const url = new URL(href)
-          let filePath = url.pathname
-          // 移除开头的斜杠（如果是 Unix 风格路径）
-          if (filePath.startsWith('/')) {
-            filePath = filePath.substring(1)
-          }
-          // Windows 路径处理
-          if (filePath.match(/^[A-Z]:/)) {
-            // 已经是 Windows 绝对路径
-          } else if (filePath.startsWith('/')) {
-            filePath = filePath.substring(1)
-          }
-          // URL 解码
-          filePath = decodeURIComponent(filePath)
-
-          // 获取当前文件的父目录，计算相对路径
-          const currentFilePath = useArticleStore.getState().activeFilePath
-          let fullPath: string
-
-          if (filePath.startsWith('/') || filePath.match(/^[A-Z]:/)) {
-            // 绝对路径
-            fullPath = filePath
-          } else {
-            // 相对路径，基于当前文件所在目录
-            const parentDir = currentFilePath.includes('/')
-              ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/'))
-              : ''
-            fullPath = parentDir ? `${parentDir}/${filePath}` : filePath
+          if (!filePath) {
+            return
           }
 
-          // 在软件内部打开文件
-          useArticleStore.getState().setActiveFilePath(fullPath)
-          return
-        } else {
-          // 外部 HTTP/HTTPS 链接：用浏览器打开
-          openUrl(href).catch(console.error)
+          if (isInternalFilePath(filePath)) {
+            await openFileInApp(filePath)
+            return
+          }
+
+          await openLocalPathWithDefaultApp(filePath)
           return
         }
-      } else if (href.startsWith('mailto:') || href.startsWith('tel:')) {
-        // 邮件和电话链接，用默认应用打开
-        openUrl(href).catch(console.error)
-        return
-      } else {
-        // 本地路径相对路径，基于当前文件所在目录
-        const currentFilePath = useArticleStore.getState().activeFilePath
-        let fullPath: string
 
-        if (href.startsWith('/') || href.match(/^[A-Z]:/)) {
-          // 绝对路径
-          fullPath = href
-        } else {
-          // 相对路径
-          const parentDir = currentFilePath.includes('/')
-            ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/'))
-            : ''
-          fullPath = parentDir ? `${parentDir}/${href}` : href
+        if (protocol) {
+          await openUrl(href)
+          return
         }
 
-        // 在软件内部打开文件
-        useArticleStore.getState().setActiveFilePath(fullPath)
-        return
-      }
+        const localPath = resolveLocalLinkPath(href, useArticleStore.getState().activeFilePath)
+
+        if (!localPath) {
+          return
+        }
+
+        if (isInternalFilePath(localPath)) {
+          await openFileInApp(localPath)
+          return
+        }
+
+        await openLocalPathWithDefaultApp(localPath)
+      })().catch(() => {})
     }
 
     editorElement.addEventListener('click', handleClick)
@@ -1639,7 +1934,7 @@ export function TipTapEditor({
     activeFilePathRef.current = activeFilePath
   }, [activeFilePath])
 
-  // Handle image paste and drop
+  // Handle image paste and file drop
   useEffect(() => {
     // Check if editor is fully initialized
     if (!editor || !editor.view || !editor.view.dom) return
@@ -1698,8 +1993,6 @@ export function TipTapEditor({
             .deleteRange({ from: placeholderStart, to: placeholderEnd })
             .run()
 
-          // Show error toast
-          console.error('Image upload failed:', error)
           toast({
             title: tImage('failed'),
             description: error instanceof Error ? error.message : undefined,
@@ -1709,69 +2002,60 @@ export function TipTapEditor({
     }
 
     const handleDrop = (event: DragEvent) => {
-      const files = event.dataTransfer?.files
-      if (!files || files.length === 0) return
+      const dataTransfer = event.dataTransfer
+      if (!dataTransfer) return
 
-      const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'))
-      if (imageFiles.length === 0) return
+      const hasDroppedFiles =
+        hasFileManagerDragData(dataTransfer) ||
+        dataTransfer.files.length > 0 ||
+        getFileUrlsFromDataTransfer(dataTransfer).length > 0
+      if (!hasDroppedFiles) return
 
-      const imageFile = imageFiles[0]
-
-      // Prevent default to avoid base64 image being inserted
       event.preventDefault()
+      event.stopPropagation()
 
-      // Get drop position
-      const pos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })
-      const insertPos = pos?.pos || editor.state.selection.from
+      void (async () => {
+        const links = await getDroppedFileMarkdownLinks(dataTransfer, activeFilePathRef.current)
+        const droppedFileNames = Array.from(dataTransfer.files || [])
+          .map(file => file.name.trim())
+          .filter(Boolean)
+        const pos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })
+        const insertPos = pos?.pos || editor.state.selection.from
 
-      // Insert "Uploading..." text as placeholder
-      editor.chain()
-        .focus()
-        .insertContentAt(insertPos, {
-          type: 'text',
-          text: 'Uploading... ',
-        })
-        .run()
+        if (links.length === 0) {
+          if (droppedFileNames.length > 0) {
+            editor.chain()
+              .focus()
+              .insertContentAt(
+                insertPos,
+                droppedFileNames.map(escapeMarkdownText).join('\n'),
+                { contentType: 'markdown' }
+              )
+              .run()
+            return
+          }
 
-      // Get the position range of the placeholder
-      const placeholderStart = insertPos
-      const placeholderEnd = insertPos + 'Uploading... '.length
-
-      handleImageUpload(imageFile, activeFilePathRef.current)
-        .then(result => {
-          // Delete the placeholder text
-          editor.chain()
-            .focus()
-            .deleteRange({ from: placeholderStart, to: placeholderEnd })
-            .run()
-
-          // Insert the actual image
-          editor.chain()
-            .insertContentAt(placeholderStart, {
-              type: 'image',
-              attrs: {
-                src: result.src,
-                alt: imageFile.name,
-                relativeSrc: result.relativePath,
-              },
-            })
-            .run()
-        })
-        .catch(error => {
-          // Remove the placeholder on error
-          editor.chain()
-            .focus()
-            .deleteRange({ from: placeholderStart, to: placeholderEnd })
-            .run()
-
-          // Show error toast
-          console.error('Image upload failed:', error)
           toast({
-            title: tImage('failed'),
-            description: error instanceof Error ? error.message : undefined,
+            title: '无法获取文件路径',
+            description: '当前拖拽来源没有提供真实文件路径，无法生成可打开的链接。',
             variant: 'destructive',
           })
+          return
+        }
+
+        const markdown = links.join('\n')
+
+        editor.chain()
+          .focus()
+          .insertContentAt(insertPos, markdown, { contentType: 'markdown' })
+          .run()
+      })().catch(error => {
+        toast({
+          title: '插入文件链接失败',
+          description: error instanceof Error ? error.message : undefined,
+          variant: 'destructive',
         })
+      })
     }
 
     // Add event listeners to editor DOM element

@@ -2973,6 +2973,8 @@
         "taskListDesc": "チェックボックス付きタスクリストを作成",
         "image": "画像",
         "imageDesc": "ローカル画像または画像ホスティングを挿入",
+        "file": "ファイル",
+        "fileDesc": "ローカルファイルを選択してリンクを挿入",
         "table": "表",
         "tableDesc": "表を挿入",
         "blockquote": "引用",
@@ -3007,6 +3009,9 @@
         "saveSuccess": "保存成功",
         "savePath": "保存先: {path}",
         "failed": "画像の挿入に失敗しました"
+      },
+      "fileInsert": {
+        "failed": "ファイルリンクの挿入に失敗しました"
       }
     }
   },

@@ -2963,6 +2963,8 @@
         "taskListDesc": "建立帶核取方塊的任務列表",
         "image": "圖片",
         "imageDesc": "插入本地圖片或圖床圖片",
+        "file": "檔案",
+        "fileDesc": "選擇本地檔案並插入連結",
         "table": "表格",
         "tableDesc": "插入表格",
         "blockquote": "引用",
@@ -2997,6 +2999,9 @@
         "saveSuccess": "儲存成功",
         "savePath": "儲存路徑: {path}",
         "failed": "插入圖片失敗"
+      },
+      "fileInsert": {
+        "failed": "插入檔案連結失敗"
       }
     }
   },

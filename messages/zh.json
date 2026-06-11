@@ -3077,6 +3077,8 @@
         "taskListDesc": "创建带复选框的任务列表",
         "image": "图片",
         "imageDesc": "插入本地图片或图床图片",
+        "file": "文件",
+        "fileDesc": "选择本地文件并插入链接",
         "table": "表格",
         "tableDesc": "插入表格",
         "blockquote": "引用",
@@ -3111,6 +3113,9 @@
         "saveSuccess": "保存成功",
         "savePath": "保存路径: __PATH__",
         "failed": "插入图片失败"
+      },
+      "fileInsert": {
+        "failed": "插入文件链接失败"
       }
     }
   },

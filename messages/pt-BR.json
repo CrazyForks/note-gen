@@ -2923,6 +2923,8 @@
         "taskListDesc": "Criar uma lista de tarefas com caixas de seleção",
         "image": "Imagem",
         "imageDesc": "Inserir imagem local ou hospedada",
+        "file": "Arquivo",
+        "fileDesc": "Escolher um arquivo local e inserir um link",
         "table": "Tabela",
         "tableDesc": "Inserir uma tabela",
         "blockquote": "Citação",
@@ -2957,6 +2959,9 @@
         "saveSuccess": "Salvo com sucesso",
         "savePath": "Salvo em: {path}",
         "failed": "Falha ao inserir imagem"
+      },
+      "fileInsert": {
+        "failed": "Falha ao inserir link de arquivo"
       }
     }
   },

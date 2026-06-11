@@ -3077,6 +3077,8 @@
         "taskListDesc": "Create a checklist with checkboxes",
         "image": "Image",
         "imageDesc": "Insert local or hosted image",
+        "file": "File",
+        "fileDesc": "Choose a local file and insert a link",
         "table": "Table",
         "tableDesc": "Insert a table",
         "blockquote": "Quote",
@@ -3111,6 +3113,9 @@
         "saveSuccess": "Save successful",
         "savePath": "Saved to: {path}",
         "failed": "Failed to insert image"
+      },
+      "fileInsert": {
+        "failed": "Failed to insert file link"
       }
     }
   },

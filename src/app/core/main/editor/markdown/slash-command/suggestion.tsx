@@ -20,14 +20,17 @@ import {
   Database,
   Map,
   Image as ImageIcon,
+  FilePlus,
 } from 'lucide-react'
 import { SuggestionProps } from '@tiptap/suggestion'
 import { type Editor, type Range } from '@tiptap/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { readFile } from '@tauri-apps/plugin-fs'
+import { appDataDir, join } from '@tauri-apps/api/path'
 import { handleImageUpload } from '@/lib/image-handler'
 import useArticleStore from '@/stores/article'
 import { toast } from '@/hooks/use-toast'
+import { getWorkspacePath, isAbsoluteFsPath } from '@/lib/workspace'
 
 export interface SlashCommandItem {
   title: string
@@ -36,6 +39,182 @@ export interface SlashCommandItem {
   group: string
   searchTerms?: string[]
   command: (props: { editor: Editor; range: Range }) => void
+}
+
+const WINDOWS_ABSOLUTE_PATH_RE = /^[a-zA-Z]:[\\/]/
+
+function normalizeLocalFilePath(path: string): string {
+  const normalized = path.trim().replace(/\\/g, '/')
+  const hasUncPrefix = normalized.startsWith('//')
+  const hasLeadingSlash = normalized.startsWith('/')
+  const segments: string[] = []
+
+  normalized.split('/').forEach((segment) => {
+    if (!segment || segment === '.') {
+      return
+    }
+
+    if (segment === '..') {
+      if (segments.length > 0 && segments[segments.length - 1] !== '..') {
+        segments.pop()
+      } else if (!hasLeadingSlash) {
+        segments.push(segment)
+      }
+      return
+    }
+
+    segments.push(segment)
+  })
+
+  const normalizedPath = segments.join('/')
+  if (hasUncPrefix) {
+    return `//${normalizedPath}`
+  }
+
+  return hasLeadingSlash ? `/${normalizedPath}` : normalizedPath
+}
+
+function getPathName(path: string): string {
+  const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
+  return normalized.split('/').filter(Boolean).pop() || normalized || path
+}
+
+function normalizeWorkspacePathSegments(path: string): string[] {
+  const normalized = path
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.?\//, '')
+    .replace(/\/+/g, '/')
+
+  if (!normalized) {
+    return []
+  }
+
+  const segments: string[] = []
+
+  normalized.split('/').forEach((segment) => {
+    if (!segment || segment === '.') {
+      return
+    }
+
+    if (segment === '..') {
+      if (segments.length > 0) {
+        segments.pop()
+      }
+      return
+    }
+
+    segments.push(segment)
+  })
+
+  return segments
+}
+
+function toMarkdownRelativePath(currentFilePath: string, targetWorkspacePath: string): string {
+  const currentSegments = normalizeWorkspacePathSegments(currentFilePath)
+  const currentDirSegments = currentSegments.slice(0, -1)
+  const targetSegments = normalizeWorkspacePathSegments(targetWorkspacePath)
+
+  let commonPrefixLength = 0
+  while (
+    commonPrefixLength < currentDirSegments.length &&
+    commonPrefixLength < targetSegments.length &&
+    currentDirSegments[commonPrefixLength] === targetSegments[commonPrefixLength]
+  ) {
+    commonPrefixLength += 1
+  }
+
+  const upwardSegments = new Array(currentDirSegments.length - commonPrefixLength).fill('..')
+  const downwardSegments = targetSegments.slice(commonPrefixLength)
+  return [...upwardSegments, ...downwardSegments].join('/') || getPathName(targetWorkspacePath)
+}
+
+function encodeLocalLinkHref(path: string): string {
+  return encodeURI(path)
+    .replace(/#/g, '%23')
+    .replace(/\?/g, '%3F')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29')
+}
+
+function toFileUrl(path: string): string {
+  const normalized = normalizeLocalFilePath(path)
+  const encodedPath = encodeLocalLinkHref(normalized)
+
+  if (normalized.startsWith('//')) {
+    return `file:${encodedPath}`
+  }
+
+  if (normalized.startsWith('/') || WINDOWS_ABSOLUTE_PATH_RE.test(normalized)) {
+    return `file://${normalized.startsWith('/') ? '' : '/'}${encodedPath}`
+  }
+
+  return encodedPath
+}
+
+function escapeMarkdownLinkText(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/\[/g, '\\[').replace(/\]/g, '\\]')
+}
+
+function createMarkdownLink(href: string, label: string): string {
+  return `[${escapeMarkdownLinkText(label)}](${href})`
+}
+
+function normalizePathForCompare(path: string): string {
+  const normalized = normalizeLocalFilePath(path).replace(/\/+$/, '')
+  return WINDOWS_ABSOLUTE_PATH_RE.test(normalized) ? normalized.toLowerCase() : normalized
+}
+
+function getPathInsideRoot(path: string, root: string): string | null {
+  const normalizedPath = normalizePathForCompare(path)
+  const normalizedRoot = normalizePathForCompare(root)
+
+  if (normalizedPath === normalizedRoot) {
+    return ''
+  }
+
+  if (!normalizedPath.startsWith(`${normalizedRoot}/`)) {
+    return null
+  }
+
+  return normalizeLocalFilePath(path).slice(normalizeLocalFilePath(root).replace(/\/+$/, '').length + 1)
+}
+
+async function getWorkspaceRelativePathForAbsolutePath(path: string): Promise<string | null> {
+  const workspace = await getWorkspacePath()
+
+  if (workspace.isCustom) {
+    return getPathInsideRoot(path, workspace.path)
+  }
+
+  const appDir = await appDataDir()
+  const defaultWorkspacePath = await join(appDir, 'article')
+  return getPathInsideRoot(path, defaultWorkspacePath)
+}
+
+async function getMarkdownHrefForFilePath(path: string, currentFilePath: string): Promise<string> {
+  const normalizedPath = normalizeLocalFilePath(path)
+
+  if (isAbsoluteFsPath(normalizedPath)) {
+    const workspaceRelativePath = await getWorkspaceRelativePathForAbsolutePath(normalizedPath)
+
+    if (workspaceRelativePath !== null) {
+      return encodeLocalLinkHref(toMarkdownRelativePath(currentFilePath, workspaceRelativePath))
+    }
+
+    return toFileUrl(normalizedPath)
+  }
+
+  return encodeLocalLinkHref(toMarkdownRelativePath(currentFilePath, normalizedPath))
+}
+
+async function createMarkdownLinksForFilePaths(paths: string[], currentFilePath: string): Promise<string[]> {
+  return await Promise.all(
+    paths.map(async (path) => {
+      const href = await getMarkdownHrefForFilePath(path, currentFilePath)
+      return createMarkdownLink(href, getPathName(path))
+    })
+  )
 }
 
 // 辅助函数: 创建 Mermaid 图表命令
@@ -89,6 +268,8 @@ export interface SlashCommandTranslations {
     taskListDesc: string
     image: string
     imageDesc: string
+    file: string
+    fileDesc: string
     table: string
     tableDesc: string
     blockquote: string
@@ -122,6 +303,9 @@ export interface SlashCommandTranslations {
     success: string
     saveSuccess: string
     savePath: string
+    failed: string
+  }
+  fileInsert: {
     failed: string
   }
 }
@@ -170,6 +354,8 @@ export const suggestionItems = (t?: SlashCommandTranslations): SlashCommandItem[
       taskListDesc: '创建带复选框的任务列表',
       image: '图片',
       imageDesc: '插入本地图片或图床图片',
+      file: '文件',
+      fileDesc: '选择本地文件并插入链接',
       table: '表格',
       tableDesc: '插入表格',
       blockquote: '引用',
@@ -204,6 +390,9 @@ export const suggestionItems = (t?: SlashCommandTranslations): SlashCommandItem[
       saveSuccess: '保存成功',
       savePath: '保存路径: __PATH__',
       failed: '插入图片失败',
+    },
+    fileInsert: {
+      failed: '插入文件链接失败',
     },
   }
 
@@ -357,6 +546,52 @@ export const suggestionItems = (t?: SlashCommandTranslations): SlashCommandItem[
 
           toast({
             title: tr.imageUpload.failed,
+            description: error instanceof Error ? error.message : 'Unknown error',
+            variant: 'destructive',
+          })
+        }
+      },
+    },
+    {
+      title: tr.items.file,
+      description: tr.items.fileDesc,
+      icon: <FilePlus className="w-4 h-4" />,
+      group: tr.groups.block,
+      searchTerms: ['file', 'attachment', 'link', 'local', 'document', '文件', '附件', '链接'],
+      command: async ({ editor, range }: { editor: Editor; range: Range }) => {
+        const rangeStart = range.from
+        editor.chain().focus().deleteRange(range).run()
+
+        try {
+          const selected = await open({
+            multiple: true,
+            directory: false,
+          })
+
+          const paths = Array.isArray(selected)
+            ? selected
+            : selected
+              ? [selected]
+              : []
+
+          if (paths.length === 0) {
+            return
+          }
+
+          const currentFilePath = useArticleStore.getState().activeFilePath
+          const links = await createMarkdownLinksForFilePaths(paths, currentFilePath)
+
+          if (links.length === 0) {
+            return
+          }
+
+          editor.chain()
+            .focus()
+            .insertContentAt(rangeStart, links.join('\n'), { contentType: 'markdown' })
+            .run()
+        } catch (error) {
+          toast({
+            title: tr.fileInsert.failed,
             description: error instanceof Error ? error.message : 'Unknown error',
             variant: 'destructive',
           })
