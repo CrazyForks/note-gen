@@ -34,7 +34,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs";
 import { useRouter } from "next/navigation";
 import { NO_TRANSCRIPTION_MESSAGE, transcribeRecording } from "@/lib/audio";
-import { cn } from "@/lib/utils";
+import { cn, isHttpUrl } from "@/lib/utils";
 import { getMarkTypeListBadgeClasses } from "./mark-type-meta";
 import { getMarkListItemContent } from "./mark-list-item-content";
 import { TodoEditTrigger } from "./todo-edit-button";
@@ -575,7 +575,7 @@ export const MarkWrapper = React.memo(({mark, variant = 'list', interactive = tr
               {t(mark.type)}
             </span>
             <ImageRecordStatusBadge status={imageStatus} label={imageStatusText} compact />
-            {mark.url.includes('http') ? <ImageUp className="size-3 text-zinc-400" /> : null}
+            {isHttpUrl(mark.url) ? <ImageUp className="size-3 text-zinc-400" /> : null}
             <span className={`ml-auto shrink-0 text-${recordTextSize}`}>{dayjs(mark.createdAt).fromNow()}</span>
           </div>
           {renderListTextBlock(itemContent.title || mark.desc || imageStatusText || t(mark.type), itemContent.preview)}

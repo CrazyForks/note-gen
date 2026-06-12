@@ -426,3 +426,29 @@ ol {
   background-color: #ea580c !important;
   color: #fff !important;
 }
+
+/* Photo preview should leave breathing room around large images. */
+.PhotoView-Portal.notegen-photo-preview .PhotoView-Slider__BannerWrap {
+  display: none;
+}
+
+.PhotoView-Portal.notegen-photo-preview .PhotoView-Slider__Overlay {
+  pointer-events: none;
+  position: relative;
+  z-index: 30;
+}
+
+.PhotoView-Portal.notegen-photo-preview .notegen-photo-preview-control {
+  pointer-events: auto;
+}
+
+.PhotoView-Portal.notegen-photo-preview .notegen-photo-preview-photo {
+  scale: 0.9;
+  transform-origin: center;
+}
+
+@media (max-width: 640px) {
+  .PhotoView-Portal.notegen-photo-preview .notegen-photo-preview-photo {
+    scale: 0.88;
+  }
+}

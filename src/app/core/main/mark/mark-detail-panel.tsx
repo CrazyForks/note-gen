@@ -3,9 +3,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import dayjs from "dayjs"
 import { Copy, FileText, FolderOpen, RefreshCw } from "lucide-react"
+import { PhotoView } from "react-photo-view"
 import { useTranslations } from "next-intl"
 import type { Mark } from "@/db/marks"
 import { LocalImage } from "@/components/local-image"
+import { PhotoPreviewProvider } from "@/components/photo-preview-provider"
 import { AudioPlayer } from "@/components/audio-player"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -21,7 +23,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { cn } from "@/lib/utils"
+import { cn, isHttpUrl } from "@/lib/utils"
 import useMarkStore from "@/stores/mark"
 import useTagStore from "@/stores/tag"
 import useSettingStore from "@/stores/setting"
@@ -46,7 +48,7 @@ const getImageSrc = (mark: Mark): string | null => {
     return null
   }
 
-  if (mark.url.includes('http')) {
+  if (isHttpUrl(mark.url)) {
     return mark.url
   }
 
@@ -66,7 +68,7 @@ function bytesToBase64(bytes: Uint8Array) {
 }
 
 function getLocalImagePath(mark: Mark) {
-  if (!mark.url || mark.url.includes('http') || (mark.type !== 'image' && mark.type !== 'scan')) {
+  if (!mark.url || isHttpUrl(mark.url) || (mark.type !== 'image' && mark.type !== 'scan')) {
     return null
   }
 
@@ -259,6 +261,7 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
   const [value, setValue] = useState('')
   const [descValue, setDescValue] = useState('')
   const [isRecognizingImage, setIsRecognizingImage] = useState(false)
+  const [detailImagePreviewSrc, setDetailImagePreviewSrc] = useState('')
   const imageSrc = getImageSrc(mark)
   const wordCount = getWordCount(mark.content || '')
   const shouldShowDescription = mark.type !== 'text' && mark.type !== 'recording' && (mark.desc !== mark.content || Boolean(imageSrc))
@@ -274,6 +277,10 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
     setValue(mark.content || '')
     setDescValue(mark.desc?.trim() || '')
   }, [mark])
+
+  useEffect(() => {
+    setDetailImagePreviewSrc(isHttpUrl(mark.url) ? mark.url : '')
+  }, [mark.url])
 
   const textDescChangeHandler = useCallback(async (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDescValue(event.target.value)
@@ -422,7 +429,7 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
                 size="sm"
                 className="gap-2"
                 onClick={handleShowImageInFolder}
-                disabled={mark.url.includes('http')}
+                disabled={!mark.url || isHttpUrl(mark.url)}
               >
                 <FolderOpen className="h-4 w-4" />
                 {t('record.capture.screenshotShowInFolder')}
@@ -440,11 +447,16 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
               </Button>
             </div>
             <div className="flex min-h-56 w-full min-w-0 max-w-full items-center justify-center overflow-hidden rounded-md bg-muted/20 p-2">
-              <LocalImage
-                src={imageSrc}
-                alt=""
-                className="max-h-[52vh] w-full max-w-full object-contain"
-              />
+              <PhotoView src={detailImagePreviewSrc}>
+                <button type="button" className="block w-full cursor-zoom-in">
+                  <LocalImage
+                    src={imageSrc}
+                    alt=""
+                    onResolvedSrc={setDetailImagePreviewSrc}
+                    className="max-h-[52vh] w-full max-w-full object-contain"
+                  />
+                </button>
+              </PhotoView>
             </div>
           </div>
         </DetailItem>
@@ -487,13 +499,15 @@ function MarkDetailBody({ mark }: { mark: Mark }) {
 
 function MarkDetailView({ mark }: { mark: Mark }) {
   return (
-    <div className="flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden bg-background">
-      <ScrollArea className="h-full w-full min-w-0 flex-1">
-        <div className="min-w-full max-w-full overflow-hidden">
-          <MarkDetailBody mark={mark} />
-        </div>
-      </ScrollArea>
-    </div>
+    <PhotoPreviewProvider>
+      <div className="flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden bg-background">
+        <ScrollArea className="h-full w-full min-w-0 flex-1">
+          <div className="min-w-full max-w-full overflow-hidden">
+            <MarkDetailBody mark={mark} />
+          </div>
+        </ScrollArea>
+      </div>
+    </PhotoPreviewProvider>
   )
 }
 

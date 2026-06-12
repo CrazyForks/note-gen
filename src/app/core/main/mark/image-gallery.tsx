@@ -1,8 +1,8 @@
 'use client'
 
 import { Mark, delMark, deleteMarks, updateMark } from "@/db/marks"
-import { useState, useEffect } from "react"
-import { cn, convertImage } from "@/lib/utils"
+import { useEffect, useMemo, useState } from "react"
+import { cn, convertImage, isHttpUrl } from "@/lib/utils"
 import { PhotoView } from "react-photo-view"
 import { LocalImage } from "@/components/local-image"
 import { useTranslations } from "next-intl"
@@ -24,12 +24,13 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import Image from "next/image"
-import { PhotoPreviewProvider } from "@/components/photo-preview-provider"
 import { getMarkOpenAction } from "./mark-open-path"
 
 interface ImageGalleryProps {
   marks: Mark[]
 }
+
+const COLLAPSED_IMAGE_LIMIT = 8
 
 // 单个图片项组件
 function ImageItem({ mark }: { mark: Mark }) {
@@ -43,7 +44,8 @@ function ImageItem({ mark }: { mark: Mark }) {
     clearSelection,
   } = useMarkStore()
   const { tags, currentTagId, fetchTags, getCurrentTag } = useTagStore()
-  const [photoSrc, setPhotoSrc] = useState('')
+  const isRemoteImage = isHttpUrl(mark.url)
+  const [photoSrc, setPhotoSrc] = useState(isRemoteImage ? mark.url : '')
   const isSelected = selectedMarkIds.has(mark.id)
   const isBatchOperation = isMultiSelectMode && selectedMarkIds.size > 0
   const filteredTags = tags.filter(tag => tag.id !== currentTagId)
@@ -52,16 +54,24 @@ function ImageItem({ mark }: { mark: Mark }) {
     : `/image/${mark.url}`
 
   useEffect(() => {
-    async function loadImage() {
-      if (mark.url.includes('http')) {
-        setPhotoSrc(mark.url)
-      } else {
-        const converted = await convertImage(imagePath)
-        setPhotoSrc(converted)
+    let cancelled = false
+
+    async function resolvePreviewSrc() {
+      const nextPhotoSrc = isRemoteImage
+        ? mark.url
+        : await convertImage(imagePath)
+
+      if (!cancelled) {
+        setPhotoSrc(nextPhotoSrc)
       }
     }
-    loadImage()
-  }, [mark.url, imagePath])
+
+    void resolvePreviewSrc()
+
+    return () => {
+      cancelled = true
+    }
+  }, [imagePath, isRemoteImage, mark.url])
 
   async function handleDelMark(e?: React.MouseEvent) {
     e?.stopPropagation()
@@ -157,18 +167,24 @@ function ImageItem({ mark }: { mark: Mark }) {
           />
         </div>
       ) : null}
-      {mark.url.includes('http') ? (
+      {isRemoteImage ? (
         <Image
           src={mark.url}
           alt=""
           width={0}
           height={0}
+          loading="lazy"
+          decoding="async"
+          unoptimized
+          onLoad={() => setPhotoSrc(mark.url)}
           className="h-full w-full object-cover"
         />
       ) : (
         <LocalImage
           src={imagePath}
           alt=""
+          useThumbnail
+          onResolvedSrc={setPhotoSrc}
           className="h-full w-full object-cover"
         />
       )}
@@ -193,11 +209,9 @@ function ImageItem({ mark }: { mark: Mark }) {
             {imageContent}
           </div>
         ) : (
-          <PhotoPreviewProvider>
-            <PhotoView src={photoSrc}>
-              {imageContent}
-            </PhotoView>
-          </PhotoPreviewProvider>
+          <PhotoView src={photoSrc}>
+            {imageContent}
+          </PhotoView>
         )}
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -254,10 +268,15 @@ export function ImageGallery({ marks }: ImageGalleryProps) {
   const { isMultiSelectMode, selectedMarkIds, setSelectedMarkIds } = useMarkStore()
 
   // 筛选出没有内容的图片记录（包括 scan 和 image 类型）
-  const emptyImageMarks = marks.filter(mark => 
+  const emptyImageMarks = useMemo(() => marks.filter(mark =>
     (mark.type === 'image' || mark.type === 'scan') && 
+    Boolean(mark.url) &&
     (!mark.content || mark.content.trim() === '')
-  )
+  ), [marks])
+  const visibleImageMarks = isExpanded
+    ? emptyImageMarks
+    : emptyImageMarks.slice(0, COLLAPSED_IMAGE_LIMIT)
+  const hiddenImageCount = emptyImageMarks.length - visibleImageMarks.length
   const selectedImageCount = emptyImageMarks.filter(mark => selectedMarkIds.has(mark.id)).length
   const isAllImagesSelected = emptyImageMarks.length > 0 && selectedImageCount === emptyImageMarks.length
   const imageGroupSelectionState = isAllImagesSelected
@@ -330,9 +349,18 @@ export function ImageGallery({ marks }: ImageGalleryProps) {
             gridTemplateColumns: `repeat(auto-fill, minmax(56px, 1fr))`
           }}
         >
-          {emptyImageMarks.map((mark) => (
+          {visibleImageMarks.map((mark) => (
             <ImageItem key={mark.id} mark={mark} />
           ))}
+          {hiddenImageCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              className="flex aspect-square items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              +{hiddenImageCount}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
