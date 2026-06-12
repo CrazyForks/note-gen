@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import emitter from '@/lib/emitter'
 import { setAiSuggestionShortcutVisible } from '@/lib/ai-suggestion-shortcut-state'
+import { clearAiSuggestionHighlight, setAiSuggestionHighlight } from './ai-suggestion-highlight'
 
 interface AISuggestionFloatingProps {
   editor: Editor
@@ -90,6 +91,12 @@ export function AISuggestionFloating({ editor }: AISuggestionFloatingProps) {
     }
   }, [abortController])
 
+  useEffect(() => {
+    return () => {
+      clearAiSuggestionHighlight(editor)
+    }
+  }, [editor])
+
   const updatePosition = useCallback(() => {
     if (!anchorPositionRef.current) {
       return
@@ -148,6 +155,7 @@ export function AISuggestionFloating({ editor }: AISuggestionFloatingProps) {
       position: { top: number; left: number; right: number; bottom: number }
       controller?: AbortController
     }) => {
+      clearAiSuggestionHighlight(editor)
       anchorPositionRef.current = data.position
       setSuggestion({
         originalText: data.originalText,
@@ -195,6 +203,7 @@ export function AISuggestionFloating({ editor }: AISuggestionFloatingProps) {
     const handleStreamingComplete = (data?: SuggestionData & PositionData) => {
       if (data) {
         anchorPositionRef.current = data.position
+        setAiSuggestionHighlight(editor, data.generatedRange)
         setSuggestion({
           originalText: data.originalText,
           suggestedText: data.suggestedText,
@@ -202,6 +211,8 @@ export function AISuggestionFloating({ editor }: AISuggestionFloatingProps) {
           generatedRange: data.generatedRange,
         })
         setIsVisible(true)
+      } else {
+        clearAiSuggestionHighlight(editor)
       }
 
       setIsStreaming(false)
@@ -217,6 +228,7 @@ export function AISuggestionFloating({ editor }: AISuggestionFloatingProps) {
       setAbortController(null)
 
       const current = latestSuggestionRef.current
+      clearAiSuggestionHighlight(editor)
       if (current) {
         editor.chain()
           .focus()
@@ -233,6 +245,7 @@ export function AISuggestionFloating({ editor }: AISuggestionFloatingProps) {
 
     const handleShowSuggestion = (data: SuggestionData & PositionData) => {
       anchorPositionRef.current = data.position
+      setAiSuggestionHighlight(editor, data.generatedRange)
       setSuggestion({
         originalText: data.originalText,
         suggestedText: data.suggestedText,
@@ -261,15 +274,18 @@ export function AISuggestionFloating({ editor }: AISuggestionFloatingProps) {
   }, [editor, abortController])
 
   const handleAccept = useCallback(() => {
+    clearAiSuggestionHighlight(editor)
     anchorPositionRef.current = null
     setThinkingText('')
     setIsVisible(false)
     setSuggestion(null)
-  }, [])
+  }, [editor])
 
   const handleReject = useCallback(() => {
     const current = latestSuggestionRef.current
     if (!current) return
+
+    clearAiSuggestionHighlight(editor)
 
     if (current.generatedRange) {
       const command = editor.chain()

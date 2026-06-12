@@ -61,6 +61,7 @@ import { fetchAiPolishStream, fetchAiConciseStream, fetchAiExpandStream } from '
 import { fetchAiTranslateStream } from '@/lib/ai/translate'
 import { AISuggestion } from './ai-suggestion'
 import { AISuggestionFloating } from './ai-suggestion-floating'
+import { AiSuggestionHighlight } from './ai-suggestion-highlight'
 import emitter from '@/lib/emitter'
 import { QuoteMark } from './quote-mark'
 import { MarkdownParagraph, normalizeMarkdownPlaceholders } from './markdown-paragraph'
@@ -120,6 +121,15 @@ function getEditorPositionRect(targetEditor: TipTapReactEditor, position: number
     left: coords.left,
     right: coords.right,
     bottom: coords.bottom,
+  }
+}
+
+function getInsertedContentRange(targetEditor: TipTapReactEditor, from: number, docSizeBeforeInsert: number) {
+  const insertedSize = Math.max(0, targetEditor.state.doc.content.size - docSizeBeforeInsert)
+
+  return {
+    from,
+    to: from + insertedSize,
   }
 }
 
@@ -1016,6 +1026,7 @@ export function TipTapEditor({
       }),
       QuoteMark,
       AISuggestion,
+      AiSuggestionHighlight,
       UniqueId.configure({
         attributeName: 'data-id',
         types: ['paragraph', 'heading', 'blockquote', 'codeBlock', 'listItem', 'bulletList', 'orderedList', 'taskItem', 'table', 'tableRow', 'tableCell', 'tableHeader'],
@@ -2196,17 +2207,21 @@ export function TipTapEditor({
       // Streaming complete - replace all content with proper Markdown parsing
       editor.chain()
         .deleteRange({ from: startPosition, to: startPosition + accumulatedResult.length })
-        .insertContent(accumulatedResult, { contentType: 'markdown' })
         .run()
 
+      const docSizeBeforeInsert = editor.state.doc.content.size
+      editor.chain()
+        .insertContentAt(startPosition, accumulatedResult, { contentType: 'markdown' })
+        .run()
+      const generatedRange = getInsertedContentRange(editor, startPosition, docSizeBeforeInsert)
+
       // Send completion event
-      const finalCoords = editor.view.coordsAtPos(startPosition + accumulatedResult.length)
       emitter.emit('ai-streaming-complete', {
         originalText: selectedText,
         suggestedText: accumulatedResult,
         type: 'polish',
-        position: finalCoords,
-        generatedRange: { from: startPosition, to: startPosition + accumulatedResult.length },
+        position: getEditorPositionRect(editor, generatedRange.to),
+        generatedRange,
       })
       emitter.emit('onboarding-step-complete', { step: 'ai-polish' })
     } catch (error) {
@@ -2286,17 +2301,21 @@ export function TipTapEditor({
       // Streaming complete - replace all content with proper Markdown parsing
       editor.chain()
         .deleteRange({ from: startPosition, to: startPosition + accumulatedResult.length })
-        .insertContent(accumulatedResult, { contentType: 'markdown' })
         .run()
 
+      const docSizeBeforeInsert = editor.state.doc.content.size
+      editor.chain()
+        .insertContentAt(startPosition, accumulatedResult, { contentType: 'markdown' })
+        .run()
+      const generatedRange = getInsertedContentRange(editor, startPosition, docSizeBeforeInsert)
+
       // Send completion event
-      const finalCoords = editor.view.coordsAtPos(startPosition + accumulatedResult.length)
       emitter.emit('ai-streaming-complete', {
         originalText: selectedText,
         suggestedText: accumulatedResult,
         type: 'concise',
-        position: finalCoords,
-        generatedRange: { from: startPosition, to: startPosition + accumulatedResult.length },
+        position: getEditorPositionRect(editor, generatedRange.to),
+        generatedRange,
       })
       emitter.emit('onboarding-step-complete', { step: 'ai-polish' })
     } catch (error) {
@@ -2376,17 +2395,21 @@ export function TipTapEditor({
       // Streaming complete - replace all content with proper Markdown parsing
       editor.chain()
         .deleteRange({ from: startPosition, to: startPosition + accumulatedResult.length })
-        .insertContent(accumulatedResult, { contentType: 'markdown' })
         .run()
 
+      const docSizeBeforeInsert = editor.state.doc.content.size
+      editor.chain()
+        .insertContentAt(startPosition, accumulatedResult, { contentType: 'markdown' })
+        .run()
+      const generatedRange = getInsertedContentRange(editor, startPosition, docSizeBeforeInsert)
+
       // Send completion event
-      const finalCoords = editor.view.coordsAtPos(startPosition + accumulatedResult.length)
       emitter.emit('ai-streaming-complete', {
         originalText: selectedText,
         suggestedText: accumulatedResult,
         type: 'expand',
-        position: finalCoords,
-        generatedRange: { from: startPosition, to: startPosition + accumulatedResult.length },
+        position: getEditorPositionRect(editor, generatedRange.to),
+        generatedRange,
       })
       emitter.emit('onboarding-step-complete', { step: 'ai-polish' })
     } catch (error) {
@@ -2458,16 +2481,20 @@ export function TipTapEditor({
 
       editor.chain()
         .deleteRange({ from: startPosition, to: startPosition + accumulatedResult.length })
-        .insertContent(accumulatedResult, { contentType: 'markdown' })
         .run()
 
-      const finalCoords = editor.view.coordsAtPos(startPosition + accumulatedResult.length)
+      const docSizeBeforeInsert = editor.state.doc.content.size
+      editor.chain()
+        .insertContentAt(startPosition, accumulatedResult, { contentType: 'markdown' })
+        .run()
+      const generatedRange = getInsertedContentRange(editor, startPosition, docSizeBeforeInsert)
+
       emitter.emit('ai-streaming-complete', {
         originalText: selectedText,
         suggestedText: accumulatedResult,
         type: 'translate',
-        position: finalCoords,
-        generatedRange: { from: startPosition, to: startPosition + accumulatedResult.length },
+        position: getEditorPositionRect(editor, generatedRange.to),
+        generatedRange,
       })
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {

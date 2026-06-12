@@ -1116,6 +1116,18 @@
   background-color: hsl(var(--primary) / 0.4);
 }
 
+.tiptap-editor .ProseMirror .tiptap-ai-generated-highlight {
+  background-color: hsl(var(--primary) / 0.12);
+  box-shadow: inset 0 -2px 0 hsl(var(--primary) / 0.45);
+  border-radius: 2px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dark .tiptap-editor .ProseMirror .tiptap-ai-generated-highlight {
+  background-color: hsl(var(--primary) / 0.18);
+  box-shadow: inset 0 -2px 0 hsl(var(--primary) / 0.55);
+}
+
 /* ========================
    Mermaid 图表样式
    ======================== */
