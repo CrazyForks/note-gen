@@ -12,6 +12,7 @@ import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import Typography from '@tiptap/extension-typography'
 import Dropcursor from '@tiptap/extension-dropcursor'
+import DragHandle from '@tiptap/extension-drag-handle'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableCell } from '@tiptap/extension-table-cell'
@@ -104,6 +105,13 @@ const IMAGE_RESIZE_DIRECTIONS: ResizableNodeViewDirection[] = [
 ]
 
 const AI_GENERATION_LOADING_TEXT = '···'
+
+function createDragHandleElement(): HTMLElement {
+  const element = document.createElement('div')
+  element.className = 'tiptap-drag-handle'
+  element.setAttribute('aria-hidden', 'true')
+  return element
+}
 
 const INTERNAL_TEXT_FILE_PATH_RE = /\.(?:md|txt|markdown|py|js|ts|jsx|tsx|css|scss|less|html|xml|json|yaml|yml|sh|bash|java|c|cpp|h|go|rs|sql|rb|php|vue|svelte|astro|toml|ini|conf|cfg|gitignore|env|example|template)$/i
 const INTERNAL_IMAGE_FILE_PATH_RE = /\.(?:jpg|jpeg|png|gif|bmp|webp|svg)$/i
@@ -1009,6 +1017,22 @@ export function TipTapEditor({
       Typography,
       SearchAndReplace,
       Dropcursor,
+      ...(!isMobile
+        ? [
+            DragHandle.configure({
+              render: createDragHandleElement,
+              computePositionConfig: {
+                middleware: [
+                  {
+                    name: 'editorDragHandleOffset',
+                    fn: ({ x, y }) => ({ x: x + 16, y }),
+                  },
+                ],
+              },
+              nested: true,
+            }),
+          ]
+        : []),
       Table.configure({
         resizable: true,
       }),
