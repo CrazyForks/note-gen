@@ -14,26 +14,55 @@
   <a href="https://www.producthunt.com/products/notegen-2?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-notegen&#0045;2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=956348&theme=light&t=1749194675492" alt="NoteGen - A&#0032;cross&#0045;platform&#0032;Markdown&#0032;note&#0045;taking&#0032;application | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </div>
 
-## Guide
+## Get Started
 
 🖥️ Official Document: [English](https://notegen.top/en/) | [简体中文](https://notegen.top/cn/)
 
 💬 Join [WeChat/QQ Group](https://github.com/codexu/note-gen/discussions/110), [Discord](https://discord.gg/SXyVZGpbpk), [Telegram](https://t.me/notegen)
 
-NoteGen is an open-source, cross-platform `Markdown` note app built for messy thinking: capture first, organize later, and let AI turn fragments into readable notes.
+> Capture first, organize later.
+
+NoteGen is an open-source, cross-platform note app that helps you capture rough information first and turn it into structured writing later.
+
+It works like a capture inbox, Markdown editor, and AI assistant in one app. Save scattered thoughts, voice recordings, screenshots, images, links, files, and todos in one place. When you are ready, let AI organize those raw records into clear notes, summaries, reports, articles, or reusable knowledge.
 
 ![](https://s2.loli.net/2025/12/22/jlpEP2c6ogwHhIA.png)
 
-## Features
+## What Can NoteGen Do?
 
-- ✍️ Capture first, organize later: turn scattered inputs into structured notes without breaking your flow.
-- 🤖 AI-native writing workflow: chat, rewrite, translate, and polish notes right beside your editor.
-- 🖼️ Image workflow: capture, recognize, describe, host, and reuse images in your notes.
-- 📝 Native Markdown storage: keep your notes portable, local-first, and future-proof.
-- 📦 Built-in knowledge base: RAG, vector indexing, and hybrid retrieval out of the box.
-- 🔌 Extensible AI stack: supports MCP, custom models, prompts, memories, and agent workflows.
-- 🔄 Flexible sync: works with GitHub, Gitee, GitLab, Gitea, S3, and WebDAV.
-- 🌐 Cross-platform: available on Windows, macOS, Linux, Android, and iOS.
+NoteGen is built around a simple idea: do not force yourself to write a perfect note at the moment an idea appears.
+
+- 🧩 Capture anything quickly: text, voice, screenshots, images, links, files, and todos.
+- 🧠 Turn messy records into organized notes: select records, choose a template, and generate structured Markdown.
+- ✍️ Keep writing after AI helps: edit the result in a Markdown editor with tables, diagrams, math, outline, search, and export tools.
+- 💬 Ask questions about your own material: chat with notes, records, and knowledge base content instead of starting from a blank prompt.
+- 🖼️ Make images useful: save screenshots and images, run OCR or AI recognition, add descriptions, and reuse them in notes.
+- 🔄 Work across devices: keep notes local as Markdown files and sync them through GitHub, Gitee, GitLab, Gitea, S3, or WebDAV.
+
+## Use NoteGen For
+
+- Meeting notes and class notes: capture fragments during the session, then turn them into a readable summary.
+- Reading and research: collect links, screenshots, documents, and quotes, then ask AI to organize the material.
+- Weekly reports and work logs: generate reports from recent records by tag, time range, or template.
+- Personal knowledge management: keep long-term notes as Markdown files and chat with your own knowledge base.
+
+## Typical Workflow
+
+1. **Record first**: save a thought, meeting snippet, screenshot, webpage, document, or task without deciding where it belongs.
+2. **Organize later**: filter records by tag, time, or type, then ask AI to turn selected records into a note, weekly report, draft, or summary.
+3. **Write with control**: polish the generated Markdown, keep useful references and images, and export or sync when needed.
+4. **Reuse your knowledge**: search, chat, translate, rewrite, or let the Agent help continue working with your notes.
+
+## Powerful When You Need It
+
+NoteGen keeps the everyday experience focused on recording and writing, while still offering advanced tools for heavier workflows:
+
+- Local-first Markdown storage and workspace-based file management.
+- AI chat, inline completion, translation, rewriting, summaries, prompts, memories, and Agent mode.
+- Knowledge base search with vector indexing and hybrid retrieval.
+- Configurable AI providers and models for chat, embeddings, OCR/VLM, audio, and more.
+- MCP support for connecting external AI tools.
+- Cross-platform desktop and mobile apps built with Tauri.
 
 ## Download
 
@@ -43,16 +72,6 @@ NoteGen is an open-source, cross-platform `Markdown` note app built for messy th
 | [Download](https://notegen.top/en/download) | [Download](https://notegen.top/en/download) | [Download](https://notegen.top/en/download) | [Download](https://notegen.top/en/download) | [TestFlight](https://testflight.apple.com/join/8KjFRTCq) |
 
 > [UpgradeLink offers application upgrade and download services](http://upgrade.toolsetlink.com/upgrade/example/tauri-example.html)
-
-## From Recording to Writing
-
-Most note apps are good at storing finished content, but weak at capturing messy thinking. NoteGen is designed for the earlier stage: record fragmented inputs first, then turn them into readable, reusable notes with Markdown and AI.
-
-NoteGen is built around three connected spaces:
-
-- `Recording`: capture scattered thoughts, screenshots, links, clips, and temporary inputs without breaking your flow.
-- `Notes`: refine everything in a Markdown editor with tables, diagrams, math, export tools, and structured writing support.
-- `AI Dialogue`: chat with your notes and knowledge base, reuse memory and context, and let AI help you organize, rewrite, and extend content.
 
 ## Contribute
 
