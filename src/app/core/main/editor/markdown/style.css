@@ -89,6 +89,11 @@
 }
 
 /* 代码块 */
+.tiptap-editor .ProseMirror .code-block-wrapper {
+  position: relative;
+  margin: 1em 0;
+}
+
 .tiptap-editor .ProseMirror pre {
   background-color: hsl(var(--muted) / 0.5);
   border-radius: 8px;
@@ -97,10 +102,98 @@
   margin: 1em 0;
 }
 
+.tiptap-editor .ProseMirror .code-block-wrapper pre {
+  margin: 0;
+  padding-top: 42px;
+}
+
 .tiptap-editor .ProseMirror pre code {
   background-color: transparent;
   padding: 0;
   font-size: 14px;
+}
+
+.tiptap-editor .ProseMirror .code-block-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap-editor .ProseMirror .code-block-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: hsl(var(--muted-foreground));
+  background-color: hsl(var(--background) / 0.78);
+  border: 1px solid hsl(var(--border) / 0.7);
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.tiptap-editor .ProseMirror .code-block-copy-button:hover {
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
+
+.tiptap-editor .ProseMirror .code-block-copy-button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.tiptap-editor .ProseMirror .code-block-language-trigger {
+  width: 78px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 6px;
+  gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: hsl(var(--muted-foreground));
+  background-color: hsl(var(--background) / 0.78);
+  border-color: hsl(var(--border) / 0.7);
+  box-shadow: none;
+}
+
+.tiptap-editor .ProseMirror .code-block-language-trigger:hover {
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
+
+.tiptap-editor .ProseMirror .code-block-language-trigger svg {
+  width: 12px;
+  height: 12px;
+}
+
+.code-block-language-trigger-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.code-block-language-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.code-block-language-option-code {
+  width: 42px;
+  flex: 0 0 42px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
 }
 
 /* 代码高亮 */

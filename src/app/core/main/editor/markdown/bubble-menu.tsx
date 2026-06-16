@@ -36,6 +36,17 @@ const POPULAR_LANGUAGES = [
   { name: 'العربية', code: 'Arabic', i18nKey: 'languages.Arabic' },
 ]
 
+const KEYBOARD_SELECTION_KEYS = new Set([
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+])
+
 interface BubbleMenuProps {
   editor: Editor
   onAIPolish?: () => void
@@ -64,6 +75,23 @@ function hasTextSelection(editor: Editor): boolean {
   return getSelectedText(editor).trim().length > 0
 }
 
+function isKeyboardSelectionIntent(event: KeyboardEvent): boolean {
+  if (event.isComposing) {
+    return false
+  }
+
+  if (
+    (event.metaKey || event.ctrlKey) &&
+    !event.altKey &&
+    !event.shiftKey &&
+    event.key.toLowerCase() === 'a'
+  ) {
+    return true
+  }
+
+  return event.shiftKey && KEYBOARD_SELECTION_KEYS.has(event.key)
+}
+
 export function BubbleMenu({
   editor,
   onAIPolish,
@@ -89,6 +117,7 @@ export function BubbleMenu({
   const translateSubmenuRef = useRef<HTMLDivElement>(null)
   const hasUserSelectionIntentRef = useRef(false)
   const isPointerSelectingRef = useRef(false)
+  const isComposingRef = useRef(false)
 
   const hideMenu = useCallback(() => {
     setShow(false)
@@ -132,6 +161,11 @@ export function BubbleMenu({
   const updatePosition = useCallback(() => {
     const { selection } = editor.state
     const { from, to } = selection
+
+    if (isComposingRef.current) {
+      hideMenu()
+      return false
+    }
 
     if (isPointerSelectingRef.current) {
       hideMenu()
@@ -221,6 +255,15 @@ export function BubbleMenu({
     const editorElement = editor.view.dom
     const ownerDocument = editorElement.ownerDocument
 
+    const handleCompositionStart = () => {
+      isComposingRef.current = true
+      hideMenu()
+    }
+
+    const handleCompositionEnd = () => {
+      isComposingRef.current = false
+    }
+
     const handlePointerStart = () => {
       isPointerSelectingRef.current = true
       hasUserSelectionIntentRef.current = false
@@ -249,7 +292,13 @@ export function BubbleMenu({
       })
     }
 
-    const handleKeyDown = () => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isKeyboardSelectionIntent(event)) {
+        return
+      }
+
+      hasUserSelectionIntentRef.current = true
+
       requestAnimationFrame(() => {
         const hasSelection = hasTextSelection(editor)
         hasUserSelectionIntentRef.current = hasSelection
@@ -264,7 +313,9 @@ export function BubbleMenu({
 
     editorElement.addEventListener('mousedown', handlePointerStart)
     editorElement.addEventListener('touchstart', handlePointerStart, { passive: true })
-    editorElement.addEventListener('keydown', handleKeyDown)
+    editorElement.addEventListener('keydown', handleKeyDown, true)
+    editorElement.addEventListener('compositionstart', handleCompositionStart)
+    editorElement.addEventListener('compositionend', handleCompositionEnd)
     ownerDocument.addEventListener('mouseup', finishPointerSelection)
     ownerDocument.addEventListener('touchend', finishPointerSelection)
     ownerDocument.addEventListener('touchcancel', finishPointerSelection)
@@ -272,7 +323,9 @@ export function BubbleMenu({
     return () => {
       editorElement.removeEventListener('mousedown', handlePointerStart)
       editorElement.removeEventListener('touchstart', handlePointerStart)
-      editorElement.removeEventListener('keydown', handleKeyDown)
+      editorElement.removeEventListener('keydown', handleKeyDown, true)
+      editorElement.removeEventListener('compositionstart', handleCompositionStart)
+      editorElement.removeEventListener('compositionend', handleCompositionEnd)
       ownerDocument.removeEventListener('mouseup', finishPointerSelection)
       ownerDocument.removeEventListener('touchend', finishPointerSelection)
       ownerDocument.removeEventListener('touchcancel', finishPointerSelection)
