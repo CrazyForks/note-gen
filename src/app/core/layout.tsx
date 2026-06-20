@@ -28,6 +28,7 @@ import { TextSizeProvider } from "@/contexts/text-size-context"
 import { SyncConfirmDialog } from "@/components/sync-confirm-dialog"
 import { AutoDataSyncConflictDialog } from "@/components/auto-data-sync-conflict-dialog"
 import { applyThemeColors } from "@/lib/theme-utils"
+import { applyAppFontFamily } from "@/lib/font-settings"
 import emitter from "@/lib/emitter"
 import { isEditableKeyboardTarget } from "@/lib/is-editable-keyboard-target"
 import useArticleStore from "@/stores/article"
@@ -42,7 +43,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { initSettingData, uiScale, customThemeColors, recordToolbarConfig } = useSettingStore()
+  const { initSettingData, uiScale, customThemeColors, recordToolbarConfig, appFontFamily } = useSettingStore()
   const { initMainHosting } = useImageStore()
   const { currentLocale } = useI18n()
   const { initShortcut } = useShortcutStore()
@@ -333,6 +334,11 @@ export default function RootLayout({
       document.documentElement.style.fontSize = `${uiScale}%`
     }
   }, [uiScale])
+
+  // 应用字体
+  useEffect(() => {
+    applyAppFontFamily(appFontFamily)
+  }, [appFontFamily])
 
   // 应用自定义主题颜色
   useEffect(() => {

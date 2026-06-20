@@ -15,6 +15,7 @@ import { applyNoteGenDefaultConfig, loadNoteGenDefaultConfig } from '@/lib/ai/no
 import { enqueueAutoDataSync, isAutoDataSyncApplyingRemote } from '@/lib/sync/auto-data-sync-queue'
 import { shouldExcludeFromSync } from '@/config/sync-exclusions'
 import { DEFAULT_SYSTEM_PROMPT } from '@/lib/ai/system-prompt'
+import { APP_FONT_SYSTEM_VALUE, applyAppFontFamily } from '@/lib/font-settings'
 
 export enum GenTemplateRange {
   All = 'all',
@@ -44,6 +45,9 @@ interface SettingState {
 
   language: string
   setLanguage: (language: string) => void
+
+  appFontFamily: string
+  setAppFontFamily: (fontFamily: string) => Promise<void>
 
   // setting - ai - 当前选择的模型 key
   currentAi: string
@@ -650,6 +654,15 @@ const useSettingStore = create<SettingState>((set, get) => ({
 
   language: '简体中文',
   setLanguage: (language) => set({ language }),
+
+  appFontFamily: APP_FONT_SYSTEM_VALUE,
+  setAppFontFamily: async (fontFamily) => {
+    set({ appFontFamily: fontFamily })
+    applyAppFontFamily(fontFamily)
+    const store = await Store.load('store.json')
+    await store.set('appFontFamily', fontFamily)
+    await store.save()
+  },
 
   currentAi: '',
   setCurrentAi: (currentAi) => set({ currentAi }),

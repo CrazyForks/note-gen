@@ -1,6 +1,7 @@
 mod mcp;
 mod mcp_runtime;
 mod device;
+mod fonts;
 mod backup;
 mod skills;
 mod ai;
@@ -8,6 +9,7 @@ mod ai;
 use mcp::{start_mcp_stdio_server, stop_mcp_server, send_mcp_message, McpServerManager};
 use mcp_runtime::{cancel_mcp_runtime_install, inspect_mcp_runtime, install_mcp_runtime, RuntimeInstallManager};
 use device::get_device_id;
+use fonts::list_system_fonts;
 use backup::{export_app_data, import_app_data, import_app_data_from_file};
 use skills::import_skill_zip;
 use ai::{ai_binary_request, ai_chat_completion_stream, ai_json_request, ai_multipart_request, cancel_ai_request, AiRequestManager};
@@ -33,6 +35,7 @@ pub fn run() {
             install_mcp_runtime,
             cancel_mcp_runtime_install,
             get_device_id,
+            list_system_fonts,
             export_app_data,
             import_app_data,
             import_app_data_from_file,

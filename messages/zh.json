@@ -56,6 +56,24 @@
           "title": "记录文字大小",
           "desc": "调整记录列表中记录项的文字大小"
         },
+        "fontFamily": {
+          "title": "应用字体",
+          "desc": "桌面端可选择系统字体；移动端使用系统允许的通用字体族",
+          "placeholder": "选择字体",
+          "loading": "正在读取系统字体...",
+          "noSystemFonts": "当前平台不支持读取完整系统字体",
+          "groups": {
+            "default": "默认",
+            "generic": "通用字体",
+            "system": "系统字体"
+          },
+          "options": {
+            "system": "跟随系统",
+            "sansSerif": "无衬线",
+            "serif": "衬线",
+            "monospace": "等宽"
+          }
+        },
         "customCss": {
           "title": "自定义 CSS",
           "desc": "添加自定义 CSS 样式来覆盖应用的默认样式",

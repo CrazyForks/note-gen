@@ -79,6 +79,7 @@ export const SENSITIVE_SYNC_EXCLUDED_FIELDS: string[] = [
   'workspacePath',
   'workspaceHistory',
   'assetsPath',
+  'appFontFamily',
   'uiScale',
   'contentTextScale',
   'customCss',

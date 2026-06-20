@@ -1064,8 +1064,9 @@ export function TipTapEditor({
               render: createDragHandleElement,
               onNodeChange: (options) => {
                 const { node } = options
-                const pos = typeof (options as { pos?: unknown }).pos === 'number'
-                  ? (options as { pos: number }).pos
+                const dragOptions = options as unknown as { pos?: unknown }
+                const pos = typeof dragOptions.pos === 'number'
+                  ? dragOptions.pos
                   : -1
 
                 editorDragHandleTargetRangeRef.current = node && pos >= 0

@@ -56,6 +56,24 @@
           "title": "Tamanho do Texto dos Registros",
           "desc": "Ajuste o tamanho do texto dos itens de registro na lista de registros"
         },
+        "fontFamily": {
+          "title": "Fonte do aplicativo",
+          "desc": "No desktop, use fontes instaladas no sistema; no celular, use famílias genéricas compatíveis com a plataforma.",
+          "placeholder": "Selecionar fonte",
+          "loading": "Carregando fontes do sistema...",
+          "noSystemFonts": "Esta plataforma não expõe a lista completa de fontes do sistema",
+          "groups": {
+            "default": "Padrão",
+            "generic": "Fontes genéricas",
+            "system": "Fontes do sistema"
+          },
+          "options": {
+            "system": "Padrão do sistema",
+            "sansSerif": "Sem serifa",
+            "serif": "Serifada",
+            "monospace": "Monoespaçada"
+          }
+        },
         "customCss": {
           "title": "CSS Personalizado",
           "desc": "Adicione estilos CSS personalizados para substituir os estilos padrão do aplicativo",

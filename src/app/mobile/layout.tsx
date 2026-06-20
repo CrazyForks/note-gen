@@ -5,6 +5,7 @@ import useSettingStore from "@/stores/setting"
 import { useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { applyThemeColors } from "@/lib/theme-utils"
+import { applyAppFontFamily } from "@/lib/font-settings"
 import { initAllDatabases } from "@/db"
 import dayjs from "dayjs"
 import zh from "dayjs/locale/zh-cn";
@@ -36,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname()
-  const { initSettingData, customThemeColors } = useSettingStore()
+  const { initSettingData, customThemeColors, appFontFamily } = useSettingStore()
   const { initMainHosting } = useImageStore()
   const { currentLocale } = useI18n()
   useEffect(() => {
@@ -88,6 +89,11 @@ export default function RootLayout({
   useEffect(() => {
     applyThemeColors(customThemeColors)
   }, [customThemeColors])
+
+  // 应用字体
+  useEffect(() => {
+    applyAppFontFamily(appFontFamily)
+  }, [appFontFamily])
 
   const hideFootbar = pathname.startsWith('/mobile/setting/pages')
 
