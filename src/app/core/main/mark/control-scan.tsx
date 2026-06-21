@@ -241,54 +241,28 @@ export function ControlScan() {
     let nextMark = savedMark
 
     try {
-      setQueue(queueId, { progress: t('record.mark.progress.uploadImage') })
-      const file = new File([bytes], filename, { type: 'image/png' })
-      let hostedUrl: string | undefined
+      if (enableImageRecognition) {
+        const result = await recognizeImageWithFallback({
+          imagePath: `${SCREENSHOT_DIR}/${filename}`,
+          base64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+          shouldGenerateDescription: Boolean(primaryModel),
+          onProgress: (stage) => {
+            setQueue(queueId, {
+              progress: getImageRecognitionProgressText(t, stage),
+            })
+          },
+        })
 
-      try {
-        hostedUrl = await uploadImage(file)
-      } catch (uploadError) {
-        console.error('Failed to upload screenshot to image hosting:', uploadError)
+        nextMark = {
+          ...nextMark,
+          content: result.content,
+          desc: result.desc || result.content || t('record.capture.screenshotNoText'),
+        }
+        await updateSavedMark(nextMark)
         toast({
-          title: t('record.capture.imageUploadFallback'),
-          description: t('record.capture.imageUploadFallbackDescription'),
+          title: t('record.capture.screenshotRecognitionComplete'),
         })
       }
-
-      if (hostedUrl) {
-        nextMark = { ...nextMark, url: hostedUrl }
-        await updateSavedMark(nextMark)
-      }
-
-      if (!enableImageRecognition) {
-        return
-      }
-
-      let content = ''
-      let desc = ''
-
-      const result = await recognizeImageWithFallback({
-        imagePath: `${SCREENSHOT_DIR}/${filename}`,
-        base64: `data:image/png;base64,${bytesToBase64(bytes)}`,
-        shouldGenerateDescription: Boolean(primaryModel),
-        onProgress: (stage) => {
-          setQueue(queueId, {
-            progress: getImageRecognitionProgressText(t, stage),
-          })
-        },
-      })
-      content = result.content
-      desc = result.desc
-
-      nextMark = {
-        ...nextMark,
-        content,
-        desc: desc || content || t('record.capture.screenshotNoText'),
-      }
-      await updateSavedMark(nextMark)
-      toast({
-        title: t('record.capture.screenshotRecognitionComplete'),
-      })
     } catch (error) {
       console.error('Screenshot recognition failed:', error)
       nextMark = {
@@ -300,6 +274,23 @@ export function ControlScan() {
         title: t('common.error'),
         description: error instanceof Error ? error.message : t('record.capture.screenshotRecognitionFailed'),
         variant: 'destructive',
+      })
+    }
+
+    try {
+      setQueue(queueId, { progress: t('record.mark.progress.uploadImage') })
+      const file = new File([bytes], filename, { type: 'image/png' })
+      const hostedUrl = await uploadImage(file)
+
+      if (hostedUrl) {
+        nextMark = { ...nextMark, url: hostedUrl }
+        await updateSavedMark(nextMark)
+      }
+    } catch (uploadError) {
+      console.error('Failed to upload screenshot to image hosting:', uploadError)
+      toast({
+        title: t('record.capture.imageUploadFallback'),
+        description: t('record.capture.imageUploadFallbackDescription'),
       })
     } finally {
       removeQueue(queueId)
