@@ -44,6 +44,28 @@ interface Links {
   html: string;
 }
 
+export interface GithubRelease {
+  name?: string | null;
+  tag_name?: string | null;
+  body?: string | null;
+  published_at?: string | null;
+  html_url?: string | null;
+  draft?: boolean;
+  prerelease?: boolean;
+}
+
+interface GithubReleasesCache {
+  updatedAt: number;
+  releases: GithubRelease[];
+}
+
+interface GetReleasesOptions {
+  forceRefresh?: boolean;
+}
+
+const GITHUB_RELEASES_CACHE_KEY = 'githubReleasesCache';
+const GITHUB_RELEASES_CACHE_TTL_MS = 1000 * 60 * 30;
+
 export async function uploadFile(
   { file, filename, sha, message, repo, path }:
   { file: string, filename?: string, sha?: string, message?: string, repo: string, path?: string })
@@ -394,10 +416,9 @@ export async function createSyncRepo(name: string, isPrivate?: boolean) {
 }
 
 // 读取 release
-export async function getRelease() {
+export async function getRelease(): Promise<GithubRelease | false | undefined> {
   const store = await Store.load('store.json');
-  const accessToken = await store.get('accessToken')
-  if (!accessToken) return;
+  const accessToken = await store.get<string>('accessToken')
   
   // 获取代理设置
   const proxyUrl = await store.get<string>('proxy')
@@ -408,7 +429,9 @@ export async function getRelease() {
   try {
     // 设置请求头
     const headers = new Headers();
-    headers.append('Authorization', `Bearer ${accessToken}`);
+    if (accessToken) {
+      headers.append('Authorization', `Bearer ${accessToken}`);
+    }
     headers.append('Accept', 'application/vnd.github+json');
     headers.append('X-GitHub-Api-Version', '2022-11-28');
     headers.append('If-None-Match', '');
@@ -423,13 +446,73 @@ export async function getRelease() {
     const response = await fetch(url, requestOptions);
     
     if (response.status >= 200 && response.status < 300) {
-      const data = await response.json();
+      const data = await response.json() as GithubRelease;
       return data;
     }
     
     throw new Error('获取 release 失败');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
+    return false
+  }
+}
+
+// 读取 release 列表
+export async function getReleases(options: GetReleasesOptions = {}): Promise<GithubRelease[] | false | undefined> {
+  const store = await Store.load('store.json');
+  const accessToken = await store.get<string>('accessToken')
+  const cachedReleases = await store.get<GithubReleasesCache>(GITHUB_RELEASES_CACHE_KEY)
+
+  if (
+    !options.forceRefresh &&
+    cachedReleases?.releases?.length &&
+    Date.now() - cachedReleases.updatedAt < GITHUB_RELEASES_CACHE_TTL_MS
+  ) {
+    return cachedReleases.releases;
+  }
+
+  // 获取代理设置
+  const proxyUrl = await store.get<string>('proxy')
+  const proxy: Proxy | undefined = proxyUrl ? {
+    all: proxyUrl
+  } : undefined
+
+  try {
+    // 设置请求头
+    const headers = new Headers();
+    if (accessToken) {
+      headers.append('Authorization', `Bearer ${accessToken}`);
+    }
+    headers.append('Accept', 'application/vnd.github+json');
+    headers.append('X-GitHub-Api-Version', '2022-11-28');
+    headers.append('If-None-Match', '');
+
+    const requestOptions = {
+      method: 'GET',
+      headers,
+      proxy
+    };
+
+    const url = `https://api.github.com/repos/codexu/note-gen/releases?per_page=100`;
+    const response = await fetch(url, requestOptions);
+
+    if (response.status >= 200 && response.status < 300) {
+      const data = await response.json() as GithubRelease[];
+      await store.set(GITHUB_RELEASES_CACHE_KEY, {
+        updatedAt: Date.now(),
+        releases: data
+      } satisfies GithubReleasesCache);
+      await store.save();
+      return data;
+    }
+
+    throw new Error('获取 release 列表失败');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    if (cachedReleases?.releases?.length) {
+      return cachedReleases.releases;
+    }
+
     return false
   }
 }

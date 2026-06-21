@@ -19,7 +19,7 @@ export default function RootLayout({
             <ArrowLeft />
           </Button>
         </div>
-        <div className="flex-1 w-full p-3">
+        <div className="mx-auto w-full max-w-5xl flex-1 p-3">
           {children}
         </div>
       </div>

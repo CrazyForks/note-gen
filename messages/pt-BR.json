@@ -444,48 +444,84 @@
     },
     "about": {
       "title": "Sobre",
-      "desc": "Um assistente de anotações focado em registro e escrita.",
+      "desc": "Registre primeiro, organize depois.",
+      "resourcesTitle": "Recursos e suporte",
+      "resourcesDesc": "Abra documentos, notas de versão ou canais da comunidade para feedback.",
+      "licenseText": "Código aberto · GitHub · GPL-3.0",
       "version": "NoteGen v{version}",
       "checkReleases": "Verificar Histórico de Lançamentos",
       "language": "Idioma",
       "checkUpdate": "Verificar Atualizações",
       "checkError": "Falha ao verificar atualizações",
+      "releaseLoadError": "Falha ao carregar o histórico de atualizações",
       "updateAvailable": "Atualizar para nova versão",
+      "updateIgnored": "Esta versão está ignorada",
       "updateDownloading": "Atualizando {downloaded} / {contentLength}",
       "updateInstalled": "Reiniciar aplicativo",
       "noUpdate": "A versão atual é a mais recente",
+      "lastCheckedAt": "Última verificação: {time}",
+      "lastCheckedNever": "Atualizações ainda não foram verificadas",
+      "releasePublishedAt": "Publicado em {date}",
+      "releaseHistoryTitle": "Histórico de atualizações",
+      "releaseHistoryDesc": "De v{currentVersion} até v{latestVersion}, {count} versões no total.",
+      "releaseHistoryEmpty": "Nenhum histórico de atualização foi encontrado entre a versão atual e a mais recente.",
+      "releasePrerelease": "Pré-lançamento",
+      "releaseNoNotes": "Nenhuma nota de versão foi fornecida para esta versão.",
+      "retryReleaseNotes": "Recarregar",
       "ignoreVersion": "Ignorar esta versão",
       "ignoreVersionSuccess": "Esta atualização de versão foi ignorada",
+      "ignoredVersionTitle": "v{version} ignorada",
+      "ignoredVersionDesc": "Esta versão não avisará novamente. Você pode restaurar o aviso e continuar a instalação.",
+      "restoreIgnoredVersion": "Restaurar aviso",
+      "restoreIgnoredVersionSuccess": "O aviso de atualização desta versão foi restaurado",
+      "sections": {
+        "appInfo": {
+          "title": "Informações do app",
+          "desc": "Veja a versão atual, o status de atualização e o resumo do app."
+        },
+        "updates": {
+          "title": "Atualizações de versão",
+          "desc": "Abra as notas da versão mais recente e o histórico de atualizações."
+        },
+        "docs": {
+          "title": "Documentos e configuração",
+          "desc": "Aprenda sobre sincronização, backup e armazenamento de dados."
+        },
+        "community": {
+          "title": "Feedback e comunidade",
+          "desc": "Reporte problemas, veja o código-fonte ou participe de discussões públicas."
+        }
+      },
       "items": {
         "home": {
           "title": "Início",
           "buttonName": "Abrir",
-          "desc": "Visite o site para saber mais sobre o NoteGen."
+          "desc": "Abra o site oficial."
         },
         "guide": {
-          "title": "Guia",
+          "title": "Guia de sincronização",
           "buttonName": "Abrir",
-          "desc": "Veja o guia de configuração, aprenda como configurar modelos, sincronização e outras informações."
+          "desc": "Configure sync com Git, S3 e WebDAV."
         },
         "github": {
           "title": "GitHub",
           "buttonName": "Ver",
-          "desc": "Se o NoteGen te ajuda, por favor, dê uma estrela para incentivar!"
+          "desc": "Veja o código e contribua."
         },
         "releases": {
           "title": "Log de Atualizações",
           "buttonName": "Ver",
-          "desc": "Veja o log de atualizações, saiba mais sobre as novidades do NoteGen."
+          "desc": "Veja as atualizações."
         },
         "issues": {
           "title": "Feedback de Problemas",
           "buttonName": "Comentários",
-          "desc": "Se você encontrar um bug no NoteGen, por favor, reporte aqui."
+          "desc": "Reporte bugs e problemas."
         },
         "discussions": {
           "title": "Discussões",
           "buttonName": "Discutir",
-          "desc": "Se você quiser discutir com o autor ou outros usuários, pode se juntar ao grupo de discussão."
+          "desc": "Participe das discussões."
         }
       }
     },

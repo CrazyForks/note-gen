@@ -585,48 +585,84 @@
     },
     "about": {
       "title": "關於",
-      "desc": "一款專注於記錄與寫作的 AI 筆記。",
+      "desc": "先記錄，再整理。",
+      "resourcesTitle": "資源與支援",
+      "resourcesDesc": "查看文件、版本記錄，或進入社群回饋問題。",
+      "licenseText": "開源專案 · GitHub · GPL-3.0",
       "version": "NoteGen v{version}",
       "checkReleases": "查詢歷史版本",
       "language": "語言",
       "checkUpdate": "檢查更新",
       "checkError": "檢查更新失敗",
+      "releaseLoadError": "更新記錄載入失敗",
       "updateAvailable": "更新至最新版本",
+      "updateIgnored": "已忽略此版本",
       "updateDownloading": "更新中 {downloaded} / {contentLength}",
       "updateInstalled": "重啟應用",
       "noUpdate": "當前已是最新版本",
+      "lastCheckedAt": "上次檢查：{time}",
+      "lastCheckedNever": "尚未檢查更新",
+      "releasePublishedAt": "發布於 {date}",
+      "releaseHistoryTitle": "更新記錄",
+      "releaseHistoryDesc": "從 v{currentVersion} 到 v{latestVersion}，共 {count} 個版本。",
+      "releaseHistoryEmpty": "未找到從目前版本到最新版本之間的更新記錄。",
+      "releasePrerelease": "預發布",
+      "releaseNoNotes": "此版本未提供更新說明。",
+      "retryReleaseNotes": "重新載入",
       "ignoreVersion": "忽略此版本",
       "ignoreVersionSuccess": "已忽略此版本更新",
+      "ignoredVersionTitle": "已忽略 v{version}",
+      "ignoredVersionDesc": "此版本不會再提示更新，你可以恢復提示並繼續安裝。",
+      "restoreIgnoredVersion": "恢復提示",
+      "restoreIgnoredVersionSuccess": "已恢復此版本更新提示",
+      "sections": {
+        "appInfo": {
+          "title": "應用資訊",
+          "desc": "查看目前版本、更新狀態和應用簡介。"
+        },
+        "updates": {
+          "title": "版本更新",
+          "desc": "查看最新版本、發布說明和歷史更新。"
+        },
+        "docs": {
+          "title": "文件與配置",
+          "desc": "從官網和文件了解同步、備份與資料儲存。"
+        },
+        "community": {
+          "title": "回饋與社群",
+          "desc": "提交問題、查看原始碼，或參與公開討論。"
+        }
+      },
       "items": {
         "home": {
           "title": "官網",
           "buttonName": "打開",
-          "desc": "訪問官網，了解 NoteGen 的更多資訊。"
+          "desc": "訪問官網了解產品。"
         },
         "guide": {
-          "title": "配置指南",
+          "title": "同步配置指南",
           "buttonName": "打開",
-          "desc": "查看配置指南，了解如何配置模型、同步等資訊。"
+          "desc": "配置 Git、S3 和 WebDAV 同步。"
         },
         "github": {
           "title": "GitHub",
           "buttonName": "查看",
-          "desc": "如果 NoteGen 幫助到了你，請給顆 star 鼓勵一下！"
+          "desc": "查看原始碼與貢獻。"
         },
         "releases": {
           "title": "更新日誌",
           "buttonName": "查看",
-          "desc": "查看更新日誌，了解 NoteGen 的更新資訊。"
+          "desc": "查看版本更新。"
         },
         "issues": {
           "title": "問題回饋",
           "buttonName": "回饋",
-          "desc": "如果發現 NoteGen 有 bug，請在這裡回饋。"
+          "desc": "回饋問題與缺陷。"
         },
         "discussions": {
           "title": "交流討論",
           "buttonName": "討論",
-          "desc": "如果你想和作者或其他用戶交流，可以加群討論。"
+          "desc": "參與交流討論。"
         }
       }
     },

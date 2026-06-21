@@ -909,7 +909,7 @@ const useSettingStore = create<SettingState>((set, get) => ({
     }
   },
 
-  lastSettingPage: 'ai',
+  lastSettingPage: 'about',
   setLastSettingPage: async (page: string) => {
     set({ lastSettingPage: page })
     const store = await Store.load('store.json');

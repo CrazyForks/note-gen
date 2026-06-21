@@ -498,48 +498,84 @@
     },
     "about": {
       "title": "About",
-      "desc": "A note-taking assistant focused on record and writing.",
+      "desc": "Capture first, organize later.",
+      "resourcesTitle": "Resources and support",
+      "resourcesDesc": "Open docs, release notes, or community channels for feedback.",
+      "licenseText": "Open source · GitHub · GPL-3.0",
       "version": "NoteGen v{version}",
       "checkReleases": "Check Release History",
       "language": "Language",
       "checkUpdate": "Check for Updates",
       "checkError": "Failed to check for updates",
+      "releaseLoadError": "Failed to load update history",
       "updateAvailable": "Update to new version",
+      "updateIgnored": "This version is ignored",
       "updateDownloading": "Updating {downloaded} / {contentLength}",
       "updateInstalled": "Restart app",
       "noUpdate": "Current version is the latest",
+      "lastCheckedAt": "Last checked: {time}",
+      "lastCheckedNever": "Updates have not been checked yet",
+      "releasePublishedAt": "Published on {date}",
+      "releaseHistoryTitle": "Update history",
+      "releaseHistoryDesc": "From v{currentVersion} to v{latestVersion}, {count} versions in total.",
+      "releaseHistoryEmpty": "No update history was found between the current version and the latest version.",
+      "releasePrerelease": "Pre-release",
+      "releaseNoNotes": "No release notes were provided for this version.",
+      "retryReleaseNotes": "Reload",
       "ignoreVersion": "Ignore this version",
       "ignoreVersionSuccess": "This version update has been ignored",
+      "ignoredVersionTitle": "Ignored v{version}",
+      "ignoredVersionDesc": "This version will not prompt again. You can restore the prompt and continue installing it.",
+      "restoreIgnoredVersion": "Restore prompt",
+      "restoreIgnoredVersionSuccess": "This version update prompt has been restored",
+      "sections": {
+        "appInfo": {
+          "title": "App information",
+          "desc": "Review the current version, update status, and app summary."
+        },
+        "updates": {
+          "title": "Version updates",
+          "desc": "Open the latest release notes and update history."
+        },
+        "docs": {
+          "title": "Docs and configuration",
+          "desc": "Learn about sync, backup, and data storage from the website and docs."
+        },
+        "community": {
+          "title": "Feedback and community",
+          "desc": "Report issues, view source code, or join public discussions."
+        }
+      },
       "items": {
         "home": {
           "title": "Home",
           "buttonName": "Open",
-          "desc": "Visit the website to learn more about NoteGen."
+          "desc": "Open the official website."
         },
         "guide": {
-          "title": "Guide",
+          "title": "Sync configuration guide",
           "buttonName": "Open",
-          "desc": "View configuration guide, learn how to configure models, sync, etc. information."
+          "desc": "Set up Git, S3, and WebDAV sync."
         },
         "github": {
           "title": "GitHub",
           "buttonName": "View",
-          "desc": "If NoteGen helps you, please give a star to encourage!"
+          "desc": "View source and contribute."
         },
         "releases": {
           "title": "Update Log",
           "buttonName": "View",
-          "desc": "View update log, learn more about NoteGen's updates."
+          "desc": "View version updates."
         },
         "issues": {
           "title": "Issue Feedback",
           "buttonName": "Feedback",
-          "desc": "If you find a bug in NoteGen, please feedback here."
+          "desc": "Report issues and bugs."
         },
         "discussions": {
           "title": "Discussions",
           "buttonName": "Discuss",
-          "desc": "If you want to discuss with the author or other users, you can join the group discussion."
+          "desc": "Join community discussions."
         }
       }
     },
