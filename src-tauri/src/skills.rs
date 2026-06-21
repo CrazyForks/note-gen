@@ -23,17 +23,16 @@ pub async fn import_skill_zip(app_handle: AppHandle, zip_path: String) -> Result
         fs::remove_dir_all(&temp_dir)
             .map_err(|e| format!("Failed to remove temp directory: {}", e))?;
     }
-    fs::create_dir_all(&temp_dir)
-        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    fs::create_dir_all(&temp_dir).map_err(|e| format!("Failed to create temp directory: {}", e))?;
 
     // 使用 zip crate 解压到临时目录
-    let file = fs::File::open(&zip_path)
-        .map_err(|e| format!("Failed to open zip file: {}", e))?;
-    let mut archive = ZipArchive::new(file)
-        .map_err(|e| format!("Failed to read zip archive: {}", e))?;
+    let file = fs::File::open(&zip_path).map_err(|e| format!("Failed to open zip file: {}", e))?;
+    let mut archive =
+        ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {}", e))?;
 
     for i in 0..archive.len() {
-        let mut file = archive.by_index(i)
+        let mut file = archive
+            .by_index(i)
             .map_err(|e| format!("Failed to read zip entry: {}", e))?;
         let outpath = temp_dir.join(file.mangled_name());
 
@@ -47,8 +46,8 @@ pub async fn import_skill_zip(app_handle: AppHandle, zip_path: String) -> Result
                         .map_err(|e| format!("Failed to create parent directory: {}", e))?;
                 }
             }
-            let mut outfile = fs::File::create(&outpath)
-                .map_err(|e| format!("Failed to create file: {}", e))?;
+            let mut outfile =
+                fs::File::create(&outpath).map_err(|e| format!("Failed to create file: {}", e))?;
             std::io::copy(&mut file, &mut outfile)
                 .map_err(|e| format!("Failed to extract file: {}", e))?;
         }
@@ -58,7 +57,10 @@ pub async fn import_skill_zip(app_handle: AppHandle, zip_path: String) -> Result
         Some(path) => path,
         None => {
             let _ = fs::remove_dir_all(&temp_dir);
-            return Err("No valid skill found in zip file. A valid skill must contain a SKILL.md file.".to_string());
+            return Err(
+                "No valid skill found in zip file. A valid skill must contain a SKILL.md file."
+                    .to_string(),
+            );
         }
     };
 
@@ -70,7 +72,8 @@ pub async fn import_skill_zip(app_handle: AppHandle, zip_path: String) -> Result
             .ok_or("Failed to get skill directory name from zip file")?
             .to_string()
     } else {
-        skill_root.file_name()
+        skill_root
+            .file_name()
             .and_then(|n| n.to_str())
             .ok_or("Failed to get skill directory name")?
             .to_string()
@@ -92,8 +95,7 @@ pub async fn import_skill_zip(app_handle: AppHandle, zip_path: String) -> Result
     }
 
     // 清理临时目录
-    fs::remove_dir_all(&temp_dir)
-        .map_err(|e| format!("Failed to remove temp directory: {}", e))?;
+    fs::remove_dir_all(&temp_dir).map_err(|e| format!("Failed to remove temp directory: {}", e))?;
 
     Ok(skill_name)
 }
@@ -103,8 +105,7 @@ fn find_skill_root(root: &Path) -> Result<Option<PathBuf>, String> {
         return Ok(Some(root.to_path_buf()));
     }
 
-    let entries = fs::read_dir(root)
-        .map_err(|e| format!("Failed to read directory: {}", e))?;
+    let entries = fs::read_dir(root).map_err(|e| format!("Failed to read directory: {}", e))?;
 
     for entry in entries {
         let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
@@ -140,8 +141,7 @@ fn copy_dir_recursive(src: &Path, dest: &Path) -> Result<(), String> {
         let dest_path = dest.join(entry.file_name());
 
         if src_path.is_file() {
-            fs::copy(&src_path, &dest_path)
-                .map_err(|e| format!("Failed to copy file: {}", e))?;
+            fs::copy(&src_path, &dest_path).map_err(|e| format!("Failed to copy file: {}", e))?;
         } else if src_path.is_dir() {
             copy_dir_recursive(&src_path, &dest_path)?;
         }

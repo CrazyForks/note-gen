@@ -1,8 +1,7 @@
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use xcap::Window;
 
-#[derive(serde::Serialize, serde::Deserialize)]
-#[derive(Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct ScreenshotImage {
     name: String,
     path: String,
@@ -16,14 +15,14 @@ pub struct ScreenshotImage {
 
 fn normalized(s: &str) -> String {
     s.replace(" ", "-")
-    .replace("/", "-")
-    .replace("\\", "-")
-    .replace("*", "-")
-    .replace("?", "-")
-    .replace(":", "-")
-    .replace("<", "-")
-    .replace(">", "-")
-    .replace("|", "-")
+        .replace("/", "-")
+        .replace("\\", "-")
+        .replace("*", "-")
+        .replace("?", "-")
+        .replace(":", "-")
+        .replace("<", "-")
+        .replace(">", "-")
+        .replace("|", "-")
 }
 
 pub fn cleanup_temp_screenshot_dir(app: &AppHandle) {
@@ -64,7 +63,7 @@ pub fn screenshot(app: AppHandle) -> Result<Vec<ScreenshotImage>, String> {
         if window.is_minimized().unwrap_or(true) {
             continue;
         }
-        
+
         // 获取窗口属性
         let title = window.title().unwrap_or_default();
         let width = window.width().unwrap_or(0);
@@ -72,15 +71,22 @@ pub fn screenshot(app: AppHandle) -> Result<Vec<ScreenshotImage>, String> {
         let x = window.x().unwrap_or(0);
         let y = window.y().unwrap_or(0);
         let z = window.z().unwrap_or(0);
-        let system_titles = vec!["Dock", "Menu Bar", "MenuBar", "Status", "Notification Center", "", "Desktop", "NoteGen"];
-        
-        if system_titles.contains(&title.as_str()) || 
-           title.len() < 2 ||
-           width < 150 || 
-           height < 150 {
+        let system_titles = vec![
+            "Dock",
+            "Menu Bar",
+            "MenuBar",
+            "Status",
+            "Notification Center",
+            "",
+            "Desktop",
+            "NoteGen",
+        ];
+
+        if system_titles.contains(&title.as_str()) || title.len() < 2 || width < 150 || height < 150
+        {
             continue;
         }
-        
+
         let image = match window.capture_image() {
             Ok(image) => image,
             Err(error) => {

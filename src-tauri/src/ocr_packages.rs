@@ -101,7 +101,13 @@ pub async fn run_ocr_provider(
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
     tauri::async_runtime::spawn_blocking(move || {
-        run_ocr_provider_sync(&app_handle, &app_data_dir, &provider_id, &image_path, languages)
+        run_ocr_provider_sync(
+            &app_handle,
+            &app_data_dir,
+            &provider_id,
+            &image_path,
+            languages,
+        )
     })
     .await
     .map_err(|e| format!("Failed to join OCR provider task: {}", e))?
@@ -230,7 +236,7 @@ fn run_windows_ocr_provider_sync(
 ) -> Result<String, String> {
     use windows::{
         core::HSTRING,
-        Graphics::Imaging::BitmapDecoder,
+        Graphics::Imaging::{BitmapAlphaMode, BitmapDecoder, BitmapPixelFormat, SoftwareBitmap},
         Storage::{FileAccessMode, StorageFile},
     };
 
@@ -250,11 +256,17 @@ fn run_windows_ocr_provider_sync(
         .map_err(|e| format!("Failed to decode image: {}", e))?
         .get()
         .map_err(|e| format!("Failed to create image decoder: {}", e))?;
-    let bitmap = decoder
+    let decoded_bitmap = decoder
         .GetSoftwareBitmapAsync()
         .map_err(|e| format!("Failed to read image bitmap: {}", e))?
         .get()
         .map_err(|e| format!("Failed to create image bitmap: {}", e))?;
+    let bitmap = SoftwareBitmap::ConvertWithAlpha(
+        &decoded_bitmap,
+        BitmapPixelFormat::Bgra8,
+        BitmapAlphaMode::Premultiplied,
+    )
+    .map_err(|e| format!("Failed to normalize image bitmap for OCR: {}", e))?;
     let engine = create_windows_ocr_engine(languages)?;
     let result = engine
         .RecognizeAsync(&bitmap)
@@ -266,7 +278,10 @@ fn run_windows_ocr_provider_sync(
         .map_err(|e| format!("Failed to read OCR result lines: {}", e))?;
     let mut text_lines = Vec::new();
 
-    for index in 0..lines.Size().map_err(|e| format!("Failed to read OCR line count: {}", e))? {
+    for index in 0..lines
+        .Size()
+        .map_err(|e| format!("Failed to read OCR line count: {}", e))?
+    {
         let line = lines
             .GetAt(index)
             .map_err(|e| format!("Failed to read OCR line: {}", e))?;
@@ -283,7 +298,9 @@ fn run_windows_ocr_provider_sync(
 }
 
 #[cfg(target_os = "windows")]
-fn create_windows_ocr_engine(languages: Vec<String>) -> Result<windows::Media::Ocr::OcrEngine, String> {
+fn create_windows_ocr_engine(
+    languages: Vec<String>,
+) -> Result<windows::Media::Ocr::OcrEngine, String> {
     use windows::{core::HSTRING, Globalization::Language, Media::Ocr::OcrEngine};
 
     let available_tags = windows_available_ocr_language_tags()?;
@@ -333,7 +350,10 @@ fn windows_available_ocr_language_tags() -> Result<Vec<String>, String> {
         .map_err(|e| format!("Failed to list Windows OCR languages: {}", e))?;
     let mut tags = Vec::new();
 
-    for index in 0..languages.Size().map_err(|e| format!("Failed to read OCR language count: {}", e))? {
+    for index in 0..languages
+        .Size()
+        .map_err(|e| format!("Failed to read OCR language count: {}", e))?
+    {
         let language = languages
             .GetAt(index)
             .map_err(|e| format!("Failed to read OCR language: {}", e))?;
@@ -349,10 +369,12 @@ fn windows_available_ocr_language_tags() -> Result<Vec<String>, String> {
 
 #[cfg(target_os = "windows")]
 fn default_ocr_language_tags() -> Vec<String> {
-    ["zh-Hans", "zh-Hant", "en-US", "ja-JP", "ko-KR"]
-        .into_iter()
-        .map(ToOwned::to_owned)
-        .collect()
+    [
+        "zh-Hans", "zh-CN", "zh-Hant", "zh-TW", "en-US", "en", "ja-JP", "ja", "ko-KR", "ko",
+    ]
+    .into_iter()
+    .map(ToOwned::to_owned)
+    .collect()
 }
 
 #[cfg(target_os = "windows")]
@@ -383,9 +405,32 @@ fn find_available_ocr_language(available_tags: &[String], candidate: &str) -> Op
         .iter()
         .find(|tag| {
             let available = tag.to_lowercase();
-            available == candidate || available.starts_with(&candidate_prefix)
+            let available_prefix = format!("{}-", available);
+            available == candidate
+                || available.starts_with(&candidate_prefix)
+                || candidate.starts_with(&available_prefix)
+                || windows_ocr_language_alias_matches(&available, &candidate)
         })
         .cloned()
+}
+
+#[cfg(target_os = "windows")]
+fn windows_ocr_language_alias_matches(available: &str, candidate: &str) -> bool {
+    match candidate {
+        "zh-hans" | "zh-cn" => {
+            available == "zh"
+                || available.starts_with("zh-hans")
+                || available.starts_with("zh-cn")
+                || available.starts_with("zh-sg")
+        }
+        "zh-hant" | "zh-tw" => {
+            available.starts_with("zh-hant")
+                || available.starts_with("zh-tw")
+                || available.starts_with("zh-hk")
+                || available.starts_with("zh-mo")
+        }
+        _ => false,
+    }
 }
 
 #[cfg(target_os = "macos")]

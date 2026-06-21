@@ -1,24 +1,29 @@
-mod mcp;
-mod mcp_runtime;
-mod device;
-mod fonts;
-mod backup;
-mod skills;
 mod ai;
-mod ocr_packages;
 #[cfg(target_os = "android")]
 mod android_ocr;
+mod backup;
+mod device;
+mod fonts;
 #[cfg(target_os = "ios")]
 mod ios_ocr;
+mod mcp;
+mod mcp_runtime;
+mod ocr_packages;
+mod skills;
 
-use mcp::{start_mcp_stdio_server, stop_mcp_server, send_mcp_message, McpServerManager};
-use mcp_runtime::{cancel_mcp_runtime_install, inspect_mcp_runtime, install_mcp_runtime, RuntimeInstallManager};
+use ai::{
+    ai_binary_request, ai_chat_completion_stream, ai_json_request, ai_multipart_request,
+    cancel_ai_request, AiRequestManager,
+};
+use backup::{export_app_data, import_app_data, import_app_data_from_file};
 use device::get_device_id;
 use fonts::list_system_fonts;
-use backup::{export_app_data, import_app_data, import_app_data_from_file};
-use skills::import_skill_zip;
-use ai::{ai_binary_request, ai_chat_completion_stream, ai_json_request, ai_multipart_request, cancel_ai_request, AiRequestManager};
+use mcp::{send_mcp_message, start_mcp_stdio_server, stop_mcp_server, McpServerManager};
+use mcp_runtime::{
+    cancel_mcp_runtime_install, inspect_mcp_runtime, install_mcp_runtime, RuntimeInstallManager,
+};
 use ocr_packages::{list_ocr_providers, run_ocr_provider};
+use skills::import_skill_zip;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

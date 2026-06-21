@@ -1,10 +1,10 @@
+use tauri::Emitter;
 use tauri::{
     image::Image,
     menu::{IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::TrayIconBuilder,
     AppHandle, Manager, Runtime,
 };
-use tauri::Emitter;
 
 pub const TRAY_ID: &str = "main";
 pub const ID_SHOW_MAIN: &str = "show-main";
@@ -22,7 +22,8 @@ pub const ID_HIDE_WINDOW: &str = "hide-window";
 pub const ID_SETTINGS: &str = "settings";
 pub const ID_QUIT: &str = "quit";
 
-const DEFAULT_RECORD_TOOL_ORDER: &[&str] = &["text", "recording", "scan", "image", "link", "file", "todo"];
+const DEFAULT_RECORD_TOOL_ORDER: &[&str] =
+    &["text", "recording", "scan", "image", "link", "file", "todo"];
 const QUICK_RECORD_VISIBLE_LIMIT: usize = 4;
 
 #[derive(Clone, serde::Deserialize)]
@@ -84,7 +85,8 @@ pub fn update_tray_record_toolbar_config(
     let tray = app
         .tray_by_id(TRAY_ID)
         .ok_or_else(|| "Tray icon not found".to_string())?;
-    let menu = build_tray_menu(&app, Some(&labels), Some(&config)).map_err(|error| error.to_string())?;
+    let menu =
+        build_tray_menu(&app, Some(&labels), Some(&config)).map_err(|error| error.to_string())?;
 
     tray.set_menu(Some(menu)).map_err(|error| error.to_string())
 }
@@ -97,10 +99,16 @@ fn build_tray_menu<R: Runtime>(
     let default_labels = default_tray_menu_labels();
     let labels = labels.unwrap_or(&default_labels);
 
-    let quick_section = MenuItem::with_id(app, "section-quick", &labels.quick_record, false, None::<&str>)?;
+    let quick_section = MenuItem::with_id(
+        app,
+        "section-quick",
+        &labels.quick_record,
+        false,
+        None::<&str>,
+    )?;
     let quick_record_items = build_quick_record_items(app, record_toolbar_config)?;
-    let (primary_record_items, more_record_items) = quick_record_items
-        .split_at(quick_record_items.len().min(QUICK_RECORD_VISIBLE_LIMIT));
+    let (primary_record_items, more_record_items) =
+        quick_record_items.split_at(quick_record_items.len().min(QUICK_RECORD_VISIBLE_LIMIT));
     let more_record_submenu = if more_record_items.is_empty() {
         None
     } else {
@@ -109,7 +117,12 @@ fn build_tray_menu<R: Runtime>(
             .map(|item| item as &dyn IsMenuItem<R>)
             .collect::<Vec<_>>();
 
-        Some(Submenu::with_items(app, &labels.more_record, true, &more_items)?)
+        Some(Submenu::with_items(
+            app,
+            &labels.more_record,
+            true,
+            &more_items,
+        )?)
     };
 
     let open_section = MenuItem::with_id(app, "section-open", &labels.open, false, None::<&str>)?;
@@ -118,9 +131,11 @@ fn build_tray_menu<R: Runtime>(
     let new_note = MenuItem::with_id(app, ID_NEW_NOTE, &labels.new_note, true, None::<&str>)?;
     let new_folder = MenuItem::with_id(app, ID_NEW_FOLDER, &labels.new_folder, true, None::<&str>)?;
 
-    let window_section = MenuItem::with_id(app, "section-window", &labels.window, false, None::<&str>)?;
+    let window_section =
+        MenuItem::with_id(app, "section-window", &labels.window, false, None::<&str>)?;
     let pin_window = MenuItem::with_id(app, ID_PIN_WINDOW, &labels.pin_toggle, true, None::<&str>)?;
-    let hide_window = MenuItem::with_id(app, ID_HIDE_WINDOW, &labels.hide_window, true, None::<&str>)?;
+    let hide_window =
+        MenuItem::with_id(app, ID_HIDE_WINDOW, &labels.hide_window, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, ID_QUIT, &labels.quit, true, None::<&str>)?;
     let separator_1 = PredefinedMenuItem::separator(app)?;
     let separator_2 = PredefinedMenuItem::separator(app)?;
@@ -180,7 +195,13 @@ fn build_quick_record_items<R: Runtime>(
 
     for item in ordered_record_tools(record_toolbar_config) {
         if let Some(menu_id) = record_tool_menu_id(&item.id) {
-            items.push(MenuItem::with_id(app, menu_id, item.label.as_str(), true, None::<&str>)?);
+            items.push(MenuItem::with_id(
+                app,
+                menu_id,
+                item.label.as_str(),
+                true,
+                None::<&str>,
+            )?);
         }
     }
 
@@ -192,7 +213,9 @@ struct RecordToolMenuItem {
     label: String,
 }
 
-fn ordered_record_tools(record_toolbar_config: Option<&[RecordToolbarItem]>) -> Vec<RecordToolMenuItem> {
+fn ordered_record_tools(
+    record_toolbar_config: Option<&[RecordToolbarItem]>,
+) -> Vec<RecordToolMenuItem> {
     match record_toolbar_config {
         Some(config) => {
             let mut enabled_items = config
@@ -286,7 +309,11 @@ fn emit_tray_action<R: Runtime>(app: &AppHandle<R>, action: &str) {
     emit_to_main(app, "tray-action", action);
 }
 
-fn emit_to_main<R: Runtime, S: serde::Serialize + Clone>(app: &AppHandle<R>, event: &str, payload: S) {
+fn emit_to_main<R: Runtime, S: serde::Serialize + Clone>(
+    app: &AppHandle<R>,
+    event: &str,
+    payload: S,
+) {
     if let Some(webview) = app.get_webview_window("main") {
         let _ = webview.emit(event, payload);
     }

@@ -83,7 +83,9 @@ fn build_macos_vision_ocr_provider() {
     println!("cargo:rerun-if-changed={}", source.display());
 
     if Command::new("swiftc").arg("--version").output().is_err() {
-        println!("cargo:warning=swiftc not found; built-in macOS OCR provider will be unavailable.");
+        println!(
+            "cargo:warning=swiftc not found; built-in macOS OCR provider will be unavailable."
+        );
         return;
     }
 
