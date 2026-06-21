@@ -120,10 +120,12 @@ fn run_ocr_provider_sync(
     image_path: &str,
     languages: Vec<String>,
 ) -> Result<String, String> {
+    let image_path = image_path.trim();
+    let relative_image_path = image_path.trim_start_matches(&['/', '\\'][..]);
     let absolute_image_path = if Path::new(image_path).is_absolute() {
         PathBuf::from(image_path)
     } else {
-        app_data_dir.join(image_path)
+        app_data_dir.join(relative_image_path)
     };
 
     #[cfg(target_os = "macos")]
@@ -240,9 +242,7 @@ fn run_windows_ocr_provider_sync(
         Storage::{FileAccessMode, StorageFile},
     };
 
-    let file_path = absolute_image_path
-        .to_str()
-        .ok_or("OCR image path is not valid UTF-8.")?;
+    let file_path = windows_ocr_image_path(absolute_image_path)?;
     let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(file_path))
         .map_err(|e| format!("Failed to open image file: {}", e))?
         .get()
@@ -295,6 +295,17 @@ fn run_windows_ocr_provider_sync(
     }
 
     Ok(text_lines.join("\n"))
+}
+
+#[cfg(target_os = "windows")]
+fn windows_ocr_image_path(path: &Path) -> Result<String, String> {
+    if !path.is_file() {
+        return Err(format!("OCR image file does not exist: {}", path.display()));
+    }
+
+    path.to_str()
+        .map(|value| value.replace('/', "\\"))
+        .ok_or("OCR image path is not valid UTF-8.".to_string())
 }
 
 #[cfg(target_os = "windows")]
