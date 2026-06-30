@@ -194,6 +194,7 @@ export default function Updater() {
 
   async function checkUpdate(forceRefresh = false) {
     setChecking(true);
+
     try {
       await checkForUpdates();
       setReleaseLoadStatus('loading');
@@ -209,10 +210,12 @@ export default function Updater() {
 
       const updateState = useUpdateStore.getState();
       const includePrereleases = isPrereleaseVersion(version) || isPrereleaseVersion(updateState.update?.version ?? updateState.latestVersion);
-      setReleaseNotes(buildReleaseNotes(releases, {
+      const nextReleaseNotes = buildReleaseNotes(releases, {
         currentVersion: version,
         includePrereleases,
-      }));
+      });
+
+      setReleaseNotes(nextReleaseNotes);
       setReleaseLoadStatus('ready');
     } catch (error) {
       const description = getErrorDescription(error) || t('releaseLoadError');
@@ -225,7 +228,8 @@ export default function Updater() {
         variant: 'destructive'
       });
     } finally {
-      setLastCheckedAt(new Date());
+      const checkedAt = new Date();
+      setLastCheckedAt(checkedAt);
       setChecking(false);
     }
   }
